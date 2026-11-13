@@ -4,6 +4,7 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from app.db import get_session
 from app.db import repository as repo
@@ -37,22 +38,38 @@ def seeded(user_id):
             repo.insert_heart_samples(
                 s,
                 [
-                    {"user_id": user_id, "ts": _at(day, h), "hr_bpm": 60.0 + i,
-                     "hrv_rmssd_ms": 50.0 - i, "source": "simulator:test"}
+                    {
+                        "user_id": user_id,
+                        "ts": _at(day, h),
+                        "hr_bpm": 60.0 + i,
+                        "hrv_rmssd_ms": 50.0 - i,
+                        "source": "simulator:test",
+                    }
                     for h in range(24)
                 ],
             )
             repo.insert_activity_samples(
                 s,
                 [
-                    {"user_id": user_id, "ts": _at(day, h), "steps": 100 * (i + 1),
-                     "active_minutes": 1.0, "screen_time_min": 5.0, "source": "simulator:test"}
+                    {
+                        "user_id": user_id,
+                        "ts": _at(day, h),
+                        "steps": 100 * (i + 1),
+                        "active_minutes": 1.0,
+                        "screen_time_min": 5.0,
+                        "source": "simulator:test",
+                    }
                     for h in range(24)
                 ],
             )
             repo.insert_sleep_session(
-                s, user_id, _at(day - timedelta(days=1), 23), _at(day, 7),
-                efficiency=0.9, stages={"deep": 90}, source="simulator:test",
+                s,
+                user_id,
+                _at(day - timedelta(days=1), 23),
+                _at(day, 7),
+                efficiency=0.9,
+                stages={"deep": 90},
+                source="simulator:test",
             )
             repo.record_mood(s, user_id, score=3 + (i % 2), ts=_at(day, 20))
     return user_id
@@ -88,11 +105,17 @@ def test_daily_metrics(seeded):
 def test_upsert_overwrites_same_timestamp(user_id):
     ts = _at(START, 12)
     with get_session() as s:
-        repo.insert_heart_samples(s, [{"user_id": user_id, "ts": ts, "hr_bpm": 70.0, "hrv_rmssd_ms": 40.0}])
-        repo.insert_heart_samples(s, [{"user_id": user_id, "ts": ts, "hr_bpm": 80.0, "hrv_rmssd_ms": 30.0}])
-        hr = s.execute(
-            text("SELECT hr_bpm FROM heart_samples WHERE user_id = :u"), {"u": user_id}
-        ).scalars().all()
+        repo.insert_heart_samples(
+            s, [{"user_id": user_id, "ts": ts, "hr_bpm": 70.0, "hrv_rmssd_ms": 40.0}]
+        )
+        repo.insert_heart_samples(
+            s, [{"user_id": user_id, "ts": ts, "hr_bpm": 80.0, "hrv_rmssd_ms": 30.0}]
+        )
+        hr = (
+            s.execute(text("SELECT hr_bpm FROM heart_samples WHERE user_id = :u"), {"u": user_id})
+            .scalars()
+            .all()
+        )
     assert hr == [80.0]
 
 
@@ -117,9 +140,7 @@ def test_delete_source_data(seeded):
 
 
 def test_constraints_reject_bad_input(user_id):
-    with pytest.raises(Exception):
-        with get_session() as s:
-            repo.record_mood(s, user_id, score=9)
-    with pytest.raises(Exception):
-        with get_session() as s:
-            repo.insert_sleep_session(s, user_id, _at(START, 8), _at(START, 7))
+    with pytest.raises(IntegrityError), get_session() as s:
+        repo.record_mood(s, user_id, score=9)
+    with pytest.raises(IntegrityError), get_session() as s:
+        repo.insert_sleep_session(s, user_id, _at(START, 8), _at(START, 7))

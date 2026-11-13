@@ -6,13 +6,13 @@ One containerized **PostgreSQL 16 + TimescaleDB** instance holds all data. Time 
 
 | Data | Shape | Storage |
 |---|---|---|
-| Heart rate + HRV (RMSSD) | high-frequency samples | hypertable `heart_samples` → daily continuous aggregate `heart_daily` |
-| Steps, active minutes, screen time | per-minute/hour counts | hypertable `activity_samples` → `activity_daily` |
+| Heart rate + HRV (RMSSD) | high-frequency samples | hypertable `heart_samples` |
+| Steps, active minutes, screen time | per-minute/hour counts | hypertable `activity_samples` |
 | Sleep | one session per night | `sleep_sessions` (duration generated, stages in JSONB) |
 | Mood check-in (1 tap) | one value per day | `mood_checkins` (score 1–5) |
 | Inference + escalation | relational | `anomalies`, `suggestions`, `suggestion_feedback`, `contacts`, `consents`, `alerts` |
 
-The continuous aggregates use real-time aggregation, so freshly simulated data shows up in daily values right away. Samples carry a `source` column (e.g. `simulator:stress_week`) so simulated data can be told apart and cleared.
+Daily values (`repository.daily_metrics`) are aggregated from the hypertables on read, so freshly simulated, backfilled or deleted data is reflected right away, even inside the transaction that wrote it. (Timescale continuous aggregates were tried and dropped: real-time aggregation only covers rows newer than the last refresh, so backfilled history stayed stale.) Samples carry a `source` column (e.g. `simulator:stress_week`) so simulated data can be told apart and cleared.
 
 ### Running it
 
@@ -78,3 +78,19 @@ docker compose run --rm migrate python -m app.simulators.hrv --new-user demo --s
 ```
 
 From Python: `hrv.generate(...)` returns rows without touching the DB; `hrv.simulate(session, user_id, start, days, scenario, ...)` writes them.
+
+## Linting & formatting
+
+Python code in `backend/` is linted and formatted with [Ruff](https://docs.astral.sh/ruff/) (config in `backend/pyproject.toml`). CI runs both checks on every push to `main` and every pull request.
+
+Fix lint issues and format, from `backend/`:
+
+```bash
+uvx ruff check --fix . && uvx ruff format .
+```
+
+Or inside the container (Ruff is part of the `dev` extra):
+
+```bash
+docker compose run --rm --build migrate ruff check .
+```

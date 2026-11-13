@@ -23,6 +23,7 @@ Run: python -m app.simulators.hrv --new-user demo --scenario stress_period --day
 from __future__ import annotations
 
 import argparse
+import itertools
 import math
 import random
 import uuid
@@ -107,7 +108,11 @@ def generate(
     if interval_min < 1 or 1440 % interval_min:
         raise ValueError("interval_min must divide a day (e.g. 1, 5, 10, 15, 30, 60)")
 
-    level = LEVELS[scenario.removeprefix("stable_")] if scenario.startswith("stable_") else LEVELS["average"]
+    level = (
+        LEVELS[scenario.removeprefix("stable_")]
+        if scenario.startswith("stable_")
+        else LEVELS["average"]
+    )
     rng = random.Random(seed)
     artifact_rng = random.Random(rng.random())  # own stream: artifacts never shift the signal noise
 
@@ -142,7 +147,11 @@ def generate(
                 + ar
             )
             rmssd = level.rmssd_ms * math.exp(dev)
-            hr = level.hr_bpm * math.exp(-HR_EXPONENT * dev) + WAKING_HR_BUMP * (1 - asleep) + hr_noise
+            hr = (
+                level.hr_bpm * math.exp(-HR_EXPONENT * dev)
+                + WAKING_HR_BUMP * (1 - asleep)
+                + hr_noise
+            )
             if spike:
                 rmssd *= 2.5 if spike_up else 0.3
             rows.append(
@@ -203,7 +212,9 @@ def _day_log_factor(scenario: str, timescale: str, d: int, days: int) -> float:
     return 0.0
 
 
-def _intraday_log_factor(scenario: str, timescale: str, d: int, hour: float, asleep: float) -> float:
+def _intraday_log_factor(
+    scenario: str, timescale: str, d: int, hour: float, asleep: float
+) -> float:
     """Within-day shape over waking hours, symmetric in log space so the daily mean is kept."""
     if timescale != "intraday" or scenario not in PATTERNS:
         return 0.0
@@ -237,9 +248,13 @@ def _asleep(scenario: str, d: int, hour: float) -> tuple[float, float]:
     best = (0.0, NIGHT_GAIN)
     for night, offset in ((d - 1, -24.0), (d, 0.0)):
         bed, wake = _night(scenario, night)
-        weight = _sigmoid((hour - bed - offset) / SLEEP_EDGE_H) * _sigmoid((wake + offset - hour) / SLEEP_EDGE_H)
+        weight = _sigmoid((hour - bed - offset) / SLEEP_EDGE_H) * _sigmoid(
+            (wake + offset - hour) / SLEEP_EDGE_H
+        )
         if weight > best[0]:
-            gain = NIGHT_GAIN * (1 - 0.05 * _sleep_shift(scenario, night))  # later nights restore less
+            gain = NIGHT_GAIN * (
+                1 - 0.05 * _sleep_shift(scenario, night)
+            )  # later nights restore less
             best = (weight, gain)
     return best
 
@@ -269,7 +284,7 @@ def _interp(x: float, knots: list[tuple[float, float]]) -> float:
     """Piecewise-linear through knots; flat before the first and after the last."""
     if x <= knots[0][0]:
         return knots[0][1]
-    for (x0, y0), (x1, y1) in zip(knots, knots[1:]):
+    for (x0, y0), (x1, y1) in itertools.pairwise(knots):
         if x <= x1:
             return y1 if x1 == x0 else _lerp(y0, y1, (x - x0) / (x1 - x0))
     return knots[-1][1]
@@ -288,16 +303,26 @@ def main(argv: list[str] | None = None) -> None:
     who.add_argument("--user", type=uuid.UUID, help="existing user id")
     who.add_argument("--new-user", metavar="NAME", help="create a user with this display name")
     parser.add_argument("--scenario", choices=SCENARIOS, default="stable_average")
-    parser.add_argument("--timescale", choices=TIMESCALES, default="days",
-                        help="for alternating/rising/lowering: across days or within each day")
+    parser.add_argument(
+        "--timescale",
+        choices=TIMESCALES,
+        default="days",
+        help="for alternating/rising/lowering: across days or within each day",
+    )
     parser.add_argument("--days", type=int, default=21)
-    parser.add_argument("--start", type=date.fromisoformat,
-                        help="first UTC day, YYYY-MM-DD (default: so the last day is today)")
+    parser.add_argument(
+        "--start",
+        type=date.fromisoformat,
+        help="first UTC day, YYYY-MM-DD (default: so the last day is today)",
+    )
     parser.add_argument("--interval", type=int, default=5, help="minutes between samples")
     parser.add_argument("--artifacts", action="store_true", help="add sensor gaps and spikes")
     parser.add_argument("--seed", type=int)
-    parser.add_argument("--no-replace", action="store_true",
-                        help="keep earlier HRV simulator data instead of clearing it")
+    parser.add_argument(
+        "--no-replace",
+        action="store_true",
+        help="keep earlier HRV simulator data instead of clearing it",
+    )
     args = parser.parse_args(argv)
 
     from app.db import get_session
@@ -306,9 +331,16 @@ def main(argv: list[str] | None = None) -> None:
     with get_session() as s:
         user_id = args.user or repo.create_user(s, args.new_user)
         n = simulate(
-            s, user_id, start, args.days, args.scenario,
-            replace=not args.no_replace, timescale=args.timescale,
-            artifacts=args.artifacts, interval_min=args.interval, seed=args.seed,
+            s,
+            user_id,
+            start,
+            args.days,
+            args.scenario,
+            replace=not args.no_replace,
+            timescale=args.timescale,
+            artifacts=args.artifacts,
+            interval_min=args.interval,
+            seed=args.seed,
         )
     end = start + timedelta(days=args.days - 1)
     print(f"user {user_id}: wrote {n} samples ({args.scenario}, {start} .. {end})")
