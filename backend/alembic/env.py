@@ -12,17 +12,12 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Continuous aggregates are managed by hand in migrations; hide them from autogenerate.
-_MANAGED_VIEWS = {"heart_daily", "activity_daily"}
-
 
 def include_object(obj, name, type_, reflected, compare_to):
-    if type_ == "table" and name in _MANAGED_VIEWS:
-        return False
     # create_hypertable() adds a `<table>_ts_idx` index that the models don't declare.
-    if type_ == "index" and reflected and compare_to is None and name and name.endswith("_ts_idx"):
-        return False
-    return True
+    return not (
+        type_ == "index" and reflected and compare_to is None and name and name.endswith("_ts_idx")
+    )
 
 
 def run_migrations_offline() -> None:

@@ -2,7 +2,7 @@
 
 Storage choices (see README "Database"):
 - heart_samples / activity_samples: TimescaleDB hypertables (high-frequency time series),
-  rolled up into the continuous aggregates `heart_daily` / `activity_daily`.
+  rolled up per day on read by `repository.daily_metrics`.
 - sleep_sessions: one row per night (an interval, not a stream), stages in JSONB.
 - Everything else (mood, anomalies, suggestions, consent, alerts): plain relational tables.
 

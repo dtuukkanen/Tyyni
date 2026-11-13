@@ -1,7 +1,6 @@
 """Single read/write entry point for simulators (#6-#8), inference (#2) and UI (#3).
 
-Days are UTC calendar days, matching the `time_bucket('1 day', ts)` used by the
-continuous aggregates. A sleep session counts toward the day the user woke up.
+Days are UTC calendar days. A sleep session counts toward the day the user woke up.
 """
 
 import uuid
@@ -104,6 +103,32 @@ _DAILY_SQL = text(
         SELECT d::date AS day
         FROM generate_series(CAST(:start AS date), CAST(:end AS date), interval '1 day') AS d
     ),
+    -- Heart/activity are aggregated straight from the hypertables (bounded to the range, so
+    -- only the matching chunks are scanned). Timescale continuous aggregates were dropped in
+    -- 0002: real-time aggregation only covers rows newer than the watermark, so backfilled
+    -- or deleted simulator data stayed invisible or stale until the next policy refresh.
+    heart AS (
+        SELECT (ts AT TIME ZONE 'UTC')::date AS day,
+               AVG(hr_bpm) AS hr_avg,
+               MIN(hr_bpm) AS hr_min,
+               AVG(hrv_rmssd_ms) AS hrv_rmssd_avg
+        FROM heart_samples
+        WHERE user_id = :user_id
+          AND ts >= CAST(:start AS date)::timestamp AT TIME ZONE 'UTC'
+          AND ts < (CAST(:end AS date) + 1)::timestamp AT TIME ZONE 'UTC'
+        GROUP BY 1
+    ),
+    activity AS (
+        SELECT (ts AT TIME ZONE 'UTC')::date AS day,
+               SUM(steps)::bigint AS steps,
+               SUM(active_minutes) AS active_minutes,
+               SUM(screen_time_min) AS screen_time_min
+        FROM activity_samples
+        WHERE user_id = :user_id
+          AND ts >= CAST(:start AS date)::timestamp AT TIME ZONE 'UTC'
+          AND ts < (CAST(:end AS date) + 1)::timestamp AT TIME ZONE 'UTC'
+        GROUP BY 1
+    ),
     sleep AS (
         SELECT (wake_time AT TIME ZONE 'UTC')::date AS day,
                SUM(duration_min)::float AS sleep_duration_min,
@@ -127,10 +152,8 @@ _DAILY_SQL = text(
            s.sleep_duration_min, s.bedtime_hour, s.wake_hour,
            m.mood_avg
     FROM days
-    LEFT JOIN heart_daily h
-           ON h.user_id = :user_id AND (h.day AT TIME ZONE 'UTC')::date = days.day
-    LEFT JOIN activity_daily a
-           ON a.user_id = :user_id AND (a.day AT TIME ZONE 'UTC')::date = days.day
+    LEFT JOIN heart h ON h.day = days.day
+    LEFT JOIN activity a ON a.day = days.day
     LEFT JOIN sleep s ON s.day = days.day
     LEFT JOIN mood m ON m.day = days.day
     ORDER BY days.day
