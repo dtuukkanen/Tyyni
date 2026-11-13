@@ -39,7 +39,9 @@ class Base(DeclarativeBase):
 
 
 def _user_fk(index: bool = True) -> Mapped[uuid.UUID]:
-    return mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=index)
+    return mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=index
+    )
 
 
 class User(Base):

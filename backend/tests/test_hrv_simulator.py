@@ -1,6 +1,7 @@
 """HRV simulator (#6). Shape tests compare against stable_average with the same seed, which
 shares the exact same noise, so they check the scenario shape rather than luck of the draw."""
 
+import itertools
 import math
 import statistics
 import uuid
@@ -35,13 +36,14 @@ def daily(rows, field="hrv_rmssd_ms"):
 def hours_mean(rows, hours, days=None, field="hrv_rmssd_ms"):
     """Mean of `field` for samples whose UTC hour is in `hours` (on day indexes `days`)."""
     return statistics.fmean(
-        r[field] for r in rows
+        r[field]
+        for r in rows
         if r["ts"].hour in hours and (days is None or (r["ts"].date() - START).days in days)
     )
 
 
 def ratios(rows, base_rows):
-    return [a / b for a, b in zip(daily(rows), daily(base_rows))]
+    return [a / b for a, b in zip(daily(rows), daily(base_rows), strict=True)]
 
 
 def test_deterministic_and_full_grid():
@@ -64,12 +66,18 @@ def test_rejects_bad_arguments():
 
 @pytest.mark.parametrize("seed", range(5))
 def test_stable_levels_are_ordered_and_plausible(seed):
-    means = {lvl: statistics.fmean(daily(gen(f"stable_{lvl}", seed=seed))) for lvl in ("high", "average", "low")}
+    means = {
+        lvl: statistics.fmean(daily(gen(f"stable_{lvl}", seed=seed)))
+        for lvl in ("high", "average", "low")
+    }
     assert means["high"] > means["average"] > means["low"]
     assert 60 < means["high"] < 110
     assert 35 < means["average"] < 65
     assert 15 < means["low"] < 35
-    hr = {lvl: statistics.fmean(daily(gen(f"stable_{lvl}", seed=seed), "hr_bpm")) for lvl in ("high", "average", "low")}
+    hr = {
+        lvl: statistics.fmean(daily(gen(f"stable_{lvl}", seed=seed), "hr_bpm"))
+        for lvl in ("high", "average", "low")
+    }
     assert hr["high"] < hr["average"] < hr["low"]
     assert all(45 < v < 85 for v in hr.values())
 
@@ -78,8 +86,14 @@ def test_night_hrv_higher_and_hr_inverse():
     rows = gen()
     night, day = hours_mean(rows, range(0, 6)), hours_mean(rows, range(10, 20))
     assert night > 1.15 * day
-    assert hours_mean(rows, range(0, 6), field="hr_bpm") < hours_mean(rows, range(10, 20), field="hr_bpm") - 5
-    assert statistics.correlation([r["hrv_rmssd_ms"] for r in rows], [r["hr_bpm"] for r in rows]) < -0.5
+    assert (
+        hours_mean(rows, range(0, 6), field="hr_bpm")
+        < hours_mean(rows, range(10, 20), field="hr_bpm") - 5
+    )
+    assert (
+        statistics.correlation([r["hrv_rmssd_ms"] for r in rows], [r["hr_bpm"] for r in rows])
+        < -0.5
+    )
 
 
 @pytest.mark.parametrize("scenario,sign", [("rising", 1), ("lowering", -1)])
@@ -93,7 +107,7 @@ def test_days_trend(scenario, sign):
 
 def test_days_alternating():
     d = daily(gen("alternating"))
-    diffs = [b - a for a, b in zip(d, d[1:])]
+    diffs = [b - a for a, b in itertools.pairwise(d)]
     assert all(x < 0 for x in diffs[0::2]) and all(x > 0 for x in diffs[1::2])
 
 
@@ -119,7 +133,10 @@ def test_stress_period_dips_and_recovers():
     assert all(x == pytest.approx(1, abs=0.01) for x in r[:7])
     assert all(x < 0.65 for x in r[9:14])
     assert r[-1] == pytest.approx(1, abs=0.01)
-    hr = [a / b for a, b in zip(daily(gen("stress_period"), "hr_bpm"), daily(gen(), "hr_bpm"))]
+    hr = [
+        a / b
+        for a, b in zip(daily(gen("stress_period"), "hr_bpm"), daily(gen(), "hr_bpm"), strict=True)
+    ]
     assert min(hr[9:14]) > 1.1  # stress also shows as raised HR
 
 
@@ -135,6 +152,7 @@ def test_sudden_drop():
 def test_late_sleep_shift_moves_night_peak_later():
     rows, base = gen("late_sleep_shift"), gen()
     early, late = range(0, 2), range(DAYS - 4, DAYS)
+
     def ratio(hour, days):
         return hours_mean(rows, {hour}, days) / hours_mean(base, {hour}, days)
 
@@ -177,7 +195,9 @@ def test_simulate_writes_daily_metrics_and_replaces(user_id):
     with get_session() as s:
         hrv.simulate(s, user_id, START, DAYS, "stable_low", seed=SEED)  # replaces, no leftovers
         count, sources = s.execute(
-            text("SELECT count(*), array_agg(DISTINCT source) FROM heart_samples WHERE user_id = :u"),
+            text(
+                "SELECT count(*), array_agg(DISTINCT source) FROM heart_samples WHERE user_id = :u"
+            ),
             {"u": user_id},
         ).one()
         rows = repo.daily_metrics(s, user_id, START, end)

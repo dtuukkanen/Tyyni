@@ -78,3 +78,19 @@ docker compose run --rm migrate python -m app.simulators.hrv --new-user demo --s
 ```
 
 From Python: `hrv.generate(...)` returns rows without touching the DB; `hrv.simulate(session, user_id, start, days, scenario, ...)` writes them.
+
+## Linting & formatting
+
+Python code in `backend/` is linted and formatted with [Ruff](https://docs.astral.sh/ruff/) (config in `backend/pyproject.toml`). CI runs both checks on every push to `main` and every pull request.
+
+Fix lint issues and format, from `backend/`:
+
+```bash
+uvx ruff check --fix . && uvx ruff format .
+```
+
+Or inside the container (Ruff is part of the `dev` extra):
+
+```bash
+docker compose run --rm --build migrate ruff check .
+```

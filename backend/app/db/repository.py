@@ -28,7 +28,9 @@ METRICS = (
 )
 
 
-def create_user(session: Session, display_name: str, timezone: str = "Europe/Helsinki") -> uuid.UUID:
+def create_user(
+    session: Session, display_name: str, timezone: str = "Europe/Helsinki"
+) -> uuid.UUID:
     user = User(display_name=display_name, timezone=timezone)
     session.add(user)
     session.flush()
@@ -80,7 +82,11 @@ def insert_sleep_session(
 
 
 def record_mood(
-    session: Session, user_id: uuid.UUID, score: int, ts: datetime | None = None, note: str | None = None
+    session: Session,
+    user_id: uuid.UUID,
+    score: int,
+    ts: datetime | None = None,
+    note: str | None = None,
 ) -> int:
     values: dict[str, Any] = {"user_id": user_id, "score": score, "note": note}
     if ts is not None:
@@ -133,9 +139,11 @@ _DAILY_SQL = text(
         SELECT (wake_time AT TIME ZONE 'UTC')::date AS day,
                SUM(duration_min)::float AS sleep_duration_min,
                MIN(EXTRACT(EPOCH FROM (bedtime AT TIME ZONE 'UTC')
-                   - ((wake_time AT TIME ZONE 'UTC')::date - 1)::timestamp) / 3600.0) AS bedtime_hour,
+                   - ((wake_time AT TIME ZONE 'UTC')::date - 1)::timestamp)
+                   / 3600.0) AS bedtime_hour,
                MAX(EXTRACT(EPOCH FROM (wake_time AT TIME ZONE 'UTC')
-                   - ((wake_time AT TIME ZONE 'UTC')::date)::timestamp) / 3600.0) AS wake_hour
+                   - ((wake_time AT TIME ZONE 'UTC')::date)::timestamp)
+                   / 3600.0) AS wake_hour
         FROM sleep_sessions
         WHERE user_id = :user_id
         GROUP BY 1
@@ -161,7 +169,9 @@ _DAILY_SQL = text(
 )
 
 
-def daily_metrics(session: Session, user_id: uuid.UUID, start: date, end: date) -> list[dict[str, Any]]:
+def daily_metrics(
+    session: Session, user_id: uuid.UUID, start: date, end: date
+) -> list[dict[str, Any]]:
     """One row per day in [start, end] with all metrics; missing data is None.
 
     bedtime_hour is hours since midnight of the day *before* waking (so 23:30 -> 23.5,
