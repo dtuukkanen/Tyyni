@@ -30,11 +30,7 @@ Run the tests (against the container DB):
 docker compose run --rm --build migrate pytest -q
 ```
 
-Optional DB browser at http://localhost:8080 (server `db`, user/password/db `wellbeing`):
-
-```bash
-docker compose --profile tools up -d adminer
-```
+Connect a SQL client (e.g. DataGrip) to `localhost:5432`, database `wellbeing`, user `wellbeing`, password `wellbeing`.
 
 Defaults are dev-only; copy `.env.example` to `.env` to change credentials or ports.
 
