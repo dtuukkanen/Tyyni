@@ -16,11 +16,11 @@ Everything runs in Docker:
 docker compose up -d db                     # TimescaleDB on localhost:5432
 docker compose run --rm migrate             # apply migrations
 docker compose up -d api                    # API docs on http://localhost:8000/docs
-docker compose run --rm migrate python -m app.simulators.sleep \
-  --new-user demo --scenario stress_period --days 21 --seed 1 --with-hrv --with-activity --with-screen
+docker compose run --rm migrate python -m app.simulators.combined \
+  --new-user demo --scenario withdrawal --days 21 --seed 1
 ```
 
-The last command creates a user named `demo` and fills three weeks of data in which a stress period starts after the first week.
+The last command creates a user named `demo`, fills three weeks of every signal in which the user slowly withdraws after the first week, and makes today's suggestions. The deployed API can do the same over HTTP (`POST /users/{id}/simulate`); [`bruno/`](bruno) has a [Bruno](https://www.usebruno.com) collection for it.
 
 ## Documentation
 

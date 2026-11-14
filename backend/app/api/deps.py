@@ -18,6 +18,7 @@ from app.db.models import User
 DEFAULT_DAYS = 14
 MAX_DAYS = 366
 MAX_SAMPLE_DAYS = 31
+MAX_SIMULATE_DAYS = 90  # one simulate call stays well inside Vercel's function timeout
 
 
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)

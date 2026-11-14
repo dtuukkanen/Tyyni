@@ -43,6 +43,18 @@ Scenarios with the same name follow the same day-by-day timeline everywhere ([`t
 
 Signals that depend on sleep (HRV's night rise, when steps and screen use stop, when mood is logged and journals are written) use the built-in 23:00–07:00 UTC night unless given real nights from the sleep simulator. The easiest way to get that is `sleep --with-hrv --with-activity --with-screen`; see [Sleep](sleep.md).
 
+## All signals at once
+
+`combined` runs all six for one user with one scenario and one seed, the others following the sleep simulator's nights, then detects the period's anomalies and makes the last day's suggestions (`--no-infer` skips that):
+
+```bash
+docker compose run --rm migrate python -m app.simulators.combined --new-user demo --scenario withdrawal --days 21 --seed 1
+```
+
+A signal without the scenario follows its closest match (`sudden_drop` → sleep's `short_night`, `stable_good` → HRV's `stable_high`, …) or its steady default; `--signals` limits the run to some of them. The same run is available over HTTP as [`POST /users/{id}/simulate`](../api.md#endpoints), which also works on the deployed API.
+
+The suggestions are for the last day, so pick a scenario that is still unusual then: `withdrawal`, `crisis`, `late_sleep_shift` and `oversleep` are, while `stress_period` has recovered by its last day (end it earlier with `end`, or show an earlier day).
+
 ## From Python
 
 Every simulator has the same shape:
