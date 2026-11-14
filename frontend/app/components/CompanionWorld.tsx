@@ -222,7 +222,14 @@ export function EnvironmentLayer() {
       </defs>
 
       {/* Warm horizon glow */}
-      <ellipse cx="215" cy="435" rx="240" ry="110" fill="#FFF9DE" fillOpacity="0.45" />
+      <ellipse
+        cx="215"
+        cy="435"
+        rx="240"
+        ry="110"
+        fill="#FFF9DE"
+        fillOpacity="0.45"
+      />
 
       {/* Distant Misty Hills */}
       <path
@@ -421,7 +428,12 @@ export function EnvironmentLayer() {
       />
 
       {/* Grass tufts across meadow */}
-      <g stroke="#4E6B40" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <g
+        stroke="#4E6B40"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M88 606 L84 598 M92 606 L95 597" />
         <path d="M134 592 L130 584 M138 592 L142 584" />
         <path d="M294 596 L291 588 M298 596 L302 588" />
@@ -433,8 +445,18 @@ export function EnvironmentLayer() {
 
       {/* Tiny Meadow Wildflowers */}
       <g transform="translate(54, 616)">
-        <path d="M0 18 Q2 9 0 0" stroke="#4A6240" strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M-5 14 L0 18 L5 13" stroke="#4A6240" strokeWidth="1.6" strokeLinecap="round" />
+        <path
+          d="M0 18 Q2 9 0 0"
+          stroke="#4A6240"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M-5 14 L0 18 L5 13"
+          stroke="#4A6240"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
         <circle cx="0" cy="-4" r="3.5" fill="#F59BA0" />
         <circle cx="4" cy="-1" r="3.5" fill="#F59BA0" />
         <circle cx="2.5" cy="3.5" r="3.5" fill="#F59BA0" />
@@ -443,14 +465,24 @@ export function EnvironmentLayer() {
         <circle cx="0" cy="0" r="2" fill="#FCE283" />
       </g>
       <g transform="translate(364, 622)">
-        <path d="M0 16 Q-2 8 0 0" stroke="#4A6240" strokeWidth="1.8" strokeLinecap="round" />
+        <path
+          d="M0 16 Q-2 8 0 0"
+          stroke="#4A6240"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
         <circle cx="0" cy="-3" r="3" fill="#F7A29E" />
         <circle cx="3" cy="0" r="3" fill="#F7A29E" />
         <circle cx="-3" cy="0" r="3" fill="#F7A29E" />
         <circle cx="0" cy="0" r="1.8" fill="#FCE283" />
       </g>
       <g transform="translate(384, 618)">
-        <path d="M0 18 Q2 9 0 0" stroke="#4A6240" strokeWidth="1.8" strokeLinecap="round" />
+        <path
+          d="M0 18 Q2 9 0 0"
+          stroke="#4A6240"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
         <circle cx="0" cy="-3" r="3.2" fill="#FCE283" />
         <circle cx="3.2" cy="0" r="3.2" fill="#FCE283" />
         <circle cx="-3.2" cy="0" r="3.2" fill="#FCE283" />
@@ -465,7 +497,12 @@ export function EnvironmentLayer() {
       <circle cx="332" cy="648" r="2" fill="#FFFDF6" fillOpacity="0.85" />
 
       {/* Foreground Corner Botanical Leaves */}
-      <g stroke="#3E5636" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <g
+        stroke="#3E5636"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path
           d="M-6 932 C2 885, 18 835, 42 795 C46 830, 32 885, 16 932 Z"
           fill="#78A85A"
@@ -527,7 +564,14 @@ export function FlowerCompanion({
         xmlns="http://www.w3.org/2000/svg"
       >
         {/* Ground shadow beneath pot */}
-        <ellipse cx="160" cy="296" rx="68" ry="14" fill="#68974C" fillOpacity="0.6" />
+        <ellipse
+          cx="160"
+          cy="296"
+          rx="68"
+          ry="14"
+          fill="#68974C"
+          fillOpacity="0.6"
+        />
 
         {/* Whole plant pivots gently around pot base center (160, 294) */}
         <g transform="translate(160, 294)">
@@ -927,7 +971,12 @@ export function FlowerCompanion({
         </g>
 
         {/* Little foreground grass blades hugging the pot base */}
-        <g stroke="#465E3B" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <g
+          stroke="#465E3B"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M114 294 C112 286, 116 280, 120 288" fill="#82B667" />
           <path d="M138 298 C136 290, 142 288, 144 298" fill="#82B667" />
           <path d="M174 298 C176 290, 182 288, 180 298" fill="#82B667" />

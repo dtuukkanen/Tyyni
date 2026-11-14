@@ -50,6 +50,7 @@ export default function Home() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedTab = params.get("tab")?.toLowerCase();
+    // oxlint-disable-next-line react/set-state-in-effect -- URL params are read after hydration
     if (requestedTab === "today") setTab("Today");
     else if (requestedTab === "ground") setTab("Ground");
     else if (requestedTab === "wins") setTab("Wins");
@@ -78,9 +79,7 @@ export default function Home() {
         if (next.mood) setMood(next.mood);
         if (next.steps && next.steps.length > 0) {
           setSteps(next.steps.map((s) => s.label));
-          setChecked(
-            next.steps.flatMap((s, idx) => (s.complete ? [idx] : [])),
-          );
+          setChecked(next.steps.flatMap((s, idx) => (s.complete ? [idx] : [])));
         }
         if (next.wins && next.wins.length > 0) {
           setWins(next.wins);

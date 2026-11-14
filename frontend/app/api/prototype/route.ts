@@ -4,7 +4,11 @@ import { NextResponse } from "next/server";
 export async function GET() {
   const baseUrl = process.env.PYTHON_SERVICE_URL;
   if (!baseUrl) {
-    return NextResponse.json({ source: "prototype", message: "Using built-in sample content.", dashboard: {} });
+    return NextResponse.json({
+      source: "prototype",
+      message: "Using built-in sample content.",
+      dashboard: {},
+    });
   }
 
   try {
@@ -13,12 +17,19 @@ export async function GET() {
       cache: "no-store",
       headers: apiKey ? { "X-API-Key": apiKey } : undefined,
     });
-    if (!response.ok) throw new Error(`Python service returned ${response.status}`);
-    return NextResponse.json({ source: "service", dashboard: await response.json() });
+    if (!response.ok)
+      throw new Error(`Python service returned ${response.status}`);
+    return NextResponse.json({
+      source: "service",
+      dashboard: await response.json(),
+    });
   } catch (error) {
     console.error("Tyyni service request failed:", error);
     return NextResponse.json(
-      { source: "prototype", message: "The service is unavailable; showing sample content." },
+      {
+        source: "prototype",
+        message: "The service is unavailable; showing sample content.",
+      },
       { status: 200 },
     );
   }

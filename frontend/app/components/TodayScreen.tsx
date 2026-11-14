@@ -197,6 +197,7 @@ export function TodayScreen({
               const iconName = STEP_ICONS[index % STEP_ICONS.length];
               return (
                 <button
+                  // oxlint-disable-next-line react/no-array-index-key -- steps are plain strings and may repeat
                   key={`${step}-${index}`}
                   type="button"
                   className={`step-card ${isDone ? "is-done" : ""}`}
@@ -246,6 +247,7 @@ export function TodayScreen({
                 value={newStep}
                 onChange={(e) => setNewStep(e.target.value)}
                 placeholder="One gentle intention (e.g., sip warm tea)..."
+                // oxlint-disable-next-line jsx-a11y/no-autofocus -- the field appears only after the user asks to add a step
                 autoFocus
               />
               <button

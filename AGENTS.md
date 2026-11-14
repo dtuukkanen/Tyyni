@@ -34,6 +34,12 @@ Lint and format from `backend/` before committing; CI (`.github/workflows/lint.y
 uvx ruff check --fix . && uvx ruff format .
 ```
 
+The frontend (`frontend/`, Next.js) uses Oxlint and Oxfmt; the same workflow fails on either. From `frontend/`:
+
+```bash
+npm run lint:fix && npm run format && npm run lint
+```
+
 ## Conventions
 
 - **Data access goes through `repository.py`.** Routers and simulators call repository functions with a `Session`; don't put SQL in them.
@@ -44,6 +50,7 @@ uvx ruff check --fix . && uvx ruff format .
 - **Determinism:** with a seed, output must be reproducible. Keep RNG draws independent of the scenario where the module already does so (see `hrv.py`), so scenarios share noise and differ only in shape. Pure refactors should leave generated data byte-identical.
 - **Journal ground truth:** simulated entries carry `expected_label` (`positive`/`neutral`/`harmful`) and `expected_risk` (`none`/`self_harm`/`suicidal`) for classifier evaluation. Crisis phrases stay first-person and non-graphic.
 - **API:** no user auth; the user is the `user_id` in the path, and `API_KEY` (when set, as in the Vercel deployment) is a shared secret checked in `X-API-Key` by `deps.require_api_key` (`PathUser` returns 404 for unknown users). Write routes call `db.commit()` themselves before returning. Keep range limits in `deps.py` (14-day default, 366 days max for day endpoints, 31 days for raw samples).
+- **Frontend style:** Oxlint (`frontend/.oxlintrc.json`) runs with `--deny-warnings`, so CI fails on warnings too. Fix findings rather than disabling rules; when a pattern is intentional, use `// oxlint-disable-next-line <rule> -- <reason>` on that line. Oxfmt (`frontend/.oxfmtrc.json`) uses print width 80, Prettier-style.
 - **Style:** Ruff with line length 100 and the rule set in `pyproject.toml`; modules start with a docstring explaining what they model; use `from __future__ import annotations` and modern typing (`X | None`, `collections.abc`).
 
 ## Tests

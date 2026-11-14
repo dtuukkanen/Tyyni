@@ -35,7 +35,17 @@ Python code in `backend/` is linted and formatted with [Ruff](https://docs.astra
 uvx ruff check --fix . && uvx ruff format .
 ```
 
-Or inside the container (Ruff is part of the `dev` extra):
+The Next.js app in `frontend/` is linted with [Oxlint](https://oxc.rs/docs/guide/usage/linter) (config in `frontend/.oxlintrc.json`) and formatted with [Oxfmt](https://oxc.rs/docs/guide/usage/formatter) (config in `frontend/.oxfmtrc.json`). The same CI workflow runs `npm run lint` and `npm run format:check`; lint fails on warnings as well as errors. From `frontend/`:
+
+```bash
+npm run lint:fix   # apply safe fixes
+npm run format     # format in place
+npm run lint       # what CI runs
+```
+
+If a finding is a deliberate pattern, disable that one line with the reason: `// oxlint-disable-next-line <rule> -- <reason>`. The Stitch exports in `frontend/designs/` are excluded from both tools.
+
+Or run the Python checks inside the container (Ruff is part of the `dev` extra):
 
 ```bash
 docker compose run --rm --build migrate ruff check .
