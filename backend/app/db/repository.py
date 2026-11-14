@@ -18,6 +18,7 @@ from app.db.models import (
     HeartSample,
     JournalEntry,
     MoodCheckin,
+    ScreenSample,
     SleepSession,
     User,
 )
@@ -70,8 +71,13 @@ def insert_heart_samples(session: Session, rows: Iterable[Mapping[str, Any]]) ->
 
 
 def insert_activity_samples(session: Session, rows: Iterable[Mapping[str, Any]]) -> int:
-    """rows: {user_id, ts, steps, active_minutes, screen_time_min[, source]}."""
+    """rows: {user_id, ts, steps, active_minutes[, source]}."""
     return _upsert_samples(session, ActivitySample, rows)
+
+
+def insert_screen_samples(session: Session, rows: Iterable[Mapping[str, Any]]) -> int:
+    """rows: {user_id, ts, screen_time_min[, source]}. Re-inserting a ts overwrites it."""
+    return _upsert_samples(session, ScreenSample, rows)
 
 
 def insert_sleep_session(
@@ -174,6 +180,23 @@ def activity_samples(
                 ActivitySample.ts < end,
             )
             .order_by(ActivitySample.ts)
+        )
+    )
+
+
+def screen_samples(
+    session: Session, user_id: uuid.UUID, start: datetime, end: datetime
+) -> list[ScreenSample]:
+    """Screen time samples with start <= ts < end, oldest first."""
+    return list(
+        session.scalars(
+            select(ScreenSample)
+            .where(
+                ScreenSample.user_id == user_id,
+                ScreenSample.ts >= start,
+                ScreenSample.ts < end,
+            )
+            .order_by(ScreenSample.ts)
         )
     )
 
@@ -281,6 +304,7 @@ def delete_source_data(session: Session, user_id: uuid.UUID, source_prefix: str)
     tables = (
         "heart_samples",
         "activity_samples",
+        "screen_samples",
         "sleep_sessions",
         "mood_checkins",
         "journal_entries",
@@ -295,10 +319,10 @@ _DAILY_SQL = text(
         SELECT d::date AS day
         FROM generate_series(CAST(:start AS date), CAST(:end AS date), interval '1 day') AS d
     ),
-    -- Heart/activity are aggregated straight from the hypertables (bounded to the range, so
-    -- only the matching chunks are scanned). Timescale continuous aggregates were dropped in
-    -- 0002: real-time aggregation only covers rows newer than the watermark, so backfilled
-    -- or deleted simulator data stayed invisible or stale until the next policy refresh.
+    -- Heart/activity/screen are aggregated straight from the hypertables (bounded to the
+    -- range, so only the matching chunks are scanned). Timescale continuous aggregates were
+    -- dropped in 0002: real-time aggregation only covers rows newer than the watermark, so
+    -- backfilled or deleted simulator data stayed invisible or stale until the next refresh.
     heart AS (
         SELECT (ts AT TIME ZONE 'UTC')::date AS day,
                AVG(hr_bpm) AS hr_avg,
@@ -313,9 +337,17 @@ _DAILY_SQL = text(
     activity AS (
         SELECT (ts AT TIME ZONE 'UTC')::date AS day,
                SUM(steps)::bigint AS steps,
-               SUM(active_minutes) AS active_minutes,
-               SUM(screen_time_min) AS screen_time_min
+               SUM(active_minutes) AS active_minutes
         FROM activity_samples
+        WHERE user_id = :user_id
+          AND ts >= CAST(:start AS date)::timestamp AT TIME ZONE 'UTC'
+          AND ts < (CAST(:end AS date) + 1)::timestamp AT TIME ZONE 'UTC'
+        GROUP BY 1
+    ),
+    screen AS (
+        SELECT (ts AT TIME ZONE 'UTC')::date AS day,
+               SUM(screen_time_min) AS screen_time_min
+        FROM screen_samples
         WHERE user_id = :user_id
           AND ts >= CAST(:start AS date)::timestamp AT TIME ZONE 'UTC'
           AND ts < (CAST(:end AS date) + 1)::timestamp AT TIME ZONE 'UTC'
@@ -342,12 +374,13 @@ _DAILY_SQL = text(
     )
     SELECT days.day,
            h.hr_avg, h.hr_min, h.hrv_rmssd_avg,
-           a.steps, a.active_minutes, a.screen_time_min,
+           a.steps, a.active_minutes, sc.screen_time_min,
            s.sleep_duration_min, s.bedtime_hour, s.wake_hour,
            m.mood_avg
     FROM days
     LEFT JOIN heart h ON h.day = days.day
     LEFT JOIN activity a ON a.day = days.day
+    LEFT JOIN screen sc ON sc.day = days.day
     LEFT JOIN sleep s ON s.day = days.day
     LEFT JOIN mood m ON m.day = days.day
     ORDER BY days.day

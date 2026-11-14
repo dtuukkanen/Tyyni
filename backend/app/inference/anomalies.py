@@ -94,7 +94,7 @@ RULES = (
     Rule("bedtime_hour", "sleep_shift", +1, 1.5, 0.25),
     Rule("wake_hour", "sleep_shift", +1, 1.5, 0.25),
     Rule("steps", "low_activity", -1, 0.4, 800.0, relative=True, full_day=True),
-    Rule("screen_time_min", "screen_time", +1, 60.0, 15.0, full_day=True),
+    Rule("screen_time_min", "screen_time", +1, 0.4, 15.0, relative=True, full_day=True),
 )
 
 # Mood (see the module docstring and _low_mood)

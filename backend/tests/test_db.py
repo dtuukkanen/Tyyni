@@ -56,6 +56,17 @@ def seeded(user_id):
                         "ts": _at(day, h),
                         "steps": 100 * (i + 1),
                         "active_minutes": 1.0,
+                        "source": "simulator:test",
+                    }
+                    for h in range(24)
+                ],
+            )
+            repo.insert_screen_samples(
+                s,
+                [
+                    {
+                        "user_id": user_id,
+                        "ts": _at(day, h),
                         "screen_time_min": 5.0,
                         "source": "simulator:test",
                     }
@@ -82,7 +93,7 @@ def test_hypertables_exist():
                 text("SELECT hypertable_name FROM timescaledb_information.hypertables")
             ).scalars()
         )
-    assert {"heart_samples", "activity_samples"} <= names
+    assert {"heart_samples", "activity_samples", "screen_samples"} <= names
 
 
 def test_daily_metrics(seeded):

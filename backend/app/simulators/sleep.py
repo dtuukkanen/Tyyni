@@ -16,12 +16,13 @@ All randomness comes from one seeded RNG with a fixed number of draws per night,
 scenarios generated with the same seed share the same noise and differ only by their shape.
 The average sleeper and late_sleep_shift use the built-in `sleep_window`, and
 `nights(...)` can be passed to `hrv.generate(nights=...)` so night-time HRV follows them, and
-to `activity.generate(nights=...)` so steps stop while asleep and follow the wake times.
+to `activity.generate(nights=...)` so steps stop while asleep and follow the wake times, and
+to `screen.generate(nights=...)` so the phone is put down at bedtime.
 
 Times are UTC and whole minutes.
 
 Run: python -m app.simulators.sleep --new-user demo --scenario oversleep --days 21 --with-hrv \
-     --with-activity
+     --with-activity --with-screen
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db import repository as repo
-from app.simulators import activity, common, hrv, sleep_window, timelines
+from app.simulators import activity, common, hrv, screen, sleep_window, timelines
 from app.simulators.common import clamp
 
 SCENARIOS = (
@@ -64,6 +65,17 @@ HRV_SCENARIO = {
 ACTIVITY_SCENARIO = {
     "stable_good": "stable_active",
     "stable_poor": "stable_sedentary",
+    "late_sleep_shift": "late_sleep_shift",
+    "oversleep": "oversleep",
+    "stress_period": "stress_period",
+    "short_night": "sudden_drop",
+}
+
+# screen time scenario that goes with each sleep scenario for --with-screen (default:
+# stable_average)
+SCREEN_SCENARIO = {
+    "stable_good": "stable_light",
+    "stable_poor": "stable_heavy",
     "late_sleep_shift": "late_sleep_shift",
     "oversleep": "oversleep",
     "stress_period": "stress_period",
@@ -284,12 +296,23 @@ def main(argv: list[str] | None = None) -> None:
         choices=activity.SCENARIOS,
         help="activity scenario for --with-activity (default: matched to --scenario)",
     )
+    parser.add_argument(
+        "--with-screen",
+        action="store_true",
+        help="also write phone screen time that stops at these bedtimes",
+    )
+    parser.add_argument(
+        "--screen-scenario",
+        choices=screen.SCENARIOS,
+        help="screen time scenario for --with-screen (default: matched to --scenario)",
+    )
     args = parser.parse_args(argv)
 
     from app.db import get_session
 
     start, end = common.period(args)
-    # nights() for HRV and activity must see the same schedule as the sessions, so always fix a seed
+    # nights() for HRV, activity and screen time must see the same schedule as the sessions,
+    # so always fix a seed
     seed = args.seed if args.seed is not None else random.randrange(2**32)
     schedule = nights(start, args.days, args.scenario, seed=seed)
     with get_session() as s:
@@ -330,6 +353,20 @@ def main(argv: list[str] | None = None) -> None:
                 seed=seed,
                 nights=schedule,
             )
+        if args.with_screen:
+            screen_scenario = args.screen_scenario or SCREEN_SCENARIO.get(
+                args.scenario, "stable_average"
+            )
+            n_screen = screen.simulate(
+                s,
+                user_id,
+                start,
+                args.days,
+                screen_scenario,
+                replace=not args.no_replace,
+                seed=seed,
+                nights=schedule,
+            )
     print(f"user {user_id}: wrote {n} sleep sessions ({args.scenario}, {start} .. {end})")
     if args.with_hrv:
         print(f"user {user_id}: wrote {n_hrv} heart samples ({hrv_scenario}, same nights)")
@@ -337,6 +374,10 @@ def main(argv: list[str] | None = None) -> None:
         print(
             f"user {user_id}: wrote {n_activity} activity samples "
             f"({activity_scenario}, same nights)"
+        )
+    if args.with_screen:
+        print(
+            f"user {user_id}: wrote {n_screen} screen time samples ({screen_scenario}, same nights)"
         )
 
 

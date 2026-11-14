@@ -21,6 +21,12 @@ def activity(user: PathUser, span: TimeRange, db: Db):
     return repo.activity_samples(db, user.id, *span)
 
 
+@router.get("/screen", response_model=list[schemas.ScreenSample])
+def screen(user: PathUser, span: TimeRange, db: Db):
+    """Phone screen time samples with start <= ts < end (at most 31 days)."""
+    return repo.screen_samples(db, user.id, *span)
+
+
 @router.get("/sleep", response_model=list[schemas.SleepSession])
 def sleep(user: PathUser, days: DayRange, db: Db):
     """Sleep sessions whose UTC wake day is in [start, end]."""

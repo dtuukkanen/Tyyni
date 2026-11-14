@@ -7,7 +7,8 @@ One containerized **PostgreSQL 16 + TimescaleDB** instance holds all data. Time 
 | Data | Shape | Storage |
 |---|---|---|
 | Heart rate + HRV (RMSSD) | high-frequency samples | hypertable `heart_samples` |
-| Steps, active minutes, screen time | per-minute/hour counts | hypertable `activity_samples` |
+| Steps, active minutes | per-minute/hour counts | hypertable `activity_samples` |
+| Phone screen time | minutes per interval | hypertable `screen_samples` (its own source: the phone, not the wearable) |
 | Sleep | one session per night | `sleep_sessions` (duration generated, stages in JSONB) |
 | Mood check-in (1 tap) | one value per day | `mood_checkins` (score 1–5, `source` tells simulated check-ins from ones made in the app) |
 | Feeling journal | free-text entries, Finnish or English | `journal_entries` (simulated entries carry ground-truth `expected_label` / `expected_risk`) |
@@ -75,6 +76,7 @@ Interactive docs are at <http://localhost:8000/docs>. A frontend can generate a 
 | `GET /users/{id}/baseline?day=&window=14` | Mean of each metric over the `window` days before `day` |
 | `GET /users/{id}/heart?start=&end=` | Raw HR + HRV samples in `[start, end)` (default: the last 24 h; at most 31 days) |
 | `GET /users/{id}/activity?start=&end=` | Raw activity samples, same range rules as `heart` |
+| `GET /users/{id}/screen?start=&end=` | Raw screen time samples, same range rules as `heart` |
 | `GET /users/{id}/sleep?start=&end=` | Sleep sessions by wake day, with `stages` and `efficiency` |
 | `GET /users/{id}/mood?start=&end=`, `POST /users/{id}/mood` | Check-ins; post `{"score": 1–5, "note"?, "ts"?}` |
 | `GET /users/{id}/journal?start=&end=`, `POST /users/{id}/journal` | Journal entries by UTC day; post `{"text": "...", "language"?: "fi"\|"en", "ts"?}` |
@@ -101,7 +103,7 @@ A rule fires when a metric is at least 2.5 spreads out *and* moves by at least i
 | `short_sleep` / `long_sleep` | Time in bed ≥ 90 min shorter / longer |
 | `sleep_shift` | Bedtime or wake time ≥ 1.5 h later |
 | `low_activity` | Steps ≥ 40 % fewer |
-| `screen_time` | Screen time ≥ 1 h more (not simulated yet, so it doesn't fire on simulated data) |
+| `screen_time` | Screen time ≥ 40 % more |
 | `low_mood` | The mood check-ins have dropped; see [below](#low-mood) |
 
 Each anomaly is one row per day and kind. `metric` / `value` / `baseline` hold the most deviating metric. `explanation` holds a `summary` ("HRV 31 ms vs usual 47 ms (-34 %); heart rate 76 bpm vs usual 64 bpm (+12 bpm)"), every `signal` that fired with its `z`, and `escalation`. An anomaly is `attention`, or `critical` when it is:
@@ -169,17 +171,18 @@ From Python: `hrv.generate(...)` returns rows without touching the DB; `hrv.simu
 - `--artifacts` drops about 10 % of the nights (watch off); the remaining nights are unchanged.
 - `--with-hrv` also writes HRV + heart rate whose night-time rise follows these exact nights (poorer nights restore less). The HRV scenario is matched to the sleep scenario (e.g. `stress_period` → `stress_period`, `short_night` → `sudden_drop`, otherwise `stable_average`); override it with `--hrv-scenario`.
 - `--with-activity` also writes [steps](#activity) that stop while asleep and follow these wake times. The activity scenario is matched the same way (`stable_good` → `stable_active`, `stable_poor` → `stable_sedentary`, `short_night` → `sudden_drop`, same name for `stress_period` / `oversleep` / `late_sleep_shift`, otherwise `stable_average`); override it with `--activity-scenario`.
+- `--with-screen` also writes [screen time](#screen-time) that stops at these bedtimes and follows these wake times. The screen time scenario is matched like the activity one (`stable_good` → `stable_light`, `stable_poor` → `stable_heavy`, `short_night` → `sudden_drop`, same name for `stress_period` / `oversleep` / `late_sleep_shift`, otherwise `stable_average`); override it with `--screen-scenario`.
 - `--seed` and `--no-replace` work as for HRV.
 
 ```bash
-docker compose run --rm migrate python -m app.simulators.sleep --new-user demo --scenario oversleep --days 21 --seed 1 --with-hrv --with-activity
+docker compose run --rm migrate python -m app.simulators.sleep --new-user demo --scenario oversleep --days 21 --seed 1 --with-hrv --with-activity --with-screen
 ```
 
 From Python: `sleep.generate(...)` returns session rows, `sleep.simulate(session, user_id, start, days, scenario, ...)` writes them, and `hrv.generate(..., nights=sleep.nights(start, days, scenario, seed=...))` lines HRV up with the same nights (`activity.generate(..., nights=...)` likewise).
 
 ### Activity
 
-[`backend/app/simulators/activity.py`](backend/app/simulators/activity.py) writes steps into `activity_samples` (one row per 15 min by default), tagged `simulator:activity:<scenario>`. Steps are simulated minute by minute: low-cadence incidental movement spread over the waking day, plus walks at ~110 steps/min — two commutes on weekdays (about 1 h and 10 h after waking), a midday walk on most weekend days, and sometimes an evening exercise walk. `active_minutes` counts the minutes with at least 100 steps (brisk walking); `screen_time_min` is not simulated and stays 0. Nobody walks while asleep: the nights are 23:00–07:00 UTC by default, or the real nights from the [sleep simulator](#sleep) when passed `nights=`, and the walks move with each day's wake time.
+[`backend/app/simulators/activity.py`](backend/app/simulators/activity.py) writes steps into `activity_samples` (one row per 15 min by default), tagged `simulator:activity:<scenario>`. Steps are simulated minute by minute: low-cadence incidental movement spread over the waking day, plus walks at ~110 steps/min — two commutes on weekdays (about 1 h and 10 h after waking), a midday walk on most weekend days, and sometimes an evening exercise walk. `active_minutes` counts the minutes with at least 100 steps (brisk walking); screen time has its [own simulator](#screen-time). Nobody walks while asleep: the nights are 23:00–07:00 UTC by default, or the real nights from the [sleep simulator](#sleep) when passed `nights=`, and the walks move with each day's wake time.
 
 | Scenario | What it produces |
 |---|---|
@@ -199,6 +202,31 @@ docker compose run --rm migrate python -m app.simulators.activity --new-user dem
 ```
 
 From Python: `activity.generate(...)` returns rows, `activity.simulate(session, user_id, start, days, scenario, ...)` writes them; pass `nights=sleep.nights(...)` to line the waking hours up with simulated sleep.
+
+### Screen time
+
+[`backend/app/simulators/screen.py`](backend/app/simulators/screen.py) writes phone screen time into `screen_samples` (minutes the screen was on, one row per 15 min by default), tagged `simulator:screen:<scenario>`. Screen time comes from the phone, not the wearable, so it has its own table; a rerun of the activity or screen simulator never touches the other's rows. Each day has a budget (the person's usual screen time, the scenario, a small weekend lift and day-to-day noise) spread over the waking day: a check in bed right after waking, a lunch bump, a rise through the evening and scrolling in bed in the hour before sleep. Minute by minute the screen is then on or off in sessions of about 2 minutes, so use comes in realistic bursts. Nobody uses the phone while asleep: the nights are 23:00–07:00 UTC by default, or the real nights from the [sleep simulator](#sleep) when passed `nights=`; minutes after midnight before a late bedtime still count as the previous evening.
+
+| Scenario | What it produces |
+|---|---|
+| `stable_light` / `stable_average` / `stable_heavy` | Steady ≈ 2 / 3.5 / 5.4 h a day |
+| `stress_period` | Same timeline as the HRV scenario: about +60 % while the stress holds (≈ 5.5 h), then recovers |
+| `withdrawal` | Same ramp as the activity scenario: rising to about double (≈ 7 h) by the end, the time steps were lost to |
+| `sudden_drop` | About +80 % on the HRV / activity `sudden_drop` day, recovering over ~3 days |
+| `late_sleep_shift` | The phone stays on as bedtime slips later (up to 3 h): more scrolling in bed, ≈ +25 % in total |
+| `oversleep` | Same ramp as the sleep scenario: lying in bed with the phone in the morning, ≈ +25 % in total |
+
+With the [`screen_time` rule](#anomaly-detection) (≥ 40 % more than usual), 100 seeds of 21 days give a `screen_time` anomaly in 0–9 % of stable runs (never critical), 93 % of `stress_period`, 91 % of `withdrawal` and every `sudden_drop` run. The rule is relative, like `low_activity`, because an absolute hour is noise for a heavy user and a big change for a light one.
+
+- `--interval` sets the minutes per row (must divide a day); daily totals don't depend on it.
+- `--artifacts` drops 1–3 h gaps on about half the days (phone off) and about 3 % of whole days; the remaining rows are unchanged.
+- `--seed` and `--no-replace` work as for HRV; replacing keeps screen time from a device (`source = 'device'`).
+
+```bash
+docker compose run --rm migrate python -m app.simulators.screen --new-user demo --scenario withdrawal --days 21 --seed 1
+```
+
+From Python: `screen.generate(...)` returns rows, `screen.simulate(session, user_id, start, days, scenario, ...)` writes them; pass `nights=sleep.nights(...)` to line the waking hours up with simulated sleep.
 
 ### Mood
 

@@ -1,4 +1,5 @@
-"""When the simulated user is asleep, shared by the HRV, activity and journal simulators.
+"""When the simulated user is asleep, shared by the HRV, activity,
+screen, mood and journal simulators.
 
 A schedule is either the built-in window (23:00-07:00 UTC, shifted later for
 late_sleep_shift) or real sleep sessions, e.g. from `sleep.nights(...)`. Time not covered by
