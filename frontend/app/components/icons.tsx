@@ -40,6 +40,8 @@ export type IconName =
   | "equalizer"
   | "phone"
   | "snowflake"
+  | "calendar"
+  | "arrowDown"
   | "close";
 
 type IconProps = SVGProps<SVGSVGElement> & {
@@ -391,6 +393,19 @@ export function Icon({ name, size = 20, className, ...props }: IconProps) {
         <svg {...common}>
           <path d="M12 3.5v17M4.6 7.8l14.8 8.4M19.4 7.8L4.6 16.2" />
           <path d="M10 5.2L12 7l2-1.8M10 18.8L12 17l2 1.8" />
+        </svg>
+      );
+    case "calendar":
+      return (
+        <svg {...common}>
+          <rect x="4" y="5.5" width="16" height="14.5" rx="2.5" />
+          <path d="M8 3.8v3.2M16 3.8v3.2M4 10h16" />
+        </svg>
+      );
+    case "arrowDown":
+      return (
+        <svg {...common}>
+          <path d="M12 5v14M6.5 13.5L12 19l5.5-5.5" />
         </svg>
       );
     case "close":
