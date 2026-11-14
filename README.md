@@ -2,7 +2,7 @@
 
 ## Database
 
-One containerized **PostgreSQL 16 + TimescaleDB** instance holds all data. Time series and relational data live side by side, so the inference logic can join heart rate, sleep, activity and mood in one query.
+One containerized **PostgreSQL 16 + TimescaleDB** instance holds all data locally; the hosted database is Neon (see [Neon](#neon)). Time series and relational data live side by side, so the inference logic can join heart rate, sleep, activity and mood in one query.
 
 | Data | Shape | Storage |
 |---|---|---|
@@ -35,6 +35,30 @@ docker compose run --rm --build migrate pytest -q
 Connect a SQL client (e.g. DataGrip) to `localhost:5432`, database `wellbeing`, user `wellbeing`, password `wellbeing`.
 
 Defaults are dev-only; copy `.env.example` to `.env` to change credentials or ports.
+
+### Neon
+
+The hosted database is the Neon project `tyyni-db` (Free plan, PostgreSQL 18, `aws-eu-central-1` Frankfurt). Its `production` branch holds the data; the Neon–Vercel integration also created a `vercel-dev` branch and put `DATABASE_URL` / `DATABASE_URL_UNPOOLED` in the Vercel project. The Free plan never bills: when its monthly compute or network transfer allowance runs out, the compute is suspended until the next month.
+
+Neon's TimescaleDB is the Apache-licensed build: hypertables work, continuous aggregates don't. The migrations check what the server offers, so the same history runs everywhere:
+
+| Server | Sample tables | Continuous aggregates (dropped again in `0002`) |
+|---|---|---|
+| Local `timescale/timescaledb` image | hypertables | created |
+| Neon | hypertables | skipped |
+| PostgreSQL without TimescaleDB | plain tables (`test_hypertables_exist` is skipped) | skipped |
+
+Run migrations against Neon over the **direct** connection string (no `-pooler` in the host); the pooled one goes through PgBouncer, which breaks session state that migrations rely on. Try a migration on a throwaway branch first:
+
+```bash
+neon branches create --project-id young-waterfall-75387175 --name migration-test --parent production
+URL=$(neon connection-string --project-id young-waterfall-75387175 --branch migration-test \
+  --database-name neondb | sed 's#^postgresql://#postgresql+psycopg://#')
+docker compose run --rm --no-deps -e DATABASE_URL="$URL" migrate      # or: ... migrate pytest -q
+neon branches delete migration-test --project-id young-waterfall-75387175
+```
+
+Use `--branch production` for the real database. Application traffic (the API) should use the pooled string (`neon connection-string --pooled`).
 
 ### Using it from Python
 

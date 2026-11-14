@@ -1,11 +1,16 @@
 """Initial schema: TimescaleDB hypertables for HR/HRV and activity, relational tables for the rest.
 
+Servers without TimescaleDB get the same tables as plain Postgres tables. Continuous aggregates need
+the Timescale-licensed build, which Neon's Apache-licensed TimescaleDB lacks, so they are skipped
+there; 0002 drops them anyway and daily values are aggregated on read.
+
 Revision ID: 0001
 Revises:
 Create Date: 2026-11-13
 """
 
 from alembic import op
+from sqlalchemy import text
 
 revision = "0001"
 down_revision = None
@@ -14,8 +19,6 @@ depends_on = None
 
 
 TABLES = """
-CREATE EXTENSION IF NOT EXISTS timescaledb;
-
 CREATE TABLE users (
     id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     display_name text NOT NULL,
@@ -23,7 +26,7 @@ CREATE TABLE users (
     created_at   timestamptz NOT NULL DEFAULT now()
 );
 
--- High-frequency streams -> hypertables -------------------------------------------
+-- High-frequency streams (hypertables) -------------------------------------------
 CREATE TABLE heart_samples (
     user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     ts           timestamptz NOT NULL,
@@ -32,7 +35,6 @@ CREATE TABLE heart_samples (
     source       text NOT NULL DEFAULT 'device',
     PRIMARY KEY (user_id, ts)
 );
-SELECT create_hypertable('heart_samples', by_range('ts', INTERVAL '7 days'));
 
 CREATE TABLE activity_samples (
     user_id         uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -43,7 +45,6 @@ CREATE TABLE activity_samples (
     source          text NOT NULL DEFAULT 'device',
     PRIMARY KEY (user_id, ts)
 );
-SELECT create_hypertable('activity_samples', by_range('ts', INTERVAL '7 days'));
 
 -- Sessions / events ----------------------------------------------------------------
 CREATE TABLE sleep_sessions (
@@ -180,8 +181,30 @@ CAGGS = [
 ]
 
 
+HYPERTABLES = """
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+SELECT create_hypertable('heart_samples', by_range('ts', INTERVAL '7 days'));
+SELECT create_hypertable('activity_samples', by_range('ts', INTERVAL '7 days'));
+"""
+
+
+def _timescale_available() -> bool:
+    query = text("SELECT 1 FROM pg_available_extensions WHERE name = 'timescaledb'")
+    return op.get_bind().execute(query).first() is not None
+
+
+def _timescale_licensed() -> bool:
+    query = text("SELECT current_setting('timescaledb.license', true)")
+    return op.get_bind().execute(query).scalar() == "timescale"
+
+
 def upgrade() -> None:
     op.execute(TABLES)
+    if not _timescale_available():
+        return
+    op.execute(HYPERTABLES)
+    if not _timescale_licensed():
+        return
     with op.get_context().autocommit_block():
         for stmt in CAGGS:
             op.execute(stmt)
