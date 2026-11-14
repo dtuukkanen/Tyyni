@@ -11,6 +11,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  applicationName: "Tyyni",
   title: "Tyyni — Calming Somatic Sanctuary",
   description:
     "A gentle nervous-system companion for daily grounding, quiet micro-victories, and somatic anchors.",
@@ -19,11 +20,15 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Tyyni",
   },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
   themeColor: "#fbf9f6",
 };
 

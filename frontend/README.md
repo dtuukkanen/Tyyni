@@ -7,6 +7,7 @@ Includes four interactive sections switchable from the bottom navigation:
 - **Ground**: Guided Box Breathing & Somatic Rhythm Pacer, synthesized Web Audio Sound Sanctuary, Nearby Nature sanctuary view, Body Scan, Mat Stretch, Slow Walk, and 1-Tap SOS Breathing.
 - **Wins**: Today’s Sanctuary Jar, one-tap micro-victory suggestions, custom quiet win logging, and Recent Gentle Moments.
 - **Anchor**: Interactive 5–4–3–2–1 Sensory Reset walkthrough, personal somatic anchors, rhythmic grounding phrase counter with spoken audio, 24–30Hz vibroacoustic brown noise, and Emergency Tether support.
+- **PWA & Offline Ready**: Web App Manifest (`app/manifest.ts`) with custom Bloomie icons (`192x192`, `512x512`, `maskable`, and `180x180` Apple touch icon), home-screen shortcuts (`SOS Calm`, `Ground`, `Anchor`), safe-area standalone framing, and a Service Worker (`public/sw.js`) that caches the Sanctuary app shell and static assets for offline grounding.
 
 ## Run locally
 
