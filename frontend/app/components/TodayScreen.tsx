@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ResolvedBehavioralNudge } from "../data/behavioralNudges";
 import {
   CIRCLE_MEMBERS,
+  LOW_ENERGY_STEPS,
   MOOD_OPTIONS,
   STEP_ICONS,
 } from "../data/sanctuaryData";
@@ -12,6 +13,57 @@ import { Icon } from "./icons";
 import { GROWTH_STAGE_NAMES, type GrowthStage } from "./useBloomieGrowth";
 
 const NO_NUDGES: ResolvedBehavioralNudge[] = [];
+
+/** Short first-person lines Bloomie says, matched to how the user arrived. */
+const BLOOMIE_LINES: Record<string, string[]> = {
+  lowEnergy: [
+    "I’m resting with you. Nothing needs to grow today.",
+    "Slow is still growing. I’ll keep watch.",
+    "Roots do their best work in the quiet.",
+  ],
+  Tired: [
+    "Tired roots still hold. Rest is welcome here.",
+    "Let’s both take it slow today.",
+    "I’ll stay close while you recharge.",
+  ],
+  Tender: [
+    "I’m leaning in close. Go gently today.",
+    "Soft petals are still petals.",
+    "You don’t have to be okay to be here with me.",
+  ],
+  Steady: [
+    "Steady soil is all I need.",
+    "Quiet days help roots grow deep.",
+    "I like growing next to you.",
+  ],
+  Light: [
+    "I’m soaking up the sun with you.",
+    "Look, a new leaf. Today feels open.",
+    "Let’s enjoy this lightness together.",
+  ],
+};
+
+function bloomieLine(
+  mood: string,
+  lowEnergy: boolean,
+  tended: number,
+  index: number,
+  stage: GrowthStage,
+) {
+  const pool =
+    BLOOMIE_LINES[lowEnergy ? "lowEnergy" : mood] ?? BLOOMIE_LINES.Steady;
+  // Bloomie speaks to its growth first: thirsty, then tended steps, then bloom.
+  const first =
+    lowEnergy || stage === 1
+      ? tended > 0 && !lowEnergy
+        ? `${tended} tiny step${tended === 1 ? "" : "s"} tended. I can feel it in my roots.`
+        : null
+      : stage === 0
+        ? "I’m a little thirsty. One tiny step would perk me up."
+        : "Everything’s tended. I’m in full bloom!";
+  const lines = first ? [first, ...pool] : pool;
+  return lines[index % lines.length];
+}
 
 type TodayScreenProps = {
   guestName: string;
@@ -30,6 +82,13 @@ type TodayScreenProps = {
   checked: number[];
   onToggleStep: (index: number) => void;
   onAddStep: (label: string) => void;
+  restChecked: number[];
+  onToggleRestStep: (index: number) => void;
+  lowEnergySoundOn: boolean;
+  onToggleLowEnergySound: () => void;
+  onStartSlowExhale: () => void;
+  restingShared: boolean;
+  onShareResting: () => void;
   waveSent: boolean;
   onSendWave: () => void;
   growthStage: GrowthStage;
@@ -39,6 +98,8 @@ type TodayScreenProps = {
   growthPreview: boolean;
   isGrowing: boolean;
   isSettling: boolean;
+  warmthSentTo: string[];
+  onSendWarmth: (name: string) => void;
   onInteractCompanion: () => void;
 };
 
@@ -59,6 +120,13 @@ export function TodayScreen({
   checked,
   onToggleStep,
   onAddStep,
+  restChecked,
+  onToggleRestStep,
+  lowEnergySoundOn,
+  onToggleLowEnergySound,
+  onStartSlowExhale,
+  restingShared,
+  onShareResting,
   waveSent,
   onSendWave,
   growthStage,
@@ -67,39 +135,53 @@ export function TodayScreen({
   growthPreview,
   isGrowing,
   isSettling,
+  warmthSentTo,
+  onSendWarmth,
   onInteractCompanion,
 }: TodayScreenProps) {
   const [addingStep, setAddingStep] = useState(false);
   const [newStep, setNewStep] = useState("");
+  const [bloomieIndex, setBloomieIndex] = useState(0);
+  const [moodInfoOpen, setMoodInfoOpen] = useState(false);
+  const moodInfoRef = useRef<HTMLDivElement>(null);
 
-  const selectedMood =
-    MOOD_OPTIONS.find((m) => m.id === mood) ?? MOOD_OPTIONS[2];
-  const visibleSteps = lowEnergy ? steps.slice(0, 1) : steps;
+  useEffect(() => {
+    if (!moodInfoOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMoodInfoOpen(false);
+    };
+    const onPointerDown = (e: PointerEvent) => {
+      if (!moodInfoRef.current?.contains(e.target as Node)) {
+        setMoodInfoOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [moodInfoOpen]);
+
+  const tended = checked.filter((i) => i < steps.length).length;
+  const shownSteps = Math.min(steps.length, 5);
+  const checkedInCount = CIRCLE_MEMBERS.filter((p) => p.feeling).length;
 
   const activeNudge =
     behavioralNudges.length > 0
       ? behavioralNudges[activeNudgeIndex % behavioralNudges.length]
       : null;
 
-  const companionSubtitle = lowEnergy
-    ? "Resting quietly with you · Soft sanctuary"
-    : growthStage === 0
-      ? "A little thirsty · One tiny step perks me up"
-      : mood === "Tired"
-        ? "Keeping gentle watch · Rest-ready"
-        : mood === "Tender"
-          ? "Holding soft space · Gently rooted"
-          : mood === "Light"
-            ? "Basking in warm breeze · Radiating calm"
-            : "Nurtured by your presence · Thriving & Calmed";
-
+  const isResting = lowEnergy && growthDone === 0 && !growthPreview;
   const growthLine = growthPreview
     ? "Previewing from settings · pick Live to use your steps."
-    : growthStage === 0
-      ? "Check off a tiny step to perk Bloomie up."
-      : growthStage === 1
-        ? `${growthDone} of ${growthTotal} done · every bit helps.`
-        : "Everything’s done — enjoy the bloom.";
+    : isResting
+      ? "Resting with you · nothing needs to grow today."
+      : growthStage === 0
+        ? "Check off a tiny step to perk Bloomie up."
+        : growthStage === 1
+          ? `${growthDone} of ${growthTotal} done · every bit helps.`
+          : "Everything’s done — enjoy the bloom.";
 
   function handleStepSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -124,10 +206,68 @@ export function TodayScreen({
 
           <div
             className={`hero-greeting-card ${
-              activeNudge ? "has-behavioral-nudge" : ""
-            }`}
+              activeNudge || lowEnergy ? "has-behavioral-nudge" : ""
+            } ${lowEnergy ? "is-low-energy-card" : ""}`}
           >
-            {activeNudge ? (
+            {lowEnergy ? (
+              <>
+                <span className="nudge-badge nudge-tone-moss">
+                  <Icon name="lowEnergy" size={12} />
+                  <span>Low-energy mode</span>
+                </span>
+                <h1 className="hero-title">
+                  Running low is okay, {guestName}.
+                </h1>
+                <p className="hero-subtitle">
+                  Tyyni has gone quiet: fewer choices, slower motion. Pick one
+                  thing, or simply rest.
+                </p>
+                <div className="rest-support-grid">
+                  <button
+                    type="button"
+                    className="rest-support-btn"
+                    onClick={onStartSlowExhale}
+                  >
+                    <Icon name="air" size={18} />
+                    <span className="rest-support-label">Slow exhale</span>
+                    <span className="rest-support-hint">1 minute</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`rest-support-btn ${
+                      lowEnergySoundOn ? "is-on" : ""
+                    }`}
+                    aria-pressed={lowEnergySoundOn}
+                    onClick={onToggleLowEnergySound}
+                  >
+                    <Icon
+                      name={lowEnergySoundOn ? "pause" : "waves"}
+                      size={18}
+                    />
+                    <span className="rest-support-label">Soft noise</span>
+                    <span className="rest-support-hint">
+                      {lowEnergySoundOn ? "Playing" : "Mutes the day"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`rest-support-btn ${
+                      restingShared ? "is-on" : ""
+                    }`}
+                    aria-pressed={restingShared}
+                    onClick={onShareResting}
+                  >
+                    <Icon name={restingShared ? "check" : "users"} size={18} />
+                    <span className="rest-support-label">
+                      {restingShared ? "Circle knows" : "I’m resting"}
+                    </span>
+                    <span className="rest-support-hint">
+                      {restingShared ? "No replies expected" : "Tell my circle"}
+                    </span>
+                  </button>
+                </div>
+              </>
+            ) : activeNudge ? (
               <>
                 <div className="nudge-top-row">
                   <span
@@ -208,17 +348,6 @@ export function TodayScreen({
               </>
             )}
           </div>
-
-          {lowEnergy && (
-            <div className="low-energy-banner" role="status">
-              <Icon name="spa" size={20} />
-              <div>
-                <strong>Low-energy sanctuary is active</strong>
-                Everything extra has stepped aside. Focusing on one gentle step
-                — or resting completely — is enough.
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Open Scenic Window for Bloomie, with Status Pill Resting Below the Pot */}
@@ -226,22 +355,45 @@ export function TodayScreen({
           <button
             type="button"
             className="companion-status-pill"
-            onClick={onInteractCompanion}
+            aria-label="Bloomie, your companion. Tap to hear from Bloomie."
+            onClick={() => {
+              setBloomieIndex((i) => i + 1);
+              onInteractCompanion();
+            }}
           >
             <span className="companion-status-orb">
-              <Icon name="spa" size={16} />
+              <Icon name="sprout" size={16} />
             </span>
             <span className="companion-status-copy">
               <span className="companion-status-title-row">
-                <span className="companion-status-title">
-                  {guestName}’s Companion: Bloomie
-                </span>
-                <span className="companion-pulse-dot" aria-hidden="true" />
-                <span className="companion-stage-chip" aria-live="polite">
-                  {GROWTH_STAGE_NAMES[growthStage]}
-                </span>
+                <span className="companion-status-title">Bloomie</span>
+                {shownSteps > 0 && !lowEnergy && (
+                  <span
+                    className="bloomie-leaf-meter"
+                    role="img"
+                    aria-label={`${tended} of ${steps.length} tiny steps tended`}
+                  >
+                    {Array.from({ length: shownSteps }, (_, i) => (
+                      <span
+                        // oxlint-disable-next-line react/no-array-index-key -- fixed-length meter
+                        key={i}
+                        className={`bloomie-leaf ${i < tended ? "is-grown" : ""}`}
+                      />
+                    ))}
+                  </span>
+                )}
               </span>
-              <span className="companion-status-sub">{companionSubtitle}</span>
+              <span className="companion-status-sub" aria-live="polite">
+                “
+                {bloomieLine(
+                  mood,
+                  lowEnergy,
+                  tended,
+                  bloomieIndex,
+                  growthStage,
+                )}
+                ”
+              </span>
             </span>
           </button>
         </div>
@@ -249,16 +401,49 @@ export function TodayScreen({
         {/* Bottom of Hero Fold: Somatic Arrival Check-In & Scroll Cue */}
         <div className="today-checkin-dock">
           <section className="section-block" aria-labelledby="checkin-heading">
-            <div className="section-header-row">
+            <div className="checkin-heading-row" ref={moodInfoRef}>
               <h2
                 id="checkin-heading"
                 className="section-label checkin-frosted-heading"
               >
                 How are you arriving today?
               </h2>
-              <span className="mood-selected-badge">
-                {selectedMood.label} selected
-              </span>
+              <button
+                type="button"
+                className="mood-info-btn"
+                aria-label="What do these feelings mean?"
+                aria-expanded={moodInfoOpen}
+                aria-controls="mood-info-panel"
+                onClick={() => setMoodInfoOpen((v) => !v)}
+              >
+                <Icon name="info" size={16} />
+              </button>
+
+              {moodInfoOpen && (
+                <div
+                  id="mood-info-panel"
+                  className="mood-info-popover"
+                  role="dialog"
+                  aria-label="What the feelings mean"
+                >
+                  <ul className="mood-info-list">
+                    {MOOD_OPTIONS.map((option) => (
+                      <li key={option.id} className="mood-info-item">
+                        <span className="mood-icon-wrap">
+                          <Icon name={option.icon} size={14} />
+                        </span>
+                        <span>
+                          <strong>{option.label}</strong> · {option.meaning}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mood-info-foot">
+                    There’s no wrong answer. It helps Tyyni and Bloomie meet you
+                    where you are.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div
@@ -286,14 +471,6 @@ export function TodayScreen({
                 );
               })}
             </div>
-
-            <p
-              className="mood-response mood-response-frosted"
-              aria-live="polite"
-            >
-              <Icon name="checkCircle" size={16} />
-              <span>{selectedMood.response}</span>
-            </p>
           </section>
 
           <div className="scroll-cue-row">
@@ -311,12 +488,18 @@ export function TodayScreen({
           className="section-block frosted-section-card"
           aria-labelledby="tiny-steps-heading"
         >
-          <div className="section-header-row">
+          <div className="section-header-stack">
             <h2 id="tiny-steps-heading" className="section-label">
-              <span>Tiny Steps for Today</span>
+              <span>
+                {lowEnergy ? "Just the Basics" : "Tiny Steps for Today"}
+              </span>
               <span className="status-dot" aria-hidden="true" />
             </h2>
-            <span className="section-meta">No streaks · No penalties</span>
+            <span className="section-meta">
+              {lowEnergy
+                ? "Basic needs first. Everything else can wait."
+                : "No streaks · No penalties"}
+            </span>
           </div>
 
           {/* Live mini Bloomie, visible while checking steps off */}
@@ -331,48 +514,70 @@ export function TodayScreen({
             />
             <div className="bloomie-steps-copy" aria-live="polite">
               <strong>
-                Bloomie is {GROWTH_STAGE_NAMES[growthStage].toLowerCase()}
+                Bloomie is{" "}
+                {isResting
+                  ? "resting"
+                  : GROWTH_STAGE_NAMES[growthStage].toLowerCase()}
               </strong>
               <span>{growthLine}</span>
             </div>
           </div>
 
           <div className="steps-stack">
-            {visibleSteps.map((step, index) => {
-              const isDone = checked.includes(index);
-              const iconName = STEP_ICONS[index % STEP_ICONS.length];
-              return (
-                <button
-                  // oxlint-disable-next-line react/no-array-index-key -- steps are plain strings and may repeat
-                  key={`${step}-${index}`}
-                  type="button"
-                  className={`step-card ${isDone ? "is-done" : ""}`}
-                  aria-pressed={isDone}
-                  onClick={() => onToggleStep(index)}
-                >
-                  <span className="step-check">
-                    <Icon name="check" size={16} />
-                  </span>
-                  <span className="step-text">{step}</span>
-                  <span className="step-trailing-icon">
-                    <Icon name={iconName} size={20} />
-                  </span>
-                </button>
-              );
-            })}
+            {lowEnergy
+              ? LOW_ENERGY_STEPS.map((step, index) => {
+                  const isDone = restChecked.includes(index);
+                  return (
+                    <button
+                      key={step.label}
+                      type="button"
+                      className={`step-card ${isDone ? "is-done" : ""}`}
+                      aria-pressed={isDone}
+                      onClick={() => onToggleRestStep(index)}
+                    >
+                      <span className="step-check">
+                        <Icon name="check" size={16} />
+                      </span>
+                      <span className="step-text">{step.label}</span>
+                      <span className="step-trailing-icon">
+                        <Icon name={step.icon} size={20} />
+                      </span>
+                    </button>
+                  );
+                })
+              : steps.map((step, index) => {
+                  const isDone = checked.includes(index);
+                  const iconName = STEP_ICONS[index % STEP_ICONS.length];
+                  return (
+                    <button
+                      // oxlint-disable-next-line react/no-array-index-key -- steps are plain strings and may repeat
+                      key={`${step}-${index}`}
+                      type="button"
+                      className={`step-card ${isDone ? "is-done" : ""}`}
+                      aria-pressed={isDone}
+                      onClick={() => onToggleStep(index)}
+                    >
+                      <span className="step-check">
+                        <Icon name="check" size={16} />
+                      </span>
+                      <span className="step-text">{step}</span>
+                      <span className="step-trailing-icon">
+                        <Icon name={iconName} size={20} />
+                      </span>
+                    </button>
+                  );
+                })}
           </div>
 
-          {lowEnergy && steps.length > 1 && (
+          {lowEnergy ? (
             <button
               type="button"
               className="soft-add-trigger"
               onClick={onExitLowEnergy}
             >
-              <span>Show {steps.length - 1} more optional steps</span>
+              <span>I have a bit more energy: show my usual steps</span>
             </button>
-          )}
-
-          {!addingStep ? (
+          ) : !addingStep ? (
             <button
               type="button"
               className="soft-add-trigger"
@@ -417,36 +622,87 @@ export function TodayScreen({
               <Icon name="users" size={19} />
               <span>Gentle Circle</span>
             </h2>
-            <span className="section-meta">3 checked in today</span>
+            <span className="section-meta">
+              {checkedInCount} checked in today
+            </span>
           </div>
 
           <p className="circle-subcopy">
             Quietly present together. No pressure, just mutual care.
           </p>
 
-          <div className="circle-grid">
-            {CIRCLE_MEMBERS.map((person) => (
-              <div key={person.name} className="member-card">
-                <div className="member-avatar-wrap">
+          <ul className="circle-list">
+            {restingShared && (
+              <li className="member-row is-self">
+                <div className={`member-avatar tone-linen`}>
+                  {guestName.charAt(0)}
+                </div>
+                <div className="member-copy">
+                  <span className="member-line">
+                    <span className="member-name">You</span>
+                    <span className="member-feeling is-resting">
+                      <Icon name="moon" size={12} />
+                      <span>Resting</span>
+                    </span>
+                  </span>
+                  <span className="member-note">
+                    Your circle knows. No replies expected.
+                  </span>
+                </div>
+              </li>
+            )}
+            {CIRCLE_MEMBERS.map((person) => {
+              const feeling = MOOD_OPTIONS.find((m) => m.id === person.feeling);
+              const warmthSent = warmthSentTo.includes(person.name);
+              return (
+                <li key={person.name} className="member-row">
                   <div className={`member-avatar ${person.tone}`}>
                     {person.initial}
                   </div>
-                  {person.done && (
-                    <span className="member-badge" aria-hidden="true">
-                      <Icon name="check" size={11} />
+                  <div className="member-copy">
+                    <span className="member-line">
+                      <span className="member-name">{person.name}</span>
+                      {feeling ? (
+                        <span
+                          className={`member-feeling feeling-${feeling.id.toLowerCase()}`}
+                        >
+                          <Icon name={feeling.icon} size={12} />
+                          <span>Feeling {feeling.label.toLowerCase()}</span>
+                        </span>
+                      ) : (
+                        <span className="member-feeling is-resting">
+                          <Icon name="moon" size={12} />
+                          <span>Resting</span>
+                        </span>
+                      )}
                     </span>
-                  )}
-                </div>
-                <span className="member-name">{person.name}</span>
-                <span
-                  className={`member-status ${person.done ? "is-done" : ""}`}
-                >
-                  {person.done && <Icon name="checkCircle" size={12} />}
-                  <span>{person.status}</span>
-                </span>
-              </div>
-            ))}
-          </div>
+                    <span className="member-note">
+                      {person.note}
+                      {person.when && (
+                        <span className="member-when"> · {person.when}</span>
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`member-warmth-btn ${warmthSent ? "is-sent" : ""}`}
+                    aria-pressed={warmthSent}
+                    aria-label={
+                      warmthSent
+                        ? `Warmth sent to ${person.name}`
+                        : `Send warmth to ${person.name}`
+                    }
+                    onClick={() => onSendWarmth(person.name)}
+                  >
+                    <Icon
+                      name={warmthSent ? "heartFilled" : "heart"}
+                      size={17}
+                    />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
 
           <button
             type="button"
@@ -454,7 +710,11 @@ export function TodayScreen({
             onClick={onSendWave}
           >
             <Icon name="wave" size={17} />
-            <span>{waveSent ? "Gentle wave sent" : "Send a gentle wave"}</span>
+            <span>
+              {waveSent
+                ? "Gentle wave sent to everyone"
+                : "Send everyone a gentle wave"}
+            </span>
           </button>
         </section>
       </div>

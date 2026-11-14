@@ -1404,7 +1404,7 @@ function Leaf({
           style={{ "--droop": `${droop}deg` } as CSSProperties}
         >
           <path
-            className={`bloomie-leaf tone-${leaf.tone}`}
+            className={`bloomie-blade tone-${leaf.tone}`}
             d="M 0 0 C 5 -9, 17 -11, 26 0 C 17 11, 5 9, 0 0 Z"
             strokeWidth="2.2"
             strokeLinejoin="round"

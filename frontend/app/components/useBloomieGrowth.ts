@@ -7,7 +7,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * the wins logged in the Sanctuary Jar, each win counting as one more done
  * task. Nothing done is Thirsty, some done is Perking up, everything done is
  * Flourishing. Moving up plays the celebration (with a toast); unchecking a
- * step moves Bloomie back down.
+ * step moves Bloomie back down. `floor` keeps Bloomie from dropping below a
+ * state (low-energy mode rests at Perking up: nothing needs to grow today).
  *
  * Demo overrides: `?growth=0..2` pins a state and `?growth=play` goes from
  * Thirsty to Flourishing on a timer, for screen recordings. The same overrides
@@ -50,11 +51,14 @@ function readOverride(): BloomieDemo {
 export function useBloomieGrowth({
   doneTasks,
   totalTasks,
+  floor = 0,
   dataReady,
   onStageUp,
 }: {
   doneTasks: number;
   totalTasks: number;
+  /** The lowest state Bloomie shows, whatever is done. */
+  floor?: GrowthStage;
   /** Whether the page's initial data (steps) has arrived. */
   dataReady: boolean;
   onStageUp?: (stage: GrowthStage) => void;
@@ -68,16 +72,21 @@ export function useBloomieGrowth({
   const overrideRef = useRef<BloomieDemo>(null);
   const stageRef = useRef<GrowthStage>(0);
   const onStageUpRef = useRef(onStageUp);
+  const floorRef = useRef(floor);
   const growTimerRef = useRef<number | null>(null);
   const playTimerRef = useRef<number | null>(null);
 
-  const liveStage = stageFor(doneTasks, totalTasks);
+  const liveStage = Math.max(
+    floor,
+    stageFor(doneTasks, totalTasks),
+  ) as GrowthStage;
   const stage: GrowthStage =
     override === "play" ? playStage : override !== null ? override : liveStage;
 
   useEffect(() => {
     stageRef.current = stage;
     onStageUpRef.current = onStageUp;
+    floorRef.current = floor;
   });
 
   const celebrate = useCallback((to: GrowthStage, announce: boolean) => {
@@ -142,7 +151,10 @@ export function useBloomieGrowth({
   const tasksChanged = useCallback(
     (nextDone: number, nextTotal: number) => {
       if (overrideRef.current !== null) return;
-      const to = stageFor(nextDone, nextTotal);
+      const to = Math.max(
+        floorRef.current,
+        stageFor(nextDone, nextTotal),
+      ) as GrowthStage;
       if (to > stageRef.current) celebrate(to, true);
     },
     [celebrate],

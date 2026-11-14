@@ -27,6 +27,8 @@ import {
   type AnchorItem,
   type DashboardData,
   INITIAL_ANCHORS,
+  LOW_ENERGY_BREATH,
+  LOW_ENERGY_STEPS,
   type PracticeModalState,
   STARTER_STEPS,
   STARTER_WINS,
@@ -45,6 +47,9 @@ export default function Home() {
   const [steps, setSteps] = useState<string[]>(STARTER_STEPS);
   const [checked, setChecked] = useState<number[]>([]);
   const [waveSent, setWaveSent] = useState(false);
+  const [warmthSentTo, setWarmthSentTo] = useState<string[]>([]);
+  const [restChecked, setRestChecked] = useState<number[]>([]);
+  const [restingShared, setRestingShared] = useState(false);
   const [bloomieCelebrating, setBloomieCelebrating] = useState(false);
 
   const [backendSuggestions, setBackendSuggestions] = useState<
@@ -170,9 +175,16 @@ export default function Home() {
     [notify],
   );
 
+  // Bloomie follows the checklist on screen (Just the Basics in low-energy
+  // mode) plus logged wins; resting in low-energy mode never looks thirsty.
+  const doneTasks =
+    (lowEnergy ? restChecked.length : checked.length) + winsLogged;
+  const totalTasks =
+    (lowEnergy ? LOW_ENERGY_STEPS.length : steps.length) + winsLogged;
   const growth = useBloomieGrowth({
-    doneTasks: checked.length + winsLogged,
-    totalTasks: steps.length + winsLogged,
+    doneTasks,
+    totalTasks,
+    floor: lowEnergy ? 1 : 0,
     dataReady,
     onStageUp: announceGrowth,
   });
@@ -239,6 +251,27 @@ export default function Home() {
     setChecked(nextChecked);
   }
 
+  function toggleLowEnergy() {
+    if (!lowEnergy) {
+      notify("Low-energy mode: fewer choices, slower motion.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    setLowEnergy(!lowEnergy);
+  }
+
+  function toggleRestStep(index: number) {
+    const isCompleting = !restChecked.includes(index);
+    const nextRest = isCompleting
+      ? [...restChecked, index]
+      : restChecked.filter((i) => i !== index);
+    growth.tasksChanged(
+      nextRest.length + winsLogged,
+      LOW_ENERGY_STEPS.length + winsLogged,
+    );
+    if (isCompleting) triggerBloomieJoy();
+    setRestChecked(nextRest);
+  }
+
   function handleAddStep(trimmed: string) {
     setSteps((prev) => [...prev, trimmed]);
     triggerBloomieJoy();
@@ -250,10 +283,7 @@ export default function Home() {
     if (!trimmed) return;
     setWins((prev) => [trimmed, ...prev]);
     setWinsLogged(winsLogged + 1);
-    growth.tasksChanged(
-      checked.length + winsLogged + 1,
-      steps.length + winsLogged + 1,
-    );
+    growth.tasksChanged(doneTasks + 1, totalTasks + 1);
     notify(`Placed “${trimmed}” in your Sanctuary Jar.`);
   }
 
@@ -373,7 +403,11 @@ export default function Home() {
   const closeModal = useCallback(() => setModal(null), []);
 
   return (
-    <div className={`tyyni-shell ${tab === "Today" ? "is-today-world" : ""}`}>
+    <div
+      className={`tyyni-shell ${tab === "Today" ? "is-today-world" : ""} ${
+        lowEnergy ? "is-low-energy" : ""
+      }`}
+    >
       {tab === "Today" && (
         <CompanionWorld
           mood={mood}
@@ -389,15 +423,12 @@ export default function Home() {
       <header className="topbar">
         <div className="brand-group">
           <TyyniLogo size={32} />
-          <div className="brand-stack">
-            <div className="brand-text">
-              <span className="brand-title">Tyyni</span>
-              <span className="brand-sep" aria-hidden="true">
-                •
-              </span>
-              <span className="brand-section">{tab.toUpperCase()}</span>
-            </div>
-            <span className="brand-sub">Sanctuary</span>
+          <div className="brand-text">
+            <span className="brand-title">Tyyni</span>
+            <span className="brand-sep" aria-hidden="true">
+              •
+            </span>
+            <span className="brand-section">{tab.toUpperCase()}</span>
           </div>
         </div>
 
@@ -431,7 +462,7 @@ export default function Home() {
             type="button"
             className={`low-energy-top-btn ${lowEnergy ? "is-active" : ""}`}
             aria-pressed={lowEnergy}
-            onClick={() => setLowEnergy((v) => !v)}
+            onClick={toggleLowEnergy}
           >
             <Icon name="lowEnergy" size={14} />
             <span>Low-Energy</span>
@@ -473,22 +504,39 @@ export default function Home() {
           checked={checked}
           onToggleStep={toggleStep}
           onAddStep={handleAddStep}
+          restChecked={restChecked}
+          onToggleRestStep={toggleRestStep}
+          lowEnergySoundOn={activeSound === "purr"}
+          onToggleLowEnergySound={() =>
+            handleSoundToggle("purr", "soft brown noise")
+          }
+          onStartSlowExhale={() => setModal(LOW_ENERGY_BREATH)}
+          restingShared={restingShared}
+          onShareResting={() => {
+            if (restingShared) return;
+            setRestingShared(true);
+            notify("Your circle knows you’re resting. No replies expected.");
+          }}
           waveSent={waveSent}
           onSendWave={() => {
             setWaveSent(true);
             triggerBloomieJoy();
-            notify("Sent a quiet wave to Liam, Maya, Sofia, and Marcus.");
+            notify("Sent a quiet wave to Liam, Maya, Marcus, and Sofia.");
+          }}
+          warmthSentTo={warmthSentTo}
+          onSendWarmth={(name) => {
+            if (warmthSentTo.includes(name)) return;
+            setWarmthSentTo((prev) => [...prev, name]);
+            triggerBloomieJoy();
+            notify(`${name} will see a little warmth from you.`);
           }}
           growthStage={growth.stage}
-          growthDone={checked.length + winsLogged}
-          growthTotal={steps.length + winsLogged}
+          growthDone={doneTasks}
+          growthTotal={totalTasks}
           growthPreview={growth.demo !== null}
           isGrowing={growth.isGrowing}
           isSettling={growth.isSettling}
-          onInteractCompanion={() => {
-            triggerBloomieJoy();
-            notify("Bloomie sways happily in the gentle breeze with you.");
-          }}
+          onInteractCompanion={triggerBloomieJoy}
         />
       )}
 
@@ -561,7 +609,7 @@ export default function Home() {
         <PwaSanctuarySheet
           guestName={guestName}
           lowEnergy={lowEnergy}
-          onToggleLowEnergy={() => setLowEnergy((v) => !v)}
+          onToggleLowEnergy={toggleLowEnergy}
           demoNudgeKey={demoNudgeKey}
           onSelectDemoNudge={(key) => {
             setDemoNudgeKey(key);

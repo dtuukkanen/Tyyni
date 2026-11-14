@@ -4,7 +4,7 @@ Mobile-first Next.js calming wellness companion built on the **Somatic Serenity*
 
 Includes four interactive sections switchable from the bottom navigation:
 
-- **Today**: 2D cute **Companion World** sanctuary featuring layered environment hills & trees, slowly scrolling storybook clouds, and an animated potted flower companion (_Bloomie_), paired with frosted glass greeting & arrival check-in, an optional adaptive behavioral nudge space (transforming `"Good morning"` into suggestive prompts such as taking a walk, guided meditation, or messaging a friend with a 1-tap quick-action CTA when backend behavioral changes arrive), Low-Energy Mode toggle, dynamic scroll blur/tint, guilt-free micro-steps, and Gentle Circle check-ins.
+- **Today**: 2D cute **Companion World** sanctuary featuring layered environment hills & trees, slowly scrolling storybook clouds, and an animated potted flower companion (_Bloomie_), paired with frosted glass greeting & arrival check-in, an optional adaptive behavioral nudge space (transforming `"Good morning"` into suggestive prompts such as taking a walk, guided meditation, or messaging a friend with a 1-tap quick-action CTA when backend behavioral changes arrive), Low-Energy Mode (a calmer, less colourful world, basic-needs steps, and one-tap supports: a slow-exhale breath, soft brown noise, and telling your circle you're resting), Bloomie speaking in first person and growing a leaf per tended step, a feelings info popover on the arrival check-in, dynamic scroll blur/tint, guilt-free micro-steps, and Gentle Circle check-ins that show each friend's feeling and a note, with per-person warmth.
 - **Ground**: Guided Box Breathing & Somatic Rhythm Pacer, synthesized Web Audio Sound Sanctuary, Nearby Nature sanctuary view, Body Scan, Mat Stretch, Slow Walk, and 1-Tap SOS Breathing.
 - **Wins**: Today’s Sanctuary Jar, one-tap micro-victory suggestions, custom quiet win logging, and Recent Gentle Moments.
 - **Anchor**: Interactive 5–4–3–2–1 Sensory Reset walkthrough, personal somatic anchors, rhythmic grounding phrase counter with spoken audio, 24–30Hz vibroacoustic brown noise, and Emergency Tether support.
@@ -22,9 +22,9 @@ The app works with sample content when the Python service is not configured (and
 
 ## Bloomie growth
 
-Bloomie mirrors today's tasks live: the **Tiny Steps** on Today plus any wins logged in the **Sanctuary Jar** (Wins tab), where each logged win counts as one more done task.
+Bloomie mirrors today's tasks live: the checklist on Today (**Tiny Steps**, or **Just the Basics** in Low-Energy mode) plus any wins logged in the **Sanctuary Jar** (Wins tab), where each logged win counts as one more done task.
 
-- **Thirsty** (nothing done yet): drooping olive stems with brown-tipped leaves, pale buds, dry cracked soil, fallen leaves, a sleepy face and a thought bubble asking for water, with "One tiny step perks me up" on the companion pill (not in Low-Energy mode).
+- **Thirsty** (nothing done yet): drooping olive stems with brown-tipped leaves, pale buds, dry cracked soil, fallen leaves, a sleepy face and a thought bubble asking for water; on the companion pill Bloomie says "I'm a little thirsty. One tiny step would perk me up." Low-Energy mode never shows Thirsty: Bloomie rests at Perking up ("nothing needs to grow today"), and tending all the basics still brings it to full bloom.
 - **Perking up** (some done): a shower waters the soil, the stems spring upright, the leaves turn green, new shoots grow and the pot smiles.
 - **Flourishing** (everything done): the buds burst into flowers, vines spill over the rim, petals scatter, the aura turns golden and a butterfly visits.
 
