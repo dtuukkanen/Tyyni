@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { sectionHeaderRow, sectionHeading, sectionMeta } from "./styles";
 
 type SectionHeaderProps = {
   /** Heading id, for the section's `aria-labelledby`. */
@@ -13,12 +14,12 @@ type SectionHeaderProps = {
 export function SectionHeader({
   id,
   title,
-  headingClassName = "section-heading",
+  headingClassName = sectionHeading,
   meta,
-  metaClassName = "section-meta",
+  metaClassName = sectionMeta,
 }: SectionHeaderProps) {
   return (
-    <div className="section-header-row">
+    <div className={sectionHeaderRow}>
       <h2 id={id} className={headingClassName}>
         {title}
       </h2>

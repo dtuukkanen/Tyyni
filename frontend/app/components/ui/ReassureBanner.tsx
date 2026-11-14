@@ -17,11 +17,15 @@ export function ReassureBanner({
   children,
 }: ReassureBannerProps) {
   return (
-    <div className="reassure-banner">
+    <div className="flex items-start gap-3.5 rounded-lg border border-outline/10 bg-surface-low p-4">
       <IconOrb icon={icon} tone={tone} />
-      <div className="reassure-copy">
-        <strong>{title}</strong>
-        <span>{children}</span>
+      <div className="flex flex-col gap-0.75">
+        <strong className="text-[14.5px] font-semibold text-ink">
+          {title}
+        </strong>
+        <span className="text-[13.5px] leading-[1.48] text-ink-soft">
+          {children}
+        </span>
       </div>
     </div>
   );
