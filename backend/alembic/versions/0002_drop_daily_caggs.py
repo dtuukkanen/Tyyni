@@ -11,6 +11,7 @@ Create Date: 2026-11-13
 """
 
 from alembic import op
+from sqlalchemy import text
 
 revision = "0002"
 down_revision = "0001"
@@ -66,6 +67,11 @@ _RESTORE = [
 
 
 def downgrade() -> None:
+    # 0001 created no continuous aggregates without Timescale-licensed TimescaleDB (e.g. on Neon,
+    # whose build is Apache-licensed, or on plain Postgres).
+    license_ = text("SELECT current_setting('timescaledb.license', true)")
+    if op.get_bind().execute(license_).scalar() != "timescale":
+        return
     with op.get_context().autocommit_block():
         for stmt in _RESTORE:
             op.execute(stmt)
