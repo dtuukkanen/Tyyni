@@ -20,7 +20,7 @@ body:json {
 
 script:post-response {
   const [first] = res.body.suggestions ?? [];
-  if (first) bru.setEnvVar("suggestionId", first.id);
+  if (first) bru.setVar("suggestionId", first.id);
 }
 
 docs {
