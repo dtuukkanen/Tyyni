@@ -21,7 +21,6 @@ import {
   sectionLabel,
   sectionMeta,
   screenBody,
-  statusDot,
   TONE,
   type Tone,
 } from "./ui/styles";
@@ -691,7 +690,6 @@ export function TodayScreen({
               <span>
                 {lowEnergy ? "Just the Basics" : "Tiny Steps for Today"}
               </span>
-              <span className={statusDot()} aria-hidden="true" />
             </h2>
             <span className={sectionMeta}>
               {lowEnergy

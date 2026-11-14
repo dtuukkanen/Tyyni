@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "./icons";
 import { IconOrb } from "./ui/IconOrb";
 import { ScreenHero } from "./ui/ScreenHero";
@@ -12,7 +12,6 @@ const card = "flex flex-col rounded-lg border border-outline/10 bg-surface-low";
 const DRAFT_KEY = "tyyni-journal-draft";
 
 function readDraft(): string {
-  if (typeof window === "undefined") return "";
   try {
     return window.localStorage.getItem(DRAFT_KEY) ?? "";
   } catch {
@@ -36,10 +35,16 @@ type JournalScreenProps = {
 type Status = "idle" | "saving" | "saved" | "error";
 
 export function JournalScreen({ onSave }: JournalScreenProps) {
-  // The tab is picked after hydration, so this screen only renders in the
-  // browser and can read the draft straight away.
-  const [text, setText] = useState(readDraft);
+  const [text, setText] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+
+  // The server can render this tab (`?tab=journal`) but can't see
+  // localStorage, so the draft is restored after hydration.
+  useEffect(() => {
+    const draft = readDraft();
+    // oxlint-disable-next-line react/set-state-in-effect -- localStorage is only readable after hydration
+    if (draft) setText(draft);
+  }, []);
 
   function handleChange(next: string) {
     setText(next);
