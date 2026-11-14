@@ -10,7 +10,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.deps import Db, require_api_key
-from app.api.routers import anomalies, journal, metrics, mood, samples, suggestions, users
+from app.api.routers import (
+    anomalies,
+    journal,
+    metrics,
+    mood,
+    samples,
+    simulators,
+    suggestions,
+    users,
+)
 
 DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:3000"
 
@@ -18,7 +27,7 @@ app = FastAPI(
     title="Wellbeing API",
     version="0.1.0",
     description="Users, daily metrics, raw sensor series, mood check-ins, journal entries, "
-    "anomalies, and suggestions with their feedback. "
+    "anomalies, suggestions with their feedback, and simulated test data. "
     "All days are UTC calendar days; a sleep session counts toward the day the user woke up. "
     "When the server sets API_KEY, every route requires it in the X-API-Key header.",
     dependencies=[Depends(require_api_key)],
@@ -41,6 +50,7 @@ for router in (
     journal.router,
     anomalies.router,
     suggestions.router,
+    simulators.router,
 ):
     app.include_router(router)
 

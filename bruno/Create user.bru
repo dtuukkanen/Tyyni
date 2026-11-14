@@ -1,0 +1,21 @@
+meta {
+  name: Create user
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/users
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "display_name": "demo"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) bru.setEnvVar("userId", res.body.id);
+}

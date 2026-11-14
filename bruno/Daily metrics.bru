@@ -1,0 +1,16 @@
+meta {
+  name: Daily metrics
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/users/{{userId}}/daily
+  body: none
+  auth: none
+}
+
+params:query {
+  ~start: 2026-11-01
+  ~end: 2026-11-14
+}

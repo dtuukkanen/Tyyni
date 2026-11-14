@@ -6,6 +6,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.api.deps import MAX_SIMULATE_DAYS
+from app.simulators import combined
+
 
 class _FromOrm(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -189,3 +192,57 @@ class JournalEntry(_FromOrm):
     expected_risk: Risk | None = Field(
         description="Ground truth for simulated entries; null for real ones"
     )
+
+
+Signal = Literal["sleep", "heart", "activity", "screen", "mood", "journal"]
+
+
+class Simulators(BaseModel):
+    scenarios: list[str] = Field(description="Every name `scenario` takes")
+    signals: dict[Signal, list[str]] = Field(description="Each signal's own scenarios")
+
+
+class SimulationCreate(BaseModel):
+    scenario: str = Field(
+        "stable_average",
+        description="The story, e.g. stress_period. Each signal follows the same name, its "
+        "closest match, or its steady default; see GET /simulators",
+    )
+    days: int = Field(21, ge=1, le=MAX_SIMULATE_DAYS)
+    end: date | None = Field(None, description="Last UTC day (default: today)")
+    seed: int | None = Field(
+        None, ge=0, lt=2**32, description="Same seed, same data (default: a random one)"
+    )
+    signals: list[Signal] = Field(
+        default_factory=lambda: list(combined.SIGNALS),
+        min_length=1,
+        description="Which signals to write (default: all)",
+    )
+    scenarios: dict[Signal, str] = Field(
+        default_factory=dict, description="Set one signal's scenario directly"
+    )
+    artifacts: bool = Field(False, description="Add real-world mess: gaps, a watch left off")
+    language: Literal["fi", "en", "mixed"] = Field("mixed", description="Journal language")
+    replace: bool = Field(
+        True, description="First clear the user's earlier simulated rows of each signal"
+    )
+    infer: bool = Field(
+        True,
+        description="Then detect the period's anomalies and make the last day's suggestions",
+    )
+
+    @model_validator(mode="after")
+    def _known_scenarios(self) -> "SimulationCreate":
+        combined.scenarios_for(self.scenario, self.scenarios)
+        return self
+
+
+class Simulation(BaseModel):
+    user_id: uuid.UUID
+    start: date
+    end: date
+    seed: int = Field(description="Send it back to get the same data")
+    scenarios: dict[Signal, str] = Field(description="The scenario each signal followed")
+    rows: dict[Signal, int] = Field(description="Rows written per signal")
+    anomalies: list[Anomaly] = Field(description="Detected in the period (when infer)")
+    suggestions: list[Suggestion] = Field(description="The last day's (when infer)")

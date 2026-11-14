@@ -1,0 +1,18 @@
+meta {
+  name: Suggestion feedback
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/users/{{userId}}/suggestions/{{suggestionId}}/feedback
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "done": true,
+    "helped": true
+  }
+}

@@ -1,0 +1,11 @@
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+docs {
+  Requests against the Tyyni API. Pick the Local or Vercel environment; on Vercel, set the
+  secret `apiKey` (the API project's `API_KEY`) in the environment first.
+
+  Run "Create user" once, or set `userId` in the environment to an existing user. "Simulate"
+  then fills that user's data and stores the first suggestion's id for "Suggestion feedback".
+}
