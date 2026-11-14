@@ -548,7 +548,6 @@ export function TodayScreen({
               <span>
                 {lowEnergy ? "Just the Basics" : "Tiny Steps for Today"}
               </span>
-              <span className="status-dot" aria-hidden="true" />
             </h2>
             <span className="section-meta">
               {lowEnergy
