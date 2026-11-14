@@ -9,7 +9,7 @@ One containerized **PostgreSQL 16 + TimescaleDB** instance holds all data. Time 
 | Heart rate + HRV (RMSSD) | high-frequency samples | hypertable `heart_samples` |
 | Steps, active minutes, screen time | per-minute/hour counts | hypertable `activity_samples` |
 | Sleep | one session per night | `sleep_sessions` (duration generated, stages in JSONB) |
-| Mood check-in (1 tap) | one value per day | `mood_checkins` (score 1–5) |
+| Mood check-in (1 tap) | one value per day | `mood_checkins` (score 1–5, `source` tells simulated check-ins from ones made in the app) |
 | Feeling journal | free-text entries, Finnish or English | `journal_entries` (simulated entries carry ground-truth `expected_label` / `expected_risk`) |
 | Inference + escalation | relational | `anomalies`, `suggestions`, `suggestion_feedback`, `contacts`, `consents`, `alerts` |
 
@@ -158,6 +158,28 @@ docker compose run --rm migrate python -m app.simulators.activity --new-user dem
 ```
 
 From Python: `activity.generate(...)` returns rows, `activity.simulate(session, user_id, start, days, scenario, ...)` writes them; pass `nights=sleep.nights(...)` to line the waking hours up with simulated sleep.
+
+### Mood
+
+[`backend/app/simulators/mood.py`](backend/app/simulators/mood.py) writes the daily 1-tap check-in into `mood_checkins`, tagged `simulator:mood:<scenario>`, so the inference and learning loop have the user's own ground truth to work with. On about 85 % of days the user checks in once in the evening (0.5–2.5 h before bed, never after midnight UTC, so the check-in counts toward its own day). The score is a latent mood rounded to 1–5: the person's usual level, the scenario's shift, last night's sleep (a poor night lowers it), a small weekend lift, and day-to-day noise that carries over (a bad day tends to follow a bad day).
+
+| Scenario | What it produces |
+|---|---|
+| `stable_good` / `stable_average` / `stable_low` | Steady mood ≈ 4.0 / 3.4 / 2.5 |
+| `stress_period` | Same timeline as the HRV scenario: about −1.3 while the stress holds, then recovers |
+| `withdrawal` | Same ramp as the activity scenario: mood down about −1.2 by the end, and check-ins drop to about half |
+| `sudden_drop` | About −2 on the HRV / activity `sudden_drop` day, recovering over ~3 days |
+| `late_sleep_shift` / `oversleep` | Follow the sleep scenarios: up to about −0.5 / −0.8 by the end |
+| `crisis` | Same ramp as the journal scenario: mood falls to 1–2 by the end, and check-ins get rarer |
+
+- `--artifacts` drops 2–4 day streaks (app not opened) and adds the odd double tap (the same score again a minute later); the other check-ins are unchanged.
+- `--seed` and `--no-replace` work as for HRV; replacing keeps check-ins made in the app (`source = 'app'`).
+
+```bash
+docker compose run --rm migrate python -m app.simulators.mood --new-user demo --scenario stress_period --days 21 --seed 1
+```
+
+From Python: `mood.generate(...)` returns rows, `mood.simulate(session, user_id, start, days, scenario, ...)` writes them; pass `nights=sleep.nights(...)` to time the check-ins before the simulated bedtimes and let each night's efficiency move the next day's mood.
 
 ### Journal
 
