@@ -84,6 +84,18 @@ class ActivitySample(Base):
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
     steps: Mapped[int] = mapped_column(Integer, server_default="0")
     active_minutes: Mapped[float] = mapped_column(Float, server_default="0")
+    source: Mapped[str] = mapped_column(Text, server_default="device")
+
+
+class ScreenSample(Base):
+    """Phone screen time per interval, from the phone's screen-time API."""
+
+    __tablename__ = "screen_samples"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
     screen_time_min: Mapped[float] = mapped_column(Float, server_default="0")
     source: Mapped[str] = mapped_column(Text, server_default="device")
 

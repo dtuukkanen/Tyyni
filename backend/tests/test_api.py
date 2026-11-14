@@ -222,6 +222,30 @@ def test_heart_and_activity_samples(seeded):
     activity = client.get(f"/users/{seeded}/activity", params=params).json()
     assert len(activity) == 3
     assert activity[0]["steps"] == 100
+    assert "screen_time_min" not in activity[0]
+
+
+def test_screen_samples(user_id):
+    with get_session() as s:
+        repo.insert_screen_samples(
+            s,
+            [
+                {"user_id": user_id, "ts": _at(START, h), "screen_time_min": float(h)}
+                for h in range(24)
+            ],
+        )
+    params = {"start": "2026-10-01T20:00:00Z", "end": "2026-10-02T00:00:00Z"}
+    samples = client.get(f"/users/{user_id}/screen", params=params).json()
+    assert [(x["ts"][11:16], x["screen_time_min"]) for x in samples] == [
+        ("20:00", 20.0),
+        ("21:00", 21.0),
+        ("22:00", 22.0),
+        ("23:00", 23.0),
+    ]
+    assert samples[0]["source"] == "device"
+    day = {"start": "2026-10-01", "end": "2026-10-01"}
+    daily = client.get(f"/users/{user_id}/daily", params=day).json()
+    assert daily[0]["screen_time_min"] == sum(range(24))
 
 
 def test_samples_range_is_limited(user_id):

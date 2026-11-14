@@ -2,7 +2,8 @@
 
 Produces `activity_samples` rows (steps + active minutes) at a fixed interval for one user.
 Steps are simulated minute by minute and summed into each interval; an active minute is a
-minute with at least ACTIVE_CADENCE steps (brisk walking). Screen time is not simulated.
+minute with at least ACTIVE_CADENCE steps (brisk walking). Screen time has its own simulator
+(`screen`) and table.
 
 Each waking minute is either incidental movement or part of a walking bout:
 

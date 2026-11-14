@@ -98,7 +98,12 @@ class ActivitySample(_FromOrm):
     ts: datetime
     steps: int
     active_minutes: float
-    screen_time_min: float
+    source: str
+
+
+class ScreenSample(_FromOrm):
+    ts: datetime
+    screen_time_min: float = Field(description="Minutes the screen was on in the interval")
     source: str
 
 
