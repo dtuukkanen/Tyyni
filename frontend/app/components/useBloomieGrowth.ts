@@ -10,7 +10,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
  * taken away from the user.
  *
  * Demo overrides: `?growth=0..4` pins a stage and `?growth=play` grows from
- * sprout to full bloom on a timer, for screen recordings.
+ * sprout to full bloom on a timer, for screen recordings. While an override is
+ * active, completing tasks doesn't earn growth.
+ *
+ * Until the stored progress and the page's data have loaded, `isSettling` is
+ * true so the flower can jump to its real stage without animating (the server
+ * render knows neither the stored progress nor the URL override).
  */
 
 export type GrowthStage = 0 | 1 | 2 | 3 | 4;
@@ -90,16 +95,27 @@ function readOverride(): Override {
   return null;
 }
 
-export function useBloomieGrowth(
-  checkedStepLabels: string[],
-  onStageUp?: (stage: GrowthStage) => void,
-) {
+export function useBloomieGrowth({
+  checkedStepLabels,
+  dataReady,
+  onStageUp,
+}: {
+  /** Labels of the steps checked right now; they count toward growth. */
+  checkedStepLabels: string[];
+  /** Whether the page's initial data (steps) has arrived. */
+  dataReady: boolean;
+  onStageUp?: (stage: GrowthStage) => void;
+}) {
   const [earned, setEarned] = useState<string[]>([]);
   const [override, setOverride] = useState<Override>(null);
   const [playStage, setPlayStage] = useState<GrowthStage>(0);
   const [isGrowing, setIsGrowing] = useState(false);
+  const [storageLoaded, setStorageLoaded] = useState(false);
+  const [settled, setSettled] = useState(false);
 
   const earnedRef = useRef<string[]>([]);
+  const dayRef = useRef("");
+  const overrideRef = useRef<Override>(null);
   const checkedRef = useRef(checkedStepLabels);
   const onStageUpRef = useRef(onStageUp);
   const growTimerRef = useRef<number | null>(null);
@@ -121,14 +137,32 @@ export function useBloomieGrowth(
 
   useEffect(() => {
     const stored = readEarned();
+    const initialOverride = readOverride();
     earnedRef.current = stored;
+    dayRef.current = storageKey();
+    overrideRef.current = initialOverride;
     // oxlint-disable-next-line react/set-state-in-effect -- localStorage and URL are read after hydration
     setEarned(stored);
-    setOverride(readOverride());
+    setOverride(initialOverride);
+    setStorageLoaded(true);
     return () => {
       if (growTimerRef.current) window.clearTimeout(growTimerRef.current);
     };
   }, []);
+
+  // Turn transitions back on two frames after the real stage has rendered, so
+  // the browser has already applied it without animating.
+  useEffect(() => {
+    if (settled || !storageLoaded || !dataReady) return;
+    let second = 0;
+    const first = window.requestAnimationFrame(() => {
+      second = window.requestAnimationFrame(() => setSettled(true));
+    });
+    return () => {
+      window.cancelAnimationFrame(first);
+      window.cancelAnimationFrame(second);
+    };
+  }, [settled, storageLoaded, dataReady]);
 
   // Play mode grows one stage per tick and skips toasts, so recordings stay clean.
   useEffect(() => {
@@ -145,6 +179,12 @@ export function useBloomieGrowth(
 
   const earn = useCallback(
     (key: string) => {
+      if (overrideRef.current !== null) return;
+      // A tab left open past midnight (UTC) starts the new day from a sprout.
+      if (dayRef.current !== storageKey()) {
+        dayRef.current = storageKey();
+        earnedRef.current = [];
+      }
       const before = earnedRef.current;
       if (before.includes(key)) return;
       const next = [...before, key];
@@ -177,6 +217,7 @@ export function useBloomieGrowth(
     stage,
     stageName: GROWTH_STAGE_NAMES[stage],
     isGrowing,
+    isSettling: !settled,
     earn,
     earnStep,
   };

@@ -68,6 +68,7 @@ export default function Home() {
   const [pwaSheetOpen, setPwaSheetOpen] = useState(false);
   const [sensoryIndex, setSensoryIndex] = useState(0);
   const [toast, setToast] = useState("");
+  const [dataReady, setDataReady] = useState(false);
 
   const pwa = usePwa();
   const toastTimerRef = useRef<number | null>(null);
@@ -129,7 +130,8 @@ export default function Home() {
           setBackendAnomalies(next.anomalies);
         }
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setDataReady(true));
 
     return () => {
       soundEngine.stop();
@@ -167,7 +169,11 @@ export default function Home() {
     [notify],
   );
 
-  const growth = useBloomieGrowth(checkedStepLabels, announceGrowth);
+  const growth = useBloomieGrowth({
+    checkedStepLabels,
+    dataReady,
+    onStageUp: announceGrowth,
+  });
 
   const triggerBloomieJoy = useCallback(() => {
     setBloomieCelebrating(true);
@@ -354,6 +360,7 @@ export default function Home() {
           isCelebrating={bloomieCelebrating}
           growthStage={growth.stage}
           isGrowing={growth.isGrowing}
+          isSettling={growth.isSettling}
         />
       )}
 

@@ -9,6 +9,7 @@ type CompanionWorldProps = {
   isCelebrating?: boolean;
   growthStage?: GrowthStage;
   isGrowing?: boolean;
+  isSettling?: boolean;
 };
 
 /**
@@ -547,12 +548,14 @@ export function FlowerCompanion({
   isCelebrating,
   stage = 4,
   isGrowing,
+  isSettling,
 }: {
   mood: string;
   lowEnergy: boolean;
   isCelebrating?: boolean;
   stage?: GrowthStage;
   isGrowing?: boolean;
+  isSettling?: boolean;
 }) {
   const isRestingMood = mood === "Tired" || lowEnergy;
   const isFlourishing = stage === 4;
@@ -562,7 +565,7 @@ export function FlowerCompanion({
     <div
       className={`companion-flower-stage ${lowEnergy ? "is-low-energy" : ""} ${
         isCelebrating ? "is-celebrating" : ""
-      } ${isGrowing ? "is-growing" : ""}`}
+      } ${isGrowing ? "is-growing" : ""} ${isSettling ? "is-settling" : ""}`}
       data-stage={stage}
       aria-hidden="true"
     >
@@ -1119,7 +1122,7 @@ export function FlowerCompanion({
         </g>
 
         {/* Full-bloom visitor: a butterfly drifting around the blossoms · stage 4 */}
-        <g transform="translate(160, 92)">
+        <g transform="translate(160, 58)">
           <g className={`grow-bloom${at(4)}`} style={delay(900)}>
             <g className="butterfly-drift">
               <Butterfly />
@@ -1144,11 +1147,11 @@ export function FlowerCompanion({
   );
 }
 
-/** Small lavender butterfly centered on its body at (0, 0); wings flap via CSS. */
+/** Lavender butterfly centered on its body at (0, 0); wings flap via CSS. */
 function Butterfly() {
   return (
-    <g>
-      <g className="butterfly-wings" stroke="#4A362D" strokeWidth="1.8">
+    <g transform="scale(1.5)">
+      <g className="butterfly-wings" stroke="#4A362D" strokeWidth="1.4">
         <path
           d="M 0 -1 C -6 -14, -20 -16, -18 -5 C -17 1, -8 2, 0 -1 Z"
           fill="#C9B6F2"
@@ -1167,7 +1170,7 @@ function Butterfly() {
       <path
         d="M -1 -6 C -3 -10, -5 -12, -7 -13 M 1 -6 C 3 -10, 5 -12, 7 -13"
         stroke="#4A362D"
-        strokeWidth="1.4"
+        strokeWidth="1"
         strokeLinecap="round"
       />
     </g>
@@ -1235,6 +1238,7 @@ export function CompanionWorld({
   isCelebrating,
   growthStage,
   isGrowing,
+  isSettling,
 }: CompanionWorldProps) {
   const veilRef = useRef<HTMLDivElement>(null);
 
@@ -1284,6 +1288,7 @@ export function CompanionWorld({
           isCelebrating={isCelebrating}
           stage={growthStage}
           isGrowing={isGrowing}
+          isSettling={isSettling}
         />
       </div>
 

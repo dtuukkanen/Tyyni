@@ -29,6 +29,8 @@ For demos and screen recordings:
 - `?growth=0` … `?growth=4` pins a stage.
 - `?growth=play` starts as a sprout and grows one stage every 2.5 s up to full bloom, without toasts.
 
+While either is set, completing tasks doesn't change the stage or store progress. On load the flower jumps straight to its stage without animating; only new completions (and play mode) animate growth.
+
 ## Lint and format
 
 [Oxlint](https://oxc.rs/docs/guide/usage/linter) and [Oxfmt](https://oxc.rs/docs/guide/usage/formatter) keep the code clean; CI runs both on every pull request.
