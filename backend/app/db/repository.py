@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import insert, select, text
+from sqlalchemy import func, insert, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -18,7 +18,10 @@ from app.db.models import (
     HeartSample,
     JournalEntry,
     MoodCheckin,
+    ScreenSample,
     SleepSession,
+    Suggestion,
+    SuggestionFeedback,
     User,
 )
 
@@ -70,8 +73,13 @@ def insert_heart_samples(session: Session, rows: Iterable[Mapping[str, Any]]) ->
 
 
 def insert_activity_samples(session: Session, rows: Iterable[Mapping[str, Any]]) -> int:
-    """rows: {user_id, ts, steps, active_minutes, screen_time_min[, source]}."""
+    """rows: {user_id, ts, steps, active_minutes[, source]}."""
     return _upsert_samples(session, ActivitySample, rows)
+
+
+def insert_screen_samples(session: Session, rows: Iterable[Mapping[str, Any]]) -> int:
+    """rows: {user_id, ts, screen_time_min[, source]}. Re-inserting a ts overwrites it."""
+    return _upsert_samples(session, ScreenSample, rows)
 
 
 def insert_sleep_session(
@@ -178,6 +186,23 @@ def activity_samples(
     )
 
 
+def screen_samples(
+    session: Session, user_id: uuid.UUID, start: datetime, end: datetime
+) -> list[ScreenSample]:
+    """Screen time samples with start <= ts < end, oldest first."""
+    return list(
+        session.scalars(
+            select(ScreenSample)
+            .where(
+                ScreenSample.user_id == user_id,
+                ScreenSample.ts >= start,
+                ScreenSample.ts < end,
+            )
+            .order_by(ScreenSample.ts)
+        )
+    )
+
+
 def sleep_sessions(
     session: Session, user_id: uuid.UUID, start: date, end: date
 ) -> list[SleepSession]:
@@ -275,12 +300,81 @@ def replace_anomalies(
     return kept
 
 
+def suggestions(
+    session: Session, user_id: uuid.UUID, start: date, end: date
+) -> list[dict[str, Any]]:
+    """Suggestions for days [start, end], by day and id, each with its latest feedback.
+
+    Rows: {id, day, kind, anomaly_id, anomaly_kind, severity, reason, shown_at, done, helped,
+    feedback_at}; the anomaly fields are null once the anomaly is gone, the feedback fields
+    before any feedback.
+    """
+    fb = SuggestionFeedback
+    latest = select(
+        fb.suggestion_id,
+        fb.done,
+        fb.helped,
+        fb.ts,
+        func.row_number()
+        .over(partition_by=fb.suggestion_id, order_by=(fb.ts.desc(), fb.id.desc()))
+        .label("n"),
+    ).subquery()
+    query = (
+        select(
+            Suggestion.id,
+            Suggestion.day,
+            Suggestion.kind,
+            Suggestion.anomaly_id,
+            Anomaly.kind.label("anomaly_kind"),
+            Anomaly.severity,
+            Suggestion.reason,
+            Suggestion.shown_at,
+            latest.c.done,
+            latest.c.helped,
+            latest.c.ts.label("feedback_at"),
+        )
+        .outerjoin(Anomaly, Anomaly.id == Suggestion.anomaly_id)
+        .outerjoin(latest, (latest.c.suggestion_id == Suggestion.id) & (latest.c.n == 1))
+        .where(Suggestion.user_id == user_id, Suggestion.day >= start, Suggestion.day <= end)
+        .order_by(Suggestion.day, Suggestion.id)
+    )
+    return [dict(r) for r in session.execute(query).mappings()]
+
+
+def add_suggestions(
+    session: Session, user_id: uuid.UUID, rows: Iterable[Mapping[str, Any]]
+) -> list[int]:
+    """Store suggestions {day, kind, anomaly_id, reason}; returns their ids."""
+    added = [Suggestion(user_id=user_id, **row) for row in rows]
+    session.add_all(added)
+    session.flush()
+    return [s.id for s in added]
+
+
+def get_suggestion(session: Session, user_id: uuid.UUID, suggestion_id: int) -> Suggestion | None:
+    """The user's suggestion, or None (also when it belongs to someone else)."""
+    s = session.get(Suggestion, suggestion_id)
+    return s if s is not None and s.user_id == user_id else None
+
+
+def add_suggestion_feedback(
+    session: Session, suggestion_id: int, *, done: bool, helped: bool | None = None
+) -> SuggestionFeedback:
+    """Record whether the user did the suggestion and whether it helped. The latest counts."""
+    fb = SuggestionFeedback(suggestion_id=suggestion_id, done=done, helped=helped)
+    session.add(fb)
+    session.flush()
+    session.refresh(fb)
+    return fb
+
+
 def delete_source_data(session: Session, user_id: uuid.UUID, source_prefix: str) -> None:
     """Remove e.g. all 'simulator:%' data for a user so a scenario can be re-run."""
     params = {"u": user_id, "p": f"{source_prefix}%"}
     tables = (
         "heart_samples",
         "activity_samples",
+        "screen_samples",
         "sleep_sessions",
         "mood_checkins",
         "journal_entries",
@@ -295,10 +389,10 @@ _DAILY_SQL = text(
         SELECT d::date AS day
         FROM generate_series(CAST(:start AS date), CAST(:end AS date), interval '1 day') AS d
     ),
-    -- Heart/activity are aggregated straight from the hypertables (bounded to the range, so
-    -- only the matching chunks are scanned). Timescale continuous aggregates were dropped in
-    -- 0002: real-time aggregation only covers rows newer than the watermark, so backfilled
-    -- or deleted simulator data stayed invisible or stale until the next policy refresh.
+    -- Heart/activity/screen are aggregated straight from the hypertables (bounded to the
+    -- range, so only the matching chunks are scanned). Timescale continuous aggregates were
+    -- dropped in 0002: real-time aggregation only covers rows newer than the watermark, so
+    -- backfilled or deleted simulator data stayed invisible or stale until the next refresh.
     heart AS (
         SELECT (ts AT TIME ZONE 'UTC')::date AS day,
                AVG(hr_bpm) AS hr_avg,
@@ -313,9 +407,17 @@ _DAILY_SQL = text(
     activity AS (
         SELECT (ts AT TIME ZONE 'UTC')::date AS day,
                SUM(steps)::bigint AS steps,
-               SUM(active_minutes) AS active_minutes,
-               SUM(screen_time_min) AS screen_time_min
+               SUM(active_minutes) AS active_minutes
         FROM activity_samples
+        WHERE user_id = :user_id
+          AND ts >= CAST(:start AS date)::timestamp AT TIME ZONE 'UTC'
+          AND ts < (CAST(:end AS date) + 1)::timestamp AT TIME ZONE 'UTC'
+        GROUP BY 1
+    ),
+    screen AS (
+        SELECT (ts AT TIME ZONE 'UTC')::date AS day,
+               SUM(screen_time_min) AS screen_time_min
+        FROM screen_samples
         WHERE user_id = :user_id
           AND ts >= CAST(:start AS date)::timestamp AT TIME ZONE 'UTC'
           AND ts < (CAST(:end AS date) + 1)::timestamp AT TIME ZONE 'UTC'
@@ -342,12 +444,13 @@ _DAILY_SQL = text(
     )
     SELECT days.day,
            h.hr_avg, h.hr_min, h.hrv_rmssd_avg,
-           a.steps, a.active_minutes, a.screen_time_min,
+           a.steps, a.active_minutes, sc.screen_time_min,
            s.sleep_duration_min, s.bedtime_hour, s.wake_hour,
            m.mood_avg
     FROM days
     LEFT JOIN heart h ON h.day = days.day
     LEFT JOIN activity a ON a.day = days.day
+    LEFT JOIN screen sc ON sc.day = days.day
     LEFT JOIN sleep s ON s.day = days.day
     LEFT JOIN mood m ON m.day = days.day
     ORDER BY days.day

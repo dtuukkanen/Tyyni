@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class _FromOrm(BaseModel):
@@ -66,12 +66,47 @@ class Anomaly(_FromOrm):
     severity: Severity
     metric: str | None = Field(description="The most deviating metric")
     value: float | None
-    baseline: float | None = Field(description="The metric's median over the 14 days before")
+    baseline: float | None = Field(
+        description="The metric's median over the 14 days before (for low_mood the mean of the "
+        "usual check-ins); null for a very low mood without a usual one"
+    )
     explanation: dict[str, Any] | None = Field(
         description="summary (text), signals (every metric that fired) and escalation "
-        "(why it is critical: extreme, sustained, multiple_signals)"
+        "(why it is critical: extreme, very_low, sustained, multiple_signals)"
     )
     created_at: datetime
+
+
+class Suggestion(BaseModel):
+    id: int
+    day: date = Field(description="The day it was suggested for")
+    kind: str = Field(description="The practice, a key of the catalog (e.g. box_breathing)")
+    title: str
+    text: str
+    minutes: int = Field(description="About how long it takes")
+    category: str = Field(
+        description="breathing, movement, rest, grounding, sleep, screen, reflection, social "
+        "or support"
+    )
+    anomaly_id: int | None = Field(description="The anomaly it answers; null once it is gone")
+    anomaly_kind: str | None
+    severity: Severity | None
+    reason: str | None = Field(description="The anomaly's summary when it was suggested")
+    shown_at: datetime
+    done: bool | None = Field(description="Latest feedback: did the user do it")
+    helped: bool | None = Field(description="Latest feedback: did it help")
+    feedback_at: datetime | None
+
+
+class SuggestionFeedbackCreate(BaseModel):
+    done: bool
+    helped: bool | None = Field(None, description="Only when done; null if not answered")
+
+    @model_validator(mode="after")
+    def _helped_needs_done(self) -> "SuggestionFeedbackCreate":
+        if self.helped is not None and not self.done:
+            raise ValueError("helped needs done=true")
+        return self
 
 
 class Today(BaseModel):
@@ -81,6 +116,9 @@ class Today(BaseModel):
     mood_logged: bool
     anomalies: list[Anomaly] = Field(
         description="Stored anomalies for yesterday and today (run detect to refresh them)"
+    )
+    suggestions: list[Suggestion] = Field(
+        description="Today's stored suggestions (POST /suggestions makes them)"
     )
 
 
@@ -95,7 +133,12 @@ class ActivitySample(_FromOrm):
     ts: datetime
     steps: int
     active_minutes: float
-    screen_time_min: float
+    source: str
+
+
+class ScreenSample(_FromOrm):
+    ts: datetime
+    screen_time_min: float = Field(description="Minutes the screen was on in the interval")
     source: str
 
 

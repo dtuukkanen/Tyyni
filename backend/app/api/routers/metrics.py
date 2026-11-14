@@ -8,6 +8,7 @@ from fastapi import APIRouter, Query
 from app.api import schemas
 from app.api.deps import DEFAULT_DAYS, DayRange, Db, PathUser, today_utc
 from app.db import repository as repo
+from app.inference import suggestions
 
 router = APIRouter(prefix="/users/{user_id}", tags=["metrics"])
 
@@ -35,7 +36,7 @@ def baseline(
 def today(user: PathUser, db: Db):
     """Everything the day view needs: today's metrics, the usual level, the mood state and
     the stored anomalies of yesterday and today (heart and activity are judged once a day is
-    over, so yesterday's are the latest)."""
+    over, so yesterday's are the latest) and today's stored suggestions."""
     day = today_utc()
     (metrics,) = repo.daily_metrics(db, user.id, day, day)
     base = repo.rolling_baseline(db, user.id, day, DEFAULT_DAYS)
@@ -45,4 +46,5 @@ def today(user: PathUser, db: Db):
         "baseline": {"day": day, "window": DEFAULT_DAYS, **base},
         "mood_logged": metrics["mood_avg"] is not None,
         "anomalies": repo.anomalies(db, user.id, day - timedelta(days=1), day),
+        "suggestions": [suggestions.present(s) for s in repo.suggestions(db, user.id, day, day)],
     }

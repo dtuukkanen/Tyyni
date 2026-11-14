@@ -214,7 +214,7 @@ def test_simulate_writes_daily_metrics_and_replaces(user_id):
     expected = gen("withdrawal")
     assert [r["steps"] for r in rows] == daily(expected)
     assert [r["active_minutes"] for r in rows] == pytest.approx(daily(expected, "active_minutes"))
-    assert all(r["screen_time_min"] == 0 for r in rows)
+    assert all(r["screen_time_min"] is None for r in rows)  # screen time is its own signal
 
     with get_session() as s:
         repo.delete_source_data(s, user_id, activity.SOURCE_PREFIX)

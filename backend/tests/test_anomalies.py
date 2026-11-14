@@ -10,14 +10,16 @@ from sqlalchemy import text
 from app.db import get_session
 from app.db import repository as repo
 from app.inference import anomalies as an
-from app.simulators import activity, hrv, sleep
+from app.simulators import activity, hrv, screen, sleep
+from app.simulators import mood as mood_sim
 
 START = date(2026, 10, 1)
 TODAY = date(2026, 11, 14)
 
 
 def steady(n=21, start=START):
-    """A steady user: small day-to-day wobble around HR 60, HRV 50, 8 h sleep, 8000 steps."""
+    """A steady user: small day-to-day wobble around HR 60, HRV 50, 8 h sleep, 8000 steps and
+    3 h of screen time."""
     rows = []
     for i in range(n):
         w = (i % 3) - 1  # -1, 0, 1
@@ -29,7 +31,7 @@ def steady(n=21, start=START):
                 "hrv_rmssd_avg": 50.0 + 2 * w,
                 "steps": 8000 + 300 * w,
                 "active_minutes": 25.0,
-                "screen_time_min": 0.0,
+                "screen_time_min": 180.0 + 10 * w,
                 "sleep_duration_min": 480.0 + 10 * w,
                 "bedtime_hour": 23.0 + 0.1 * w,
                 "wake_hour": 7.0 + 0.1 * w,
@@ -166,7 +168,11 @@ def test_extreme_deviation_is_critical():
         ({"sleep_duration_min": 600.0}, "long_sleep", "sleep 10 h 00 min vs usual 8 h 00 min"),
         ({"bedtime_hour": 25.5}, "sleep_shift", "bedtime 01:30 vs usual 23:00 (+2.5 h)"),
         ({"wake_hour": 9.0}, "sleep_shift", "wake time 09:00 vs usual 07:00 (+2.0 h)"),
-        ({"screen_time_min": 120.0}, "screen_time", "screen time 2 h 00 min vs usual"),
+        (
+            {"screen_time_min": 300.0},
+            "screen_time",
+            "screen time 5 h 00 min vs usual 3 h 00 min (+2.0 h)",
+        ),
         ({"mood_avg": 2.0}, "low_mood", "mood 2.0/5 vs usual 4.0/5 (-2.0)"),
     ],
 )
@@ -176,6 +182,69 @@ def test_each_rule_fires_with_an_explanation(change, kind, summary):
     (a,) = find(rows)
     assert a["kind"] == kind
     assert a["explanation"]["summary"].startswith(summary)
+
+
+def mood(rows, days, score):
+    for i in days:
+        rows[i]["mood_avg"] = score
+
+
+def test_one_check_in_two_points_down_is_a_sharp_drop_but_not_critical():
+    rows = steady()
+    mood(rows, [16], 3.0)
+    assert find(rows) == []  # one point down, once
+    mood(rows, [16], 2.0)
+    (a,) = find(rows)
+    assert (a["kind"], a["severity"], a["value"], a["baseline"]) == ("low_mood", "attention", 2, 4)
+    assert a["explanation"]["escalation"] == []
+
+
+def test_one_bad_check_in_from_a_wobbly_user_is_not_low_mood():
+    rows = steady()
+    for i, r in enumerate(rows):
+        r["mood_avg"] = 4.0 + (i % 3) - 1  # 3, 4, 5
+    mood(rows, [16], 2.0)
+    assert find(rows) == []  # 2.4 spreads down, and the last 3 check-ins average 3.3
+
+
+def test_a_dip_fires_once_the_recent_check_ins_are_a_point_down():
+    rows = steady()
+    mood(rows, [16, 17, 18], 3.0)
+    mood(rows, [19], None)
+    (a,) = find(rows)
+    assert (a["day"], a["kind"], a["severity"]) == (rows[18]["day"], "low_mood", "attention")
+    assert a["explanation"]["summary"] == "mood 3.0/5 vs usual 4.0/5 (-1.0), last 3 check-ins 3.0/5"
+    (signal,) = a["explanation"]["signals"]
+    assert (signal["recent"], signal["recent_checkins"], signal["z"]) == (3.0, 3, -2.0)
+
+
+def test_a_dip_two_points_down_becomes_extreme():
+    rows = steady()
+    mood(rows, [16, 17, 18], 2.0)
+    found = find(rows)
+    assert kinds(found) == [
+        (rows[16]["day"], "low_mood", "attention"),  # sharp drop
+        (rows[17]["day"], "low_mood", "attention"),  # dip
+        (rows[18]["day"], "low_mood", "critical"),
+    ]
+    assert found[-1]["explanation"]["escalation"] == ["extreme", "sustained"]
+
+
+def test_very_low_mood_is_critical_without_a_baseline():
+    rows = steady(5)
+    mood(rows, [2, 3, 4], 1.0)
+    (a,) = find(rows)
+    assert (a["day"], a["kind"], a["severity"]) == (rows[4]["day"], "low_mood", "critical")
+    assert (a["baseline"], a["explanation"]["escalation"]) == (None, ["very_low"])
+    assert a["explanation"]["summary"] == "mood 1.0/5, last 3 check-ins 1.0/5"
+
+
+def test_very_low_mood_never_becomes_the_new_normal():
+    rows = steady()
+    mood(rows, range(len(rows)), 1.0)
+    found = find(rows)
+    assert [a["day"] for a in found] == [r["day"] for r in rows[2:]]
+    assert found[-1]["explanation"]["escalation"] == ["very_low", "sustained"]
 
 
 def test_accepts_decimal_metrics():
@@ -202,12 +271,16 @@ def user_id():
         s.execute(text("DELETE FROM users WHERE id = :u"), {"u": uid})
 
 
-def simulate(user_id, sleep_scenario, hrv_scenario, activity_scenario, seed=1):
+def simulate(
+    user_id, sleep_scenario, hrv_scenario, activity_scenario, mood_scenario, screen_scenario, seed=1
+):
     with get_session() as s:
         nights = sleep.nights(START, DAYS, sleep_scenario, seed=seed)
         sleep.simulate(s, user_id, START, DAYS, sleep_scenario, seed=seed)
         hrv.simulate(s, user_id, START, DAYS, hrv_scenario, seed=seed, nights=nights)
         activity.simulate(s, user_id, START, DAYS, activity_scenario, seed=seed, nights=nights)
+        mood_sim.simulate(s, user_id, START, DAYS, mood_scenario, seed=seed, nights=nights)
+        screen.simulate(s, user_id, START, DAYS, screen_scenario, seed=seed, nights=nights)
 
 
 def detect(user_id):
@@ -217,17 +290,20 @@ def detect(user_id):
 
 @pytest.mark.parametrize("seed", range(3))
 def test_stable_simulated_user_has_no_anomalies(user_id, seed):
-    simulate(user_id, "stable_average", "stable_average", "stable_average", seed=seed)
+    simulate(user_id, *["stable_average"] * 5, seed=seed)
     assert detect(user_id) == []
 
 
 def test_simulated_stress_period_is_found_and_stored(user_id):
-    simulate(user_id, "stress_period", "stress_period", "stress_period")
+    simulate(user_id, *["stress_period"] * 5)
     found = detect(user_id)
     stress_days = {(a.day - START).days for a in found if a.kind == "stress"}
     hold = set(range(9, 15))  # onset on days 7-8, hold on days 9-14, recovery on days 15-17
     assert len(hold & stress_days) >= 5
     assert all(7 <= d <= 17 for d in stress_days)  # nothing in the normal days around it
+    for kind in ("low_mood", "screen_time"):
+        kind_days = {(a.day - START).days for a in found if a.kind == kind}
+        assert kind_days and all(7 <= d <= 17 for d in kind_days), kind
     assert any(a.severity == "critical" for a in found)
     with get_session() as s:
         stored = repo.anomalies(s, user_id, START, END)
@@ -237,15 +313,24 @@ def test_simulated_stress_period_is_found_and_stored(user_id):
 
 
 def test_simulated_sudden_drop_is_critical_on_the_day(user_id):
-    simulate(user_id, "short_night", "sudden_drop", "sudden_drop")
+    simulate(user_id, "short_night", *["sudden_drop"] * 4)
     drop = START + timedelta(days=DAYS // 2)
     on_drop = {a.kind: a.severity for a in detect(user_id) if a.day == drop}
-    assert {"stress", "short_sleep", "low_activity"} <= on_drop.keys()
+    assert {"stress", "short_sleep", "low_activity", "low_mood", "screen_time"} <= on_drop.keys()
     assert set(on_drop.values()) == {"critical"}
 
 
+def test_simulated_mood_crisis_ends_critical(user_id):
+    simulate(user_id, *["stable_average"] * 3, "crisis", "stable_average")
+    found = detect(user_id)
+    assert {a.kind for a in found} == {"low_mood"}  # only the mood moves
+    assert all((a.day - START).days >= 7 for a in found)  # the decline starts on day 7
+    assert found[-1].severity == "critical"
+    assert "very_low" in found[-1].explanation["escalation"]
+
+
 def test_rerun_keeps_ids_and_drops_what_no_longer_fires(user_id):
-    simulate(user_id, "stress_period", "stress_period", "stress_period")
+    simulate(user_id, *["stress_period"] * 5)
     first = detect(user_id)
     second = detect(user_id)
     assert [(a.id, a.day, a.kind) for a in first] == [(a.id, a.day, a.kind) for a in second]
@@ -261,7 +346,7 @@ def test_rerun_keeps_ids_and_drops_what_no_longer_fires(user_id):
 
 
 def test_cli_prints_and_stores(user_id, capsys):
-    simulate(user_id, "stress_period", "stress_period", "stress_period")
+    simulate(user_id, *["stress_period"] * 5)
     an.main(["--user", str(user_id), "--end", END.isoformat(), "--days", str(DAYS)])
     out = capsys.readouterr().out
     assert "stress" in out and "HRV" in out
