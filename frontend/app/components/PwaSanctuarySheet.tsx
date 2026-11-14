@@ -7,6 +7,7 @@ import {
 } from "../data/behavioralNudges";
 import { Icon, TyyniLogo } from "./icons";
 import { ModalSheet } from "./ui/ModalSheet";
+import { cx, eyebrowBadge, pillButton, statusDot } from "./ui/styles";
 import {
   type BloomieDemo,
   GROWTH_STAGE_NAMES,
@@ -31,6 +32,19 @@ type PreviewChipsProps<K> = {
 };
 
 /** A labelled row of single-select chips for previewing demo states. */
+const iosGuide =
+  "flex flex-col gap-1 rounded-lg border border-primary-container/15 bg-primary-fixed/35 px-4 py-3.5 text-[13px] leading-[1.48] text-ink-soft [&_strong]:text-primary";
+
+/** A setting's bold name and one-line explanation. */
+function PrefCopy({ title, children }: { title: string; children: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <strong className="text-[14px] text-ink">{title}</strong>
+      <span className="text-[12.5px] text-ink-soft">{children}</span>
+    </div>
+  );
+}
+
 function PreviewChips<K>({
   title,
   description,
@@ -40,12 +54,13 @@ function PreviewChips<K>({
   onSelect,
 }: PreviewChipsProps<K>) {
   return (
-    <div className="pwa-demo-section">
-      <div className="pwa-pref-copy">
-        <strong>{title}</strong>
-        <span>{description}</span>
-      </div>
-      <div className="pwa-demo-chips" role="group" aria-label={ariaLabel}>
+    <div className="flex flex-col gap-2 border-t border-surface-container pt-3">
+      <PrefCopy title={title}>{description}</PrefCopy>
+      <div
+        className="flex flex-wrap gap-1.5"
+        role="group"
+        aria-label={ariaLabel}
+      >
         {options.map((opt) => {
           const isSelected = selected === opt.key;
           return (
@@ -53,7 +68,12 @@ function PreviewChips<K>({
               key={String(opt.key)}
               type="button"
               aria-pressed={isSelected}
-              className={`pwa-demo-chip ${isSelected ? "is-selected" : ""}`}
+              className={cx(
+                "min-h-8 rounded-full border px-2.75 py-1.25 text-[12px] font-semibold transition-colors duration-160",
+                isSelected
+                  ? "border-primary bg-primary-container text-on-primary"
+                  : "border-outline/16 bg-surface-low text-ink-soft hover:bg-surface-container",
+              )}
               onClick={() => onSelect(opt.key)}
             >
               {opt.label}
@@ -196,24 +216,25 @@ export function PwaSanctuarySheet({
       labelledBy="pwa-sheet-title"
       closeLabel="Close sanctuary settings"
       onClose={onClose}
-      className="pwa-sheet"
+      align="start"
     >
-      <div className="pwa-sheet-header">
+      <div className="flex items-center gap-3 pr-9">
         <TyyniLogo size={42} />
         <div>
-          <span className="eyebrow-badge">Sanctuary App</span>
-          <h2 id="pwa-sheet-title" className="section-heading pwa-sheet-title">
+          <span className={eyebrowBadge}>Sanctuary App</span>
+          <h2
+            id="pwa-sheet-title"
+            className="mt-1 mb-0 text-[19px] font-semibold tracking-[-0.01em] text-ink"
+          >
             {guestName}’s Sanctuary
           </h2>
         </div>
       </div>
 
       {/* Connectivity & Offline Readiness Card */}
-      <div className="pwa-status-card">
-        <div className="pwa-status-row">
-          <span
-            className={`status-dot ${pwa.isOffline ? "status-dot-muted" : ""}`}
-          />
+      <div className="flex flex-col gap-1.5 rounded-lg border border-outline/12 bg-surface-low px-4 py-3.5">
+        <div className="flex items-center gap-2 text-[14px] text-ink">
+          <span className={statusDot({ muted: pwa.isOffline })} />
           <strong>
             {pwa.isOffline
               ? "Offline Mode Active"
@@ -222,7 +243,7 @@ export function PwaSanctuarySheet({
                 : "Gentle Mode Active"}
           </strong>
         </div>
-        <p className="pwa-status-copy">
+        <p className="m-0 text-[13px] leading-[1.48] text-ink-soft">
           {pwa.isOffline
             ? "No connection needed — Bloomie, Box Breathing, synthesized Sound Sanctuary, and your Sensory Anchors continue working offline."
             : "Your breathing pacer, Web Audio soundscapes, and grounding anchors are cached locally so Tyyni stays calm even without signal."}
@@ -230,21 +251,21 @@ export function PwaSanctuarySheet({
       </div>
 
       {/* Home Screen App Install Section */}
-      <div className="pwa-install-box">
+      <div className="flex flex-col gap-2.5">
         {pwa.isStandalone ? (
-          <div className="pwa-installed-pill">
+          <div className="flex items-center gap-2 rounded-lg bg-secondary-container px-3.5 py-3 text-[13.5px] font-semibold text-on-secondary-container">
             <Icon name="verified" size={18} />
             <span>Installed on your Home Screen · Standalone mode</span>
           </div>
         ) : pwa.canInstallPrompt ? (
           <>
-            <p className="pwa-install-copy">
+            <p className="m-0 text-[13.5px] leading-[1.48] text-ink-soft">
               Install Tyyni on your device for one-tap full-screen access,
               offline grounding, and SOS breathing shortcuts.
             </p>
             <button
               type="button"
-              className="btn-primary-pill btn-full"
+              className={pillButton({ variant: "primary", full: true })}
               onClick={async () => {
                 const accepted = await pwa.promptInstall();
                 if (accepted) {
@@ -258,7 +279,7 @@ export function PwaSanctuarySheet({
             </button>
           </>
         ) : pwa.isIOS ? (
-          <div className="pwa-ios-guide">
+          <div className={iosGuide}>
             <strong>Add Tyyni to your Home Screen</strong>
             <p>
               In Safari, tap the <strong>Share</strong> button below, then
@@ -267,7 +288,7 @@ export function PwaSanctuarySheet({
             </p>
           </div>
         ) : (
-          <div className="pwa-ios-guide">
+          <div className={iosGuide}>
             <strong>Install as a Home Screen or Dock App</strong>
             <p>
               Use your browser’s address bar install icon or menu (
@@ -307,14 +328,13 @@ export function PwaSanctuarySheet({
       />
 
       {/* Quick Low-Energy Preference Row */}
-      <div className="pwa-pref-row">
-        <div className="pwa-pref-copy">
-          <strong>Low-Energy Mode</strong>
-          <span>Softens visuals and trims choices to essentials</span>
-        </div>
+      <div className="flex items-center justify-between gap-3 border-t border-surface-container pt-3">
+        <PrefCopy title="Low-Energy Mode">
+          Softens visuals and trims choices to essentials
+        </PrefCopy>
         <button
           type="button"
-          className={`btn-secondary-pill ${lowEnergy ? "is-active" : ""}`}
+          className={pillButton({ active: lowEnergy })}
           aria-pressed={lowEnergy}
           onClick={onToggleLowEnergy}
         >

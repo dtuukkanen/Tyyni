@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cx, eyebrowBadge, heroSubtitle } from "./styles";
 
 type ScreenHeroProps = {
   /** Leading mark inside the eyebrow badge, usually an `<Icon>`. */
@@ -22,15 +23,20 @@ export function ScreenHero({
   children,
 }: ScreenHeroProps) {
   return (
-    <div className="hero-header">
-      <span className="eyebrow-badge">
+    <div className="flex flex-col gap-2">
+      <span className={eyebrowBadge}>
         {badge}
         <span>{badgeLabel}</span>
       </span>
-      <h1 className={green ? "hero-title hero-title-green" : "hero-title"}>
+      <h1
+        className={cx(
+          "mt-0.5 mb-0 text-[30px] leading-[1.2] font-semibold tracking-[-0.02em]",
+          green ? "text-primary" : "text-ink",
+        )}
+      >
         {title}
       </h1>
-      <p className="hero-subtitle">{subtitle}</p>
+      <p className={heroSubtitle}>{subtitle}</p>
       {children}
     </div>
   );

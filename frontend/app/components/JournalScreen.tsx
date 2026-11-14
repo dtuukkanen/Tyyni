@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Icon } from "./icons";
 import { IconOrb } from "./ui/IconOrb";
 import { ScreenHero } from "./ui/ScreenHero";
+import { cx, pillButton, screenBody } from "./ui/styles";
+
+const card = "flex flex-col rounded-lg border border-outline/10 bg-surface-low";
 
 // The unsent draft stays on this device so leaving the tab loses nothing.
 const DRAFT_KEY = "tyyni-journal-draft";
@@ -59,7 +62,7 @@ export function JournalScreen({ onSave }: JournalScreenProps) {
   }
 
   return (
-    <main className="screen-body">
+    <main className={screenBody()}>
       <ScreenHero
         badge={<Icon name="pen" size={13} />}
         badgeLabel="QUIET PAGE"
@@ -69,26 +72,31 @@ export function JournalScreen({ onSave }: JournalScreenProps) {
       />
 
       {status === "saved" ? (
-        <section className="journal-card journal-saved" aria-live="polite">
+        <section
+          className={cx(card, "items-center gap-1.5 px-5 py-8 text-center")}
+          aria-live="polite"
+        >
           <IconOrb icon="checkCircle" tone="tone-moss" />
-          <p className="journal-saved-title">Saved.</p>
-          <p className="journal-saved-sub">You can set it down now.</p>
+          <p className="mt-2 mb-0 text-[20px] font-semibold text-primary">
+            Saved.
+          </p>
+          <p className="m-0 text-ink-soft">You can set it down now.</p>
           <button
             type="button"
-            className="journal-again"
+            className="mt-3 rounded-full px-3.5 py-2 text-[14px] font-semibold text-primary-container underline underline-offset-3 hover:bg-secondary-container/30"
             onClick={() => setStatus("idle")}
           >
             Write another
           </button>
         </section>
       ) : (
-        <form className="journal-card" onSubmit={handleSubmit}>
+        <form className={cx(card, "gap-3.5 p-4")} onSubmit={handleSubmit}>
           <label htmlFor="journal-text" className="sr-only">
             Your journal entry
           </label>
           <textarea
             id="journal-text"
-            className="journal-textarea"
+            className="field-sizing-content min-h-55 w-full resize-none rounded-md border border-outline/22 bg-surface-lowest px-4 py-3.5 text-[16px] leading-[1.6] text-ink transition-[border-color,box-shadow] outline-none placeholder:text-ink-muted focus:border-primary-container focus:shadow-[0_0_0_3px_rgba(58,96,87,0.12)]"
             value={text}
             onChange={(e) => handleChange(e.target.value)}
             placeholder="What’s here right now?"
@@ -96,14 +104,20 @@ export function JournalScreen({ onSave }: JournalScreenProps) {
             rows={8}
           />
           {status === "error" && (
-            <p className="journal-note" role="status">
+            <p
+              className="m-0 text-[14px] leading-[1.5] text-tertiary"
+              role="status"
+            >
               Couldn’t save just yet. Your words are still here; try again
               whenever you like.
             </p>
           )}
           <button
             type="submit"
-            className="btn-primary-pill journal-save"
+            className={cx(
+              pillButton({ variant: "primary" }),
+              "min-w-30 self-end disabled:cursor-default disabled:opacity-45 disabled:hover:bg-primary-container",
+            )}
             disabled={!text.trim() || status === "saving"}
           >
             <Icon name="spa" size={16} />
