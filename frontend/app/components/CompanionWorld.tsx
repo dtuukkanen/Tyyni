@@ -1,6 +1,29 @@
 "use client";
 
 import { type CSSProperties, useEffect, useRef } from "react";
+import {
+  aura,
+  bud,
+  cheeks,
+  fallenLeaf,
+  grow,
+  growthBurst,
+  leafBlade,
+  leafDroop,
+  leafRib,
+  leafTip,
+  posture,
+  potFace,
+  SPARKLES,
+  sepal,
+  soil,
+  soilCracks,
+  sparkle,
+  STEM_SWAY,
+  stem,
+  thoughtBubble,
+} from "./bloomieStyles";
+import { cx } from "./ui/styles";
 import type { GrowthStage } from "./useBloomieGrowth";
 
 type CompanionWorldProps = {
@@ -10,46 +33,68 @@ type CompanionWorldProps = {
   growthStage?: GrowthStage;
   isGrowing?: boolean;
   isSettling?: boolean;
+  /** A nudge or low-energy card fills the top, so Bloomie shrinks to fit. */
+  compact?: boolean;
 };
+
+/** Where each cloud sits in its segment. */
+const CLOUD = {
+  near1: "absolute top-0 left-[52%] block h-auto w-[215px]",
+  near2: "absolute top-5 left-[4%] block h-auto w-[162px] opacity-92",
+  mid1: "absolute top-1 -left-[4%] block h-auto w-[240px]",
+  mid2: "absolute top-6 left-[56%] block h-auto w-[190px]",
+  far1: "absolute top-3 left-[22%] block h-auto w-[265px]",
+  far2: "absolute top-0.5 left-[72%] block h-auto w-[185px]",
+};
+
+const cloudSegment = "relative h-35 w-1/2 shrink-0";
 
 /**
  * 1. SEPARATE CLOUD LAYER
  * Fluffy 2D storybook clouds with warm cream undersides and soft outlines,
  * scrolling sideways slowly across three seamless parallax bands.
  */
-export function CloudsLayer() {
+export function CloudsLayer({ paused = false }: { paused?: boolean }) {
+  // Every band is two identical segments that scroll by one segment and loop.
+  const track = cx(
+    "absolute left-0 flex w-[200%] will-change-transform",
+    paused && "[animation-play-state:paused]",
+  );
   return (
-    <div className="companion-clouds-layer" aria-hidden="true">
-      <div className="cloud-track cloud-track-far">
-        <div className="cloud-segment">
-          <StorybookCloudC className="cloud-item cloud-far-1" />
-          <StorybookCloudB className="cloud-item cloud-far-2" />
+    <div
+      className="pointer-events-none absolute inset-x-0 top-0 bottom-[40%] z-2 overflow-hidden"
+      aria-hidden="true"
+    >
+      <div className={cx(track, "top-[32%] animate-cloud-far opacity-88")}>
+        <div className={cloudSegment}>
+          <StorybookCloudC className={CLOUD.far1} />
+          <StorybookCloudB className={CLOUD.far2} />
         </div>
-        <div className="cloud-segment">
-          <StorybookCloudC className="cloud-item cloud-far-1" />
-          <StorybookCloudB className="cloud-item cloud-far-2" />
-        </div>
-      </div>
-
-      <div className="cloud-track cloud-track-mid">
-        <div className="cloud-segment">
-          <StorybookCloudA className="cloud-item cloud-mid-1" />
-          <StorybookCloudB className="cloud-item cloud-mid-2" />
-        </div>
-        <div className="cloud-segment">
-          <StorybookCloudA className="cloud-item cloud-mid-1" />
-          <StorybookCloudB className="cloud-item cloud-mid-2" />
+        <div className={cloudSegment}>
+          <StorybookCloudC className={CLOUD.far1} />
+          <StorybookCloudB className={CLOUD.far2} />
         </div>
       </div>
 
-      <div className="cloud-track cloud-track-near">
-        <div className="cloud-segment">
-          <StorybookCloudB className="cloud-item cloud-near-1" />
-          <StorybookCloudA className="cloud-item cloud-near-2" />
+      <div className={cx(track, "top-[19%] animate-cloud-mid")}>
+        <div className={cloudSegment}>
+          <StorybookCloudA className={CLOUD.mid1} />
+          <StorybookCloudB className={CLOUD.mid2} />
         </div>
-        <div className="cloud-segment">
-          <StorybookCloudB className="cloud-item cloud-near-1" />
-          <StorybookCloudA className="cloud-item cloud-near-2" />
+        <div className={cloudSegment}>
+          <StorybookCloudA className={CLOUD.mid1} />
+          <StorybookCloudB className={CLOUD.mid2} />
+        </div>
+      </div>
+
+      <div className={cx(track, "top-[7%] animate-cloud-near")}>
+        <div className={cloudSegment}>
+          <StorybookCloudB className={CLOUD.near1} />
+          <StorybookCloudA className={CLOUD.near2} />
+        </div>
+        <div className={cloudSegment}>
+          <StorybookCloudB className={CLOUD.near1} />
+          <StorybookCloudA className={CLOUD.near2} />
         </div>
       </div>
     </div>
@@ -152,7 +197,7 @@ function StorybookCloudC({ className }: { className?: string }) {
 export function EnvironmentLayer() {
   return (
     <svg
-      className="companion-env-svg"
+      className="absolute inset-0 z-3 block size-full"
       viewBox="0 0 430 932"
       preserveAspectRatio="xMidYMid slice"
       fill="none"
@@ -253,7 +298,7 @@ export function EnvironmentLayer() {
 
       {/* Far Left Misty Tree — pivot at trunk root (18, 515) */}
       <g transform="translate(18, 515)">
-        <g className="env-tree-sway-slow">
+        <g className="origin-[0_0] animate-tree-slow">
           <path
             d="M0 0 L0 -68 M0 -40 L-14 -60 M0 -46 L14 -64"
             stroke="#8D796B"
@@ -275,7 +320,7 @@ export function EnvironmentLayer() {
 
       {/* Second Left Rounded Tree — pivot at trunk root (88, 528) */}
       <g transform="translate(88, 528)">
-        <g className="env-tree-sway-mid">
+        <g className="origin-[0_0] animate-tree-mid">
           <path
             d="M0 0 L0 -78 M0 -42 L-14 -62 M0 -52 L14 -70"
             stroke="#8A7465"
@@ -301,7 +346,7 @@ export function EnvironmentLayer() {
 
       {/* Distant Right Mid-Tree — pivot at trunk root (342, 502) */}
       <g transform="translate(342, 502)">
-        <g className="env-tree-sway-slow">
+        <g className="origin-[0_0] animate-tree-slow">
           <path
             d="M0 0 L0 -62 M0 -32 L-16 -52 M0 -38 L14 -56"
             stroke="#8D7768"
@@ -331,7 +376,7 @@ export function EnvironmentLayer() {
 
       {/* Large Foreground Canopy Tree on Right — pivot at trunk base (412, 505) */}
       <g transform="translate(412, 505)">
-        <g className="env-tree-sway-right">
+        <g className="origin-[0_0] animate-tree-canopy">
           <path
             d="M0 0 C-2 -45, -4 -90, -8 -135 L-44 -175 M-6 -110 L-24 -165 M2 -95 L20 -140 M6 0 L14 -115"
             stroke="#7A6152"
@@ -553,7 +598,7 @@ type ShootSpec = {
   lean: number;
   bend: number;
   nod: number;
-  sway: string;
+  sway: keyof typeof STEM_SWAY;
   from: GrowthStage;
   d: number;
   lower: LeafSpec[];
@@ -575,7 +620,7 @@ const SHOOTS: ShootSpec[] = [
     lean: -22,
     bend: -38,
     nod: -30,
-    sway: "stem-sway-left",
+    sway: "left",
     from: 1,
     d: 1000,
     lower: [
@@ -619,7 +664,7 @@ const SHOOTS: ShootSpec[] = [
     lean: -26,
     bend: -48,
     nod: -35,
-    sway: "stem-sway-mid-left",
+    sway: "midLeft",
     from: 0,
     d: 0,
     lower: [
@@ -664,7 +709,7 @@ const SHOOTS: ShootSpec[] = [
     lean: 16,
     bend: 52,
     nod: 40,
-    sway: "stem-sway-center",
+    sway: "center",
     from: 0,
     d: 0,
     lower: [
@@ -710,7 +755,7 @@ const SHOOTS: ShootSpec[] = [
     lean: 26,
     bend: 46,
     nod: 34,
-    sway: "stem-sway-mid-right",
+    sway: "midRight",
     from: 0,
     d: 0,
     lower: [
@@ -746,7 +791,7 @@ const SHOOTS: ShootSpec[] = [
     lean: 22,
     bend: 36,
     nod: 28,
-    sway: "stem-sway-right",
+    sway: "right",
     from: 1,
     d: 1100,
     lower: [
@@ -828,7 +873,7 @@ const PETAL_BURST = [
  * 2 Flourishing: buds burst into flowers, vines spill over the rim, a
  *   golden aura, pollen, a butterfly and a beaming face.
  * Each shoot has a lower and an upper segment so it can bend at its joint;
- * the state's posture and colors live in globals.css (`.bloomie-*`).
+ * the state's posture and colors live in `bloomieStyles.ts`.
  */
 export function FlowerCompanion({
   mood,
@@ -838,6 +883,7 @@ export function FlowerCompanion({
   isGrowing,
   isSettling,
   variant = "hero",
+  compact = false,
 }: {
   mood: string;
   lowEnergy: boolean;
@@ -847,46 +893,66 @@ export function FlowerCompanion({
   isSettling?: boolean;
   /** `hero` is the big scene companion; `mini` sits inline (Tiny Steps card). */
   variant?: "hero" | "mini";
+  /** Hero only: shrink to make room for a nudge or low-energy card. */
+  compact?: boolean;
 }) {
   const isRestingMood = mood === "Tired" || lowEnergy;
-  const at = (from: GrowthStage) => (stage >= from ? "" : " is-dormant");
-  const until = (to: GrowthStage) => (stage < to ? "" : " is-dormant");
+  const growing = Boolean(isGrowing);
+  const celebrating = Boolean(isCelebrating);
+  const hero = variant === "hero";
 
   return (
     <div
-      className={`bloomie ${
-        variant === "mini" ? "bloomie-mini" : "companion-flower-stage"
-      } ${lowEnergy ? "is-low-energy" : ""} ${
-        isCelebrating ? "is-celebrating" : ""
-      } ${isGrowing ? "is-growing" : ""} ${isSettling ? "is-settling" : ""}`}
-      data-stage={stage}
+      className={cx(
+        "pointer-events-none flex items-center justify-center",
+        hero
+          ? cx(
+              "absolute left-1/2 z-4 h-[clamp(196px,29dvh,252px)] w-[clamp(190px,28dvh,244px)] [transition:top_320ms_cubic-bezier(0.22,1,0.36,1),transform_320ms_cubic-bezier(0.22,1,0.36,1)] short:h-[clamp(166px,26dvh,216px)] short:w-[clamp(160px,25dvh,210px)]",
+              compact
+                ? "top-[47%] transform-[translate(-50%,-50%)_scale(0.62)] tall:top-[48.5%] tall:transform-[translate(-50%,-50%)_scale(0.88)]"
+                : "top-[46%] transform-[translate(-50%,-50%)] short:top-[44%]",
+            )
+          : "relative h-[95px] w-20 flex-none",
+        // While the real state loads, jump to it without animating.
+        isSettling && "transition-none! **:transition-none!",
+        // Change state at once instead of staggering it in.
+        "motion-reduce:delay-0! motion-reduce:**:delay-0!",
+      )}
       aria-hidden="true"
     >
-      <div className="companion-aura" />
-      <div className="growth-burst" />
+      <div className={aura(stage, growing)} />
+      <div className={growthBurst(stage, growing)} />
 
-      <div className="companion-sparkles">
-        <span className="sparkle-dot sparkle-1" />
-        <span className="sparkle-dot sparkle-2" />
-        <span className="sparkle-dot sparkle-3" />
-        <span className="sparkle-dot sparkle-extra sparkle-4" />
-        <span className="sparkle-dot sparkle-extra sparkle-5" />
-        <span className="sparkle-dot sparkle-extra sparkle-6" />
-      </div>
+      {hero && (
+        <div className="pointer-events-none absolute inset-0 z-3">
+          {SPARKLES.map(({ place, extra }) => (
+            <span
+              key={place}
+              className={sparkle(place, extra, stage, growing, celebrating)}
+            />
+          ))}
+        </div>
+      )}
 
-      <div className="petal-burst">
-        {PETAL_BURST.map((p) => (
-          <span
-            key={`${p.x}${p.y}`}
-            style={
-              { "--px": p.x, "--py": p.y, background: p.c } as CSSProperties
-            }
-          />
-        ))}
-      </div>
+      {hero && (
+        <div className="pointer-events-none absolute inset-0 z-3">
+          {PETAL_BURST.map((p) => (
+            <span
+              key={`${p.x}${p.y}`}
+              className={cx(
+                "absolute top-[40%] left-1/2 h-1.75 w-2.5 rounded-[50%_50%_50%_0] opacity-0",
+                growing && stage === 2 && "animate-petal-burst",
+              )}
+              style={
+                { "--px": p.x, "--py": p.y, background: p.c } as CSSProperties
+              }
+            />
+          ))}
+        </div>
+      )}
 
       <svg
-        className="companion-flower-svg"
+        className="relative z-2 size-full overflow-visible"
         // The mini crops the sky around the plant so it draws larger.
         viewBox={variant === "mini" ? "56 64 208 248" : "0 0 320 330"}
         fill="none"
@@ -905,18 +971,27 @@ export function FlowerCompanion({
         <g transform="translate(160, 294)">
           {/* Fallen dry leaves on the ground; they blow away once watered */}
           <g transform="translate(-84, -4) rotate(-12)">
-            <g className="bloomie-fallen-leaf is-left">
+            <g className={fallenLeaf("left", stage)}>
               <FallenLeaf />
             </g>
           </g>
           <g transform="translate(76, -2) rotate(196)">
-            <g className="bloomie-fallen-leaf is-right">
+            <g className={fallenLeaf("right", stage)}>
               <FallenLeaf />
             </g>
           </g>
 
           {/* Whole plant pivots gently around pot base center (160, 294) */}
-          <g className="flower-whole-sway">
+          <g
+            className={cx(
+              "origin-[0_0]",
+              growing || celebrating
+                ? "animate-flower-bounce"
+                : lowEnergy
+                  ? "animate-flower-sway-slow"
+                  : "animate-flower-sway",
+            )}
+          >
             {/* 1. Back half of pot rim & soil bed so stems grow from INSIDE the pot */}
             <ellipse
               cx="0"
@@ -928,14 +1003,14 @@ export function FlowerCompanion({
               strokeWidth="2.5"
             />
             <ellipse
-              className="bloomie-soil"
+              className={soil(stage)}
               cx="0"
               cy="-102"
               rx="52"
               ry="6.5"
             />
             <path
-              className="bloomie-soil-cracks"
+              className={soilCracks(stage)}
               d="M -38 -101 L -30 -103 L -24 -100 M -6 -104 L 0 -101 L 7 -103 M 22 -100 L 30 -103 L 36 -101"
               strokeWidth="1.4"
               strokeLinecap="round"
@@ -944,15 +1019,18 @@ export function FlowerCompanion({
 
             {/* 2. Five articulated shoots */}
             {SHOOTS.map((shoot) => (
-              <Shoot key={shoot.x} shoot={shoot} at={at} until={until} />
+              <Shoot key={shoot.x} shoot={shoot} stage={stage} />
             ))}
 
             {/* Watering shower: drops fall behind the front rim into the soil */}
-            <g className="bloomie-watering">
+            <g>
               {WATER_DROPS.map((drop) => (
                 <g key={drop.x} transform={`translate(${drop.x}, -112)`}>
                   <path
-                    className="bloomie-water-drop"
+                    className={cx(
+                      "opacity-0",
+                      growing && stage === 1 && "animate-water-fall",
+                    )}
                     style={delay(drop.d)}
                     d="M 0 -9 C -4 -3, -5 0, 0 3 C 5 0, 4 -3, 0 -9 Z"
                     fill="#9FD8F2"
@@ -964,7 +1042,7 @@ export function FlowerCompanion({
             </g>
 
             {/* 3. Terracotta Pot Body, Front Rim Lip, and Kawaii Face */}
-            <g className="pot-body-group">
+            <g>
               {/* Tapered pot body */}
               <path
                 d="M -54 -88 L 54 -88 L 38 -8 C 36 0, 20 4, 0 4 C -20 4, -36 0, -38 -8 Z"
@@ -1001,14 +1079,14 @@ export function FlowerCompanion({
               />
 
               {/* Kawaii Face: one variant per growth state, cross-faded */}
-              <g className="pot-face">
-                <g className="bloomie-cheeks">
+              <g>
+                <g className={cheeks(stage)}>
                   <ellipse cx="-29" cy="-35" rx="8.5" ry="4.2" fill="#F4A892" />
                   <ellipse cx="29" cy="-35" rx="8.5" ry="4.2" fill="#F4A892" />
                 </g>
 
                 {/* Thirsty: heavy-lidded eyes, wavy mouth, a sweat drop */}
-                <g className="bloomie-face is-thirsty">
+                <g className={potFace(0, stage)}>
                   <g transform="translate(0, -46)" fill="#3F2A1E">
                     <path d="M -28.2 -0.6 A 5.2 5.2 0 0 0 -17.8 -0.6 Z" />
                     <path d="M 17.8 -0.6 A 5.2 5.2 0 0 0 28.2 -0.6 Z" />
@@ -1026,7 +1104,7 @@ export function FlowerCompanion({
                     strokeLinecap="round"
                   />
                   <path
-                    className="bloomie-sweat"
+                    className="animate-sweat"
                     d="M 41 -68 C 38 -63, 37 -60, 41 -58 C 45 -60, 44 -63, 41 -68 Z"
                     fill="#BFE6F5"
                     stroke="#4A7D93"
@@ -1035,9 +1113,9 @@ export function FlowerCompanion({
                 </g>
 
                 {/* Perking up: bright open eyes and a soft smile */}
-                <g className="bloomie-face is-perky">
+                <g className={potFace(1, stage)}>
                   <g transform="translate(0, -46)">
-                    <g className="pot-eyes">
+                    <g className="origin-[0_0] animate-pot-blink">
                       <circle cx="-23" cy="0" r="5.2" fill="#3F2A1E" />
                       <circle cx="-24.5" cy="-1.8" r="1.6" fill="#FFFDF9" />
                       <circle cx="23" cy="0" r="5.2" fill="#3F2A1E" />
@@ -1062,7 +1140,7 @@ export function FlowerCompanion({
                 </g>
 
                 {/* Flourishing: "^ ^" eyes and a beaming open smile */}
-                <g className="bloomie-face is-joyful">
+                <g className={potFace(2, stage)}>
                   <g
                     transform="translate(0, -46)"
                     stroke="#3F2A1E"
@@ -1090,7 +1168,7 @@ export function FlowerCompanion({
 
             {/* 4. Front rim leaves · from Perking up */}
             <path
-              className={`grow-leaf${at(1)}`}
+              className={grow("leaf", stage, 1)}
               style={delay(1550)}
               d="M -28 -100 C -42 -90, -46 -74, -34 -72 C -22 -72, -14 -88, -28 -100 Z"
               fill="#97C879"
@@ -1098,7 +1176,7 @@ export function FlowerCompanion({
               strokeWidth="2.3"
             />
             <path
-              className={`grow-leaf${at(1)}`}
+              className={grow("leaf", stage, 1)}
               style={delay(1700)}
               d="M 28 -100 C 42 -90, 46 -74, 34 -72 C 22 -72, 14 -88, 28 -100 Z"
               fill="#97C879"
@@ -1108,9 +1186,9 @@ export function FlowerCompanion({
 
             {/* 5. Cascading vines with hanging blossoms · Flourishing */}
             <g transform="translate(-36, -100)">
-              <g className="vine-sway-left">
+              <g className="origin-[0_0] animate-vine-left">
                 <path
-                  className={`grow-stem${at(2)}`}
+                  className={grow("stem", stage, 2)}
                   pathLength={1}
                   style={delay(150)}
                   d="M 0 0 C -30 -6, -52 18, -58 64"
@@ -1119,7 +1197,7 @@ export function FlowerCompanion({
                   strokeLinecap="round"
                 />
                 <path
-                  className={`grow-leaf${at(2)}`}
+                  className={grow("leaf", stage, 2)}
                   style={delay(450)}
                   d="M -28 2 C -44 -8, -56 0, -46 12 C -38 20, -26 12, -28 2 Z"
                   fill="#95C777"
@@ -1127,7 +1205,7 @@ export function FlowerCompanion({
                   strokeWidth="2.2"
                 />
                 <path
-                  className={`grow-leaf${at(2)}`}
+                  className={grow("leaf", stage, 2)}
                   style={delay(600)}
                   d="M -46 24 C -64 20, -74 30, -62 40 C -54 46, -42 36, -46 24 Z"
                   fill="#86B96B"
@@ -1135,7 +1213,7 @@ export function FlowerCompanion({
                   strokeWidth="2.2"
                 />
                 <path
-                  className={`grow-leaf${at(2)}`}
+                  className={grow("leaf", stage, 2)}
                   style={delay(700)}
                   d="M -40 34 C -26 34, -20 46, -32 52 C -40 56, -46 44, -40 34 Z"
                   fill="#78AC5E"
@@ -1143,7 +1221,7 @@ export function FlowerCompanion({
                   strokeWidth="2.2"
                 />
                 <path
-                  className={`grow-leaf${at(2)}`}
+                  className={grow("leaf", stage, 2)}
                   style={delay(850)}
                   d="M -56 52 C -74 52, -80 64, -68 72 C -58 76, -50 64, -56 52 Z"
                   fill="#86B96B"
@@ -1151,8 +1229,8 @@ export function FlowerCompanion({
                   strokeWidth="2.2"
                 />
                 <g transform="translate(-58, 66)">
-                  <g className={`grow-bloom${at(2)}`} style={delay(1000)}>
-                    <g className="blossom-flutter-delayed">
+                  <g className={grow("bloom", stage, 2)} style={delay(1000)}>
+                    <g className="origin-[0_0] animate-petal-flutter-late">
                       <FivePetalFlower
                         petalColor={LILAC.petal}
                         centerColor={LILAC.center}
@@ -1165,9 +1243,9 @@ export function FlowerCompanion({
             </g>
 
             <g transform="translate(36, -100)">
-              <g className="vine-sway-right">
+              <g className="origin-[0_0] animate-vine-right">
                 <path
-                  className={`grow-stem${at(2)}`}
+                  className={grow("stem", stage, 2)}
                   pathLength={1}
                   style={delay(250)}
                   d="M 0 0 C 30 -6, 50 18, 54 62"
@@ -1176,7 +1254,7 @@ export function FlowerCompanion({
                   strokeLinecap="round"
                 />
                 <path
-                  className={`grow-stem${at(2)}`}
+                  className={grow("stem", stage, 2)}
                   pathLength={1}
                   style={delay(750)}
                   d="M 46 34 C 54 40, 60 46, 66 52"
@@ -1185,7 +1263,7 @@ export function FlowerCompanion({
                   strokeLinecap="round"
                 />
                 <path
-                  className={`grow-leaf${at(2)}`}
+                  className={grow("leaf", stage, 2)}
                   style={delay(500)}
                   d="M 26 4 C 42 -4, 54 4, 44 16 C 36 22, 24 14, 26 4 Z"
                   fill="#95C777"
@@ -1193,7 +1271,7 @@ export function FlowerCompanion({
                   strokeWidth="2.2"
                 />
                 <path
-                  className={`grow-leaf${at(2)}`}
+                  className={grow("leaf", stage, 2)}
                   style={delay(650)}
                   d="M 46 26 C 62 24, 70 34, 58 42 C 50 48, 40 38, 46 26 Z"
                   fill="#86B96B"
@@ -1201,7 +1279,7 @@ export function FlowerCompanion({
                   strokeWidth="2.2"
                 />
                 <path
-                  className={`grow-leaf${at(2)}`}
+                  className={grow("leaf", stage, 2)}
                   style={delay(800)}
                   d="M 52 62 C 62 72, 54 84, 42 76 C 36 68, 44 60, 52 62 Z"
                   fill="#86B96B"
@@ -1209,8 +1287,8 @@ export function FlowerCompanion({
                   strokeWidth="2.2"
                 />
                 <g transform="translate(66, 52)">
-                  <g className={`grow-bloom${at(2)}`} style={delay(1100)}>
-                    <g className="blossom-flutter">
+                  <g className={grow("bloom", stage, 2)} style={delay(1100)}>
+                    <g className="origin-[0_0] animate-petal-flutter">
                       <FivePetalFlower
                         petalColor={PINK.petal}
                         centerColor={PINK.center}
@@ -1225,8 +1303,8 @@ export function FlowerCompanion({
 
           {/* Thirsty thought bubble asking for a little water */}
           <g transform="translate(-62, -206)">
-            <g className="bloomie-thought">
-              <g className="bloomie-thought-bob">
+            <g className={thoughtBubble(stage)}>
+              <g className="animate-thought-bob">
                 <circle
                   cx="26"
                   cy="40"
@@ -1271,10 +1349,12 @@ export function FlowerCompanion({
 
         {/* Full-bloom visitor: a butterfly drifting above the blossoms */}
         <g transform="translate(160, 44)">
-          <g className={`grow-bloom${at(2)}`} style={delay(1300)}>
-            <g className="butterfly-drift">
-              <Butterfly />
-            </g>
+          <g className={grow("bloom", stage, 2)} style={delay(1300)}>
+            {hero && (
+              <g className="origin-[0_0] animate-butterfly-drift">
+                <Butterfly />
+              </g>
+            )}
           </g>
         </g>
 
@@ -1299,15 +1379,7 @@ export function FlowerCompanion({
  * One articulated shoot: the lower segment leans at the soil, the upper one
  * bends at the joint, and the head (bud, then blossom) nods at the tip.
  */
-function Shoot({
-  shoot,
-  at,
-  until,
-}: {
-  shoot: ShootSpec;
-  at: (from: GrowthStage) => string;
-  until: (to: GrowthStage) => string;
-}) {
+function Shoot({ shoot, stage }: { shoot: ShootSpec; stage: GrowthStage }) {
   const vars = {
     "--lean": `${shoot.lean}deg`,
     "--bend": `${shoot.bend}deg`,
@@ -1315,10 +1387,10 @@ function Shoot({
   };
   return (
     <g transform={`translate(${shoot.x}, -102) rotate(${shoot.angle})`}>
-      <g className="bloomie-lean" style={delay(450, vars)}>
-        <g className={shoot.sway}>
+      <g className={posture("lean", stage)} style={delay(450, vars)}>
+        <g className={STEM_SWAY[shoot.sway]}>
           <path
-            className={`bloomie-stem grow-stem${at(shoot.from)}`}
+            className={cx(stem(stage), grow("stem", stage, shoot.from))}
             pathLength={1}
             style={delay(shoot.d)}
             d={`M 0 0 C 2 ${-shoot.l1 * 0.35}, -2 ${-shoot.l1 * 0.7}, 0 ${-shoot.l1}`}
@@ -1330,13 +1402,13 @@ function Shoot({
               key={leaf.y}
               leaf={leaf}
               droop={droopFor(leaf.angle, shoot.angle + shoot.lean)}
-              at={at}
+              stage={stage}
             />
           ))}
           <g transform={`translate(0, ${-shoot.l1})`}>
-            <g className="bloomie-bend" style={delay(550, vars)}>
+            <g className={posture("bend", stage)} style={delay(550, vars)}>
               <path
-                className={`bloomie-stem grow-stem${at(shoot.from)}`}
+                className={cx(stem(stage), grow("stem", stage, shoot.from))}
                 pathLength={1}
                 style={delay(shoot.d + 380)}
                 d={`M 0 0 C 2 ${-shoot.l2 * 0.4}, 1 ${-shoot.l2 * 0.75}, 0 ${-shoot.l2}`}
@@ -1351,22 +1423,22 @@ function Shoot({
                     leaf.angle,
                     shoot.angle + shoot.lean + shoot.bend,
                   )}
-                  at={at}
+                  stage={stage}
                 />
               ))}
               <g transform={`translate(0, ${-shoot.l2})`}>
-                <g className="bloomie-nod" style={delay(650, vars)}>
+                <g className={posture("nod", stage)} style={delay(650, vars)}>
                   <g
-                    className={`grow-sprig${at(shoot.from)}${until(2)}`}
+                    className={grow("sprig", stage, shoot.from, 2)}
                     style={delay(shoot.from === 0 ? 0 : shoot.d + 700)}
                   >
-                    <Bud />
+                    <Bud stage={stage} />
                   </g>
                   <g
-                    className={`grow-bloom${at(2)}`}
+                    className={grow("bloom", stage, 2)}
                     style={delay(shoot.bloom.d)}
                   >
-                    <g className="blossom-flutter">
+                    <g className="origin-[0_0] animate-petal-flutter">
                       <FivePetalFlower
                         petalColor={shoot.bloom.petal}
                         centerColor={shoot.bloom.center}
@@ -1388,33 +1460,33 @@ function Shoot({
 function Leaf({
   leaf,
   droop,
-  at,
+  stage,
 }: {
   leaf: LeafSpec;
   droop: number;
-  at: (from: GrowthStage) => string;
+  stage: GrowthStage;
 }) {
   return (
     <g
       transform={`translate(0, ${leaf.y}) rotate(${leaf.angle}) scale(${leaf.scale})`}
     >
-      <g className={`grow-sprig${at(leaf.from)}`} style={delay(leaf.d)}>
+      <g className={grow("sprig", stage, leaf.from)} style={delay(leaf.d)}>
         <g
-          className="bloomie-leaf-droop"
+          className={leafDroop(stage)}
           style={{ "--droop": `${droop}deg` } as CSSProperties}
         >
           <path
-            className={`bloomie-blade tone-${leaf.tone}`}
+            className={leafBlade(leaf.tone, stage)}
             d="M 0 0 C 5 -9, 17 -11, 26 0 C 17 11, 5 9, 0 0 Z"
             strokeWidth="2.2"
             strokeLinejoin="round"
           />
           <path
-            className="bloomie-leaf-tip"
+            className={leafTip(stage)}
             d="M 18 -5.6 C 22 -4.6, 25 -1.6, 26 0 C 25 1.6, 22 4.6, 18 5.6 C 19.4 2, 19.4 -2, 18 -5.6 Z"
           />
           <path
-            className="bloomie-leaf-rib"
+            className={leafRib(stage)}
             d="M 3 0 Q 13 -1, 21 0"
             strokeWidth="1.3"
             strokeLinecap="round"
@@ -1426,18 +1498,18 @@ function Leaf({
 }
 
 /** A closed flower bud with two sepals, pointing up from its stem tip. */
-function Bud() {
+function Bud({ stage }: { stage: GrowthStage }) {
   return (
     <g transform="scale(1.15)">
       <path
-        className="bloomie-bud"
+        className={bud(stage)}
         d="M 0 -1 C -7 -7, -6 -17, 0 -21 C 6 -17, 7 -7, 0 -1 Z"
         stroke="#4E3A32"
         strokeWidth="1.9"
         strokeLinejoin="round"
       />
       <path
-        className="bloomie-sepal"
+        className={sepal(stage)}
         d="M 0 1 C -6 -1, -8 -7, -6 -11 C -4 -7, -2 -4, 0 -2 Z M 0 1 C 6 -1, 8 -7, 6 -11 C 4 -7, 2 -4, 0 -2 Z"
         strokeWidth="1.6"
         strokeLinejoin="round"
@@ -1471,7 +1543,11 @@ function FallenLeaf() {
 function Butterfly() {
   return (
     <g transform="scale(1.5)">
-      <g className="butterfly-wings" stroke="#4A362D" strokeWidth="1.4">
+      <g
+        className="origin-[0_0] animate-butterfly-flap"
+        stroke="#4A362D"
+        strokeWidth="1.4"
+      >
         <path
           d="M 0 -1 C -6 -14, -20 -16, -18 -5 C -17 1, -8 2, 0 -1 Z"
           fill="#C9B6F2"
@@ -1545,6 +1621,7 @@ export function CompanionWorld({
   growthStage,
   isGrowing,
   isSettling,
+  compact = false,
 }: CompanionWorldProps) {
   const veilRef = useRef<HTMLDivElement>(null);
 
@@ -1576,13 +1653,23 @@ export function CompanionWorld({
   }, []);
 
   return (
-    <div className="companion-world-root" aria-hidden="true">
-      <div className="companion-world-canvas">
+    <div
+      className="pointer-events-none fixed inset-y-0 left-1/2 z-0 w-full max-w-[430px] -translate-x-1/2 overflow-hidden bg-surface"
+      aria-hidden="true"
+    >
+      <div
+        className={cx(
+          "absolute inset-0 size-full transform-[translateZ(0)]",
+          // Calmer world: less colour and motion while energy is low.
+          lowEnergy &&
+            "brightness-97 saturate-72 transition-[filter] duration-600",
+        )}
+      >
         {/* Layer 1a: Pastel Sky Backdrop */}
-        <div className="companion-sky-backdrop" />
+        <div className="absolute inset-0 z-1 bg-[linear-gradient(180deg,#bae4ea_0%,#d3efe9_28%,#f3f7dc_52%,#fef6d4_68%,#a8cc74_100%)]" />
 
         {/* Layer 2: Clouds (Scrolling Sideways Slowly behind trees & hills) */}
-        <CloudsLayer />
+        <CloudsLayer paused={lowEnergy} />
 
         {/* Layer 1b: Environment (Hills, Trees, Meadow, Wildflowers) */}
         <EnvironmentLayer />
@@ -1595,11 +1682,15 @@ export function CompanionWorld({
           stage={growthStage}
           isGrowing={isGrowing}
           isSettling={isSettling}
+          compact={compact}
         />
       </div>
 
       {/* Constant-radius frosted scroll veil faded strictly via GPU opacity */}
-      <div ref={veilRef} className="companion-scroll-veil" />
+      <div
+        ref={veilRef}
+        className="pointer-events-none absolute inset-0 z-5 transform-[translateZ(0)] bg-surface/84 opacity-0 backdrop-blur-[18px] will-change-[opacity]"
+      />
     </div>
   );
 }

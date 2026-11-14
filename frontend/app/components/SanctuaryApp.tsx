@@ -565,11 +565,7 @@ export function SanctuaryApp({ dashboard, children }: SanctuaryAppProps) {
   };
 
   return (
-    <div
-      className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-surface md:shadow-[0_0_60px_-12px_rgba(34,72,64,0.14),0_0_0_1px_rgba(113,121,118,0.14)]"
-      data-shell
-      data-low-energy={lowEnergy || undefined}
-    >
+    <div className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-surface md:shadow-[0_0_60px_-12px_rgba(34,72,64,0.14),0_0_0_1px_rgba(113,121,118,0.14)]">
       {tab === "Today" && (
         <CompanionWorld
           mood={mood}
@@ -578,6 +574,8 @@ export function SanctuaryApp({ dashboard, children }: SanctuaryAppProps) {
           growthStage={growth.stage}
           isGrowing={growth.isGrowing}
           isSettling={growth.isSettling}
+          // Same condition as TodayScreen's compact greeting card.
+          compact={lowEnergy || behavioralNudges.length > 0}
         />
       )}
 
