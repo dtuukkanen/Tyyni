@@ -8,6 +8,7 @@ import {
   STEP_ICONS,
 } from "../data/sanctuaryData";
 import { Icon } from "./icons";
+import { GROWTH_STAGE_NAMES, type GrowthStage } from "./useBloomieGrowth";
 
 const NO_NUDGES: ResolvedBehavioralNudge[] = [];
 
@@ -30,7 +31,7 @@ type TodayScreenProps = {
   onAddStep: (label: string) => void;
   waveSent: boolean;
   onSendWave: () => void;
-  growthStageName: string;
+  growthStage: GrowthStage;
   onInteractCompanion: () => void;
 };
 
@@ -53,7 +54,7 @@ export function TodayScreen({
   onAddStep,
   waveSent,
   onSendWave,
-  growthStageName,
+  growthStage,
   onInteractCompanion,
 }: TodayScreenProps) {
   const [addingStep, setAddingStep] = useState(false);
@@ -70,13 +71,15 @@ export function TodayScreen({
 
   const companionSubtitle = lowEnergy
     ? "Resting quietly with you · Soft sanctuary"
-    : mood === "Tired"
-      ? "Keeping gentle watch · Rest-ready"
-      : mood === "Tender"
-        ? "Holding soft space · Gently rooted"
-        : mood === "Light"
-          ? "Basking in warm breeze · Radiating calm"
-          : "Nurtured by your presence · Thriving & Calmed";
+    : growthStage === 0
+      ? "A little thirsty · One tiny step perks me up"
+      : mood === "Tired"
+        ? "Keeping gentle watch · Rest-ready"
+        : mood === "Tender"
+          ? "Holding soft space · Gently rooted"
+          : mood === "Light"
+            ? "Basking in warm breeze · Radiating calm"
+            : "Nurtured by your presence · Thriving & Calmed";
 
   function handleStepSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -215,7 +218,7 @@ export function TodayScreen({
                 </span>
                 <span className="companion-pulse-dot" aria-hidden="true" />
                 <span className="companion-stage-chip" aria-live="polite">
-                  {growthStageName}
+                  {GROWTH_STAGE_NAMES[growthStage]}
                 </span>
               </span>
               <span className="companion-status-sub">{companionSubtitle}</span>

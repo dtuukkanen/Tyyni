@@ -22,14 +22,16 @@ The app works with sample content when the Python service is not configured (and
 
 ## Bloomie growth
 
-Bloomie starts each day as a sprout and grows through five stages (Sprouting, Leafing out, Budding, Blooming, Flourishing) as the user completes things: checking a tiny step, the mood check-in, sending a wave, starting a suggestion, adding a win, or finishing the 5–4–3–2–1 practice. Each counts once a day (thresholds 1, 2, 4 and 6 for stages 1–4), and the plant never shrinks during a day. Progress is stored in `localStorage` under `tyyni.bloomie.<UTC date>` and resets the next day; delete that key to start over. The logic lives in `app/components/useBloomieGrowth.ts`, the animation in the `.grow-*` rules of `app/globals.css`.
+Bloomie has three states that follow the user's day. Each UTC day starts **Thirsty**: drooping olive stems with brown-tipped leaves, pale buds, dry cracked soil, fallen leaves, a sleepy face and a thought bubble asking for water, with "One tiny step perks me up" on the companion pill (not in Low-Energy mode). After 2 completed moments it is **Perking up**: a shower waters the soil, the stems spring upright, the leaves turn green, new shoots grow and the pot smiles. After 5 it is **Flourishing**: the buds burst into flowers, vines spill over the rim, petals scatter, the aura turns golden and a butterfly visits.
+
+Completed moments are checking a tiny step, the mood check-in, sending a wave, starting a suggestion, adding a win, or finishing the 5–4–3–2–1 practice; each counts once a day, and Bloomie never goes back down within a day. Progress is stored in `localStorage` under `tyyni.bloomie.<UTC date>`; delete that key to start over. The logic lives in `app/components/useBloomieGrowth.ts`, the drawing in `FlowerCompanion` (`app/components/CompanionWorld.tsx`) and the states and motion in the Bloomie growth rules of `app/globals.css`.
 
 For demos and screen recordings:
 
-- `?growth=0` … `?growth=4` pins a stage.
-- `?growth=play` starts as a sprout and grows one stage every 2.5 s up to full bloom, without toasts.
+- `?growth=0`, `?growth=1` or `?growth=2` pins a state.
+- `?growth=play` starts Thirsty and changes state every 4 s up to Flourishing, without toasts.
 
-While either is set, completing tasks doesn't change the stage or store progress. On load the flower jumps straight to its stage without animating; only new completions (and play mode) animate growth.
+While either is set, completing tasks doesn't change the state or store progress. On load the flower jumps straight to its state without animating; only new completions (and play mode) animate.
 
 ## Lint and format
 

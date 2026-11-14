@@ -5,12 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 /**
  * Bloomie's daily growth. Every completed moment (a tiny step, a mood
  * check-in, a wave, a started suggestion, a win, a finished practice) earns an
- * idempotent key; the number of distinct keys sets the growth stage. Growth
- * resets each UTC day and never goes down within a day, so nothing is ever
- * taken away from the user.
+ * idempotent key; the number of distinct keys sets the growth state:
+ * Thirsty, then Perking up, then Flourishing. Each UTC day starts Thirsty, an
+ * invitation to care for the plant, and growth never goes down within a day.
  *
- * Demo overrides: `?growth=0..4` pins a stage and `?growth=play` grows from
- * sprout to full bloom on a timer, for screen recordings. While an override is
+ * Demo overrides: `?growth=0..2` pins a state and `?growth=play` goes from
+ * Thirsty to Flourishing on a timer, for screen recordings. While an override is
  * active, completing tasks doesn't earn growth.
  *
  * Until the stored progress and the page's data have loaded, `isSettling` is
@@ -18,22 +18,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
  * render knows neither the stored progress nor the URL override).
  */
 
-export type GrowthStage = 0 | 1 | 2 | 3 | 4;
+export type GrowthStage = 0 | 1 | 2;
 
 export const GROWTH_STAGE_NAMES: Record<GrowthStage, string> = {
-  0: "Sprouting",
-  1: "Leafing out",
-  2: "Budding",
-  3: "Blooming",
-  4: "Flourishing",
+  0: "Thirsty",
+  1: "Perking up",
+  2: "Flourishing",
 };
 
-/** Points needed to reach each stage, indexed by stage. */
-const STAGE_THRESHOLDS = [0, 1, 2, 4, 6] as const;
+/** Points needed to reach each state, indexed by state. */
+const STAGE_THRESHOLDS = [0, 2, 5] as const;
 
 const STORAGE_PREFIX = "tyyni.bloomie.";
-const PLAY_INTERVAL_MS = 2500;
-const GROWING_MS = 1800;
+const PLAY_INTERVAL_MS = 4000;
+const GROWING_MS = 2400;
 
 export function stageFor(points: number): GrowthStage {
   let stage = 0;
@@ -89,7 +87,7 @@ type Override = GrowthStage | "play" | null;
 function readOverride(): Override {
   const value = new URLSearchParams(window.location.search).get("growth");
   if (value === "play") return "play";
-  if (value !== null && /^[0-4]$/.test(value)) {
+  if (value !== null && /^[0-2]$/.test(value)) {
     return Number(value) as GrowthStage;
   }
   return null;
@@ -172,7 +170,7 @@ export function useBloomieGrowth({
       current += 1;
       setPlayStage(current as GrowthStage);
       celebrate(current as GrowthStage, false);
-      if (current >= 4) window.clearInterval(timer);
+      if (current >= 2) window.clearInterval(timer);
     }, PLAY_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [override, celebrate]);
@@ -215,7 +213,6 @@ export function useBloomieGrowth({
 
   return {
     stage,
-    stageName: GROWTH_STAGE_NAMES[stage],
     isGrowing,
     isSettling: !settled,
     earn,

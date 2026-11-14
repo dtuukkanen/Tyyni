@@ -460,7 +460,7 @@ export default function Home() {
             triggerBloomieJoy();
             notify("Sent a quiet wave to Liam, Maya, Sofia, and Marcus.");
           }}
-          growthStageName={growth.stageName}
+          growthStage={growth.stage}
           onInteractCompanion={() => {
             triggerBloomieJoy();
             notify("Bloomie sways happily in the gentle breeze with you.");
