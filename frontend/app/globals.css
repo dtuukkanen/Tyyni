@@ -3540,6 +3540,7 @@ select:focus-visible {
 
 .nav-tab {
   min-width: 0;
+  text-decoration: none;
   min-height: 52px;
   padding: 5px 4px;
   border-radius: var(--radius-full);
@@ -4172,4 +4173,10 @@ select:focus-visible {
   .bloomie * {
     transition-delay: 0ms !important;
   }
+}
+
+/* Loading splash while the server streams in today's data (app/page.tsx) */
+.app-splash {
+  align-items: center;
+  justify-content: center;
 }
