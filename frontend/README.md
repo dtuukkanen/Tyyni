@@ -17,3 +17,16 @@ npm run dev
 ```
 
 The app works with sample content when the Python service is not configured. To connect it, set `PYTHON_SERVICE_URL` to the service's private base URL. The Next.js server calls `GET {PYTHON_SERVICE_URL}/dashboard` through `/api/prototype`, so the service address is never exposed to the browser. The endpoint can return a JSON object with optional `displayName`, `dateLabel`, `mood`, `steps`, and `wins` fields. `steps` is an array of `{ "label": string, "complete": boolean }`; `wins` is an array of strings. Adjust the proxy route or client mapping if the Python service uses another endpoint or response shape.
+
+## Deploy (Vercel)
+
+The app is hosted on Vercel's free Hobby plan, which has no paid overage: if a usage limit is hit, the project is paused instead of billed. In the Vercel project, set **Root Directory** to `frontend` (the framework is detected as Next.js).
+
+`vercel.json` pins the server route `/api/prototype` to `arn1` (Stockholm), the Vercel region closest to the backend in Google Cloud `europe-north1` (Finland). Until `PYTHON_SERVICE_URL` is set in the project's environment variables, the deployment serves the built-in sample content.
+
+```bash
+vercel login
+vercel link          # from frontend/; creates .vercel/ (git-ignored)
+vercel deploy        # preview deployment
+vercel deploy --prod # production deployment
+```
