@@ -9,6 +9,8 @@ import {
 } from "../data/sanctuaryData";
 import { Icon } from "./icons";
 
+const NO_NUDGES: ResolvedBehavioralNudge[] = [];
+
 type TodayScreenProps = {
   guestName: string;
   dateLabel: string;
@@ -36,7 +38,7 @@ export function TodayScreen({
   dateLabel,
   lowEnergy,
   onExitLowEnergy,
-  behavioralNudges = [],
+  behavioralNudges = NO_NUDGES,
   activeNudgeIndex = 0,
   onCycleNudge,
   onDismissNudge,
@@ -103,11 +105,11 @@ export function TodayScreen({
             {activeNudge ? (
               <>
                 <div className="nudge-top-row">
-                  <span className={`nudge-badge nudge-tone-${activeNudge.tone}`}>
+                  <span
+                    className={`nudge-badge nudge-tone-${activeNudge.tone}`}
+                  >
                     <Icon
-                      name={
-                        activeNudge.tone === "blush" ? "heart" : "spa"
-                      }
+                      name={activeNudge.tone === "blush" ? "heart" : "spa"}
                       size={12}
                     />
                     <span>{activeNudge.badgeLabel}</span>
@@ -295,6 +297,7 @@ export function TodayScreen({
               const iconName = STEP_ICONS[index % STEP_ICONS.length];
               return (
                 <button
+                  // oxlint-disable-next-line react/no-array-index-key -- steps are plain strings and may repeat
                   key={`${step}-${index}`}
                   type="button"
                   className={`step-card ${isDone ? "is-done" : ""}`}
@@ -344,6 +347,7 @@ export function TodayScreen({
                 value={newStep}
                 onChange={(e) => setNewStep(e.target.value)}
                 placeholder="One gentle intention (e.g., sip warm tea)..."
+                // oxlint-disable-next-line jsx-a11y/no-autofocus -- the field appears only after the user asks to add a step
                 autoFocus
               />
               <button

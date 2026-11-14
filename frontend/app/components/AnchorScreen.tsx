@@ -135,10 +135,7 @@ export function AnchorScreen({
       </section>
 
       {/* My Core Anchors */}
-      <section
-        className="section-block"
-        aria-labelledby="core-anchors-heading"
-      >
+      <section className="section-block" aria-labelledby="core-anchors-heading">
         <div className="section-header-row">
           <h2 id="core-anchors-heading" className="section-heading">
             My Core Anchors
@@ -265,7 +262,9 @@ export function AnchorScreen({
 
           <div className="practice-footer">
             <div>
-              <h3 className="practice-title">Deep Cat Purr &amp; Brown Noise</h3>
+              <h3 className="practice-title">
+                Deep Cat Purr &amp; Brown Noise
+              </h3>
               <p className="practice-desc">
                 Rhythmic low frequencies that relax the spine.
               </p>
@@ -280,9 +279,7 @@ export function AnchorScreen({
                   ? "Pause brown noise anchor"
                   : "Play brown noise anchor"
               }
-              onClick={() =>
-                onSoundToggle("purr", "Vibroacoustic Brown Noise")
-              }
+              onClick={() => onSoundToggle("purr", "Vibroacoustic Brown Noise")}
             >
               <Icon
                 name={activeSound === "purr" ? "pause" : "play"}

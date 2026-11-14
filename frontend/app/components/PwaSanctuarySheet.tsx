@@ -30,6 +30,7 @@ export function usePwa(): PwaState {
     useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- browser-only state, read after hydration
     setIsOffline(!navigator.onLine);
 
     const iosDetected =
@@ -135,6 +136,7 @@ export function PwaSanctuarySheet({
   }, [onClose]);
 
   return (
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- backdrop click closes; Escape is handled on window
     <div
       className="modal-backdrop"
       role="dialog"
@@ -158,7 +160,10 @@ export function PwaSanctuarySheet({
           <TyyniLogo size={42} />
           <div>
             <span className="eyebrow-badge">Sanctuary App</span>
-            <h2 id="pwa-sheet-title" className="section-heading pwa-sheet-title">
+            <h2
+              id="pwa-sheet-title"
+              className="section-heading pwa-sheet-title"
+            >
               {guestName}’s Sanctuary
             </h2>
           </div>
@@ -244,7 +249,11 @@ export function PwaSanctuarySheet({
                 : "Preview how Today adapts when backend detects signal changes"}
             </span>
           </div>
-          <div className="pwa-demo-chips" role="group" aria-label="Behavioral nudge preview">
+          <div
+            className="pwa-demo-chips"
+            role="group"
+            aria-label="Behavioral nudge preview"
+          >
             {DEMO_NUDGE_OPTIONS.map((opt) => {
               const isSelected = demoNudgeKey === opt.key;
               return (

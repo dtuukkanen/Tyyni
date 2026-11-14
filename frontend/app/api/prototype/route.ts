@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-function mapMoodScoreToId(score: number | null | undefined): string | undefined {
+function mapMoodScoreToId(
+  score: number | null | undefined,
+): string | undefined {
   if (score == null) return undefined;
   if (score <= 2) return "Tired";
   if (score < 3.4) return "Tender";
@@ -36,7 +38,10 @@ async function resolveUser(
 
   const listRes = await fetch(`${base}/users`, { cache: "no-store", headers });
   if (!listRes.ok) return null;
-  const users = (await listRes.json()) as { id: string; display_name?: string }[];
+  const users = (await listRes.json()) as {
+    id: string;
+    display_name?: string;
+  }[];
   return users.length > 0 ? users[0] : null;
 }
 
@@ -186,6 +191,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Tyyni suggestion feedback failed:", error);
-    return NextResponse.json({ ok: false, source: "prototype" }, { status: 200 });
+    return NextResponse.json(
+      { ok: false, source: "prototype" },
+      { status: 200 },
+    );
   }
 }

@@ -35,6 +35,7 @@ export function PracticeModal({
 
   useEffect(() => {
     if (modal.mode !== "breath") return;
+    // oxlint-disable-next-line react/set-state-in-effect -- restart the breath cycle when a new modal opens
     setBreathIndex(0);
     const timer = window.setInterval(() => {
       setBreathIndex((prev) => (prev + 1) % BREATH_PHASES.length);
@@ -46,6 +47,7 @@ export function PracticeModal({
   const activeSense = SENSORY_STEPS[sensoryIndex];
 
   return (
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- backdrop click closes; Escape is handled on window
     <div
       className="modal-backdrop"
       role="dialog"

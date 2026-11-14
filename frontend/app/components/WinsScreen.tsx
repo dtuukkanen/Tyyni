@@ -64,6 +64,7 @@ export function WinsScreen({ wins, onAddWin }: WinsScreenProps) {
           <div className="win-pebble-list">
             {wins.map((win, idx) => (
               <span
+                // oxlint-disable-next-line react/no-array-index-key -- wins are plain strings and may repeat
                 key={`${win}-${idx}`}
                 className={`win-pebble win-variant-${idx % 4}`}
               >
@@ -229,7 +230,9 @@ export function WinsScreen({ wins, onAddWin }: WinsScreenProps) {
         <span className="icon-orb icon-orb-round affirmation-orb">
           <Icon name="meditate" size={20} />
         </span>
-        <p className="affirmation-quote">“You do not need to earn your rest.”</p>
+        <p className="affirmation-quote">
+          “You do not need to earn your rest.”
+        </p>
         <p className="affirmation-sub">
           Return to these soft reflections whenever overwhelm strikes. You are
           doing enough simply by breathing.

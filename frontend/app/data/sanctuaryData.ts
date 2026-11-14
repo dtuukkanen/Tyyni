@@ -74,7 +74,8 @@ export const MOOD_OPTIONS: MoodOption[] = [
     id: "Light",
     label: "Light",
     icon: "sun",
-    response: "Clear and light is embraced. Enjoy the quiet ease of this moment.",
+    response:
+      "Clear and light is embraced. Enjoy the quiet ease of this moment.",
   },
 ];
 
@@ -84,7 +85,12 @@ export const STARTER_STEPS = [
   "Step outside or look at the sky for 1 minute",
 ];
 
-export const STEP_ICONS: IconName[] = ["twilight", "waterGlass", "cloud", "spa"];
+export const STEP_ICONS: IconName[] = [
+  "twilight",
+  "waterGlass",
+  "cloud",
+  "spa",
+];
 
 export const CIRCLE_MEMBERS = [
   { initial: "L", name: "Liam", status: "Done", done: true, tone: "tone-moss" },

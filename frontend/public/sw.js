@@ -90,7 +90,9 @@ self.addEventListener("fetch", (event) => {
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();
-            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, copy));
+            caches
+              .open(RUNTIME_CACHE)
+              .then((cache) => cache.put(request, copy));
           }
           return response;
         })
