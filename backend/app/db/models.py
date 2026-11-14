@@ -122,6 +122,7 @@ class MoodCheckin(Base):
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     score: Mapped[int] = mapped_column(SmallInteger)
     note: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text, server_default="app")
 
 
 class JournalEntry(Base):

@@ -136,7 +136,7 @@ def test_delete_source_data(seeded):
     with get_session() as s:
         rows = repo.daily_metrics(s, seeded, START, START + timedelta(days=DAYS - 1))
     assert all(r["hr_avg"] is None and r["steps"] is None for r in rows)
-    assert all(r["mood_avg"] is not None for r in rows)  # mood is user input, not simulated
+    assert all(r["mood_avg"] is not None for r in rows)  # check-ins made in the app are kept
 
 
 def test_constraints_reject_bad_input(user_id):

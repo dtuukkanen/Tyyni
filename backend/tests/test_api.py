@@ -95,6 +95,7 @@ def test_record_and_list_mood(user_id):
     created = r.json()
     assert created["score"] == 4
     assert created["note"] == "ok day"
+    assert created["source"] == "app"
     assert datetime.fromisoformat(created["ts"]) == _at(date(2026, 10, 3), 20)  # naive -> UTC
 
     moods = client.get(
