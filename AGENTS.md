@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Wellbeing backend for Junction 2026: wearable-style data (heart rate + HRV, sleep, activity), mood check-ins and a feeling journal in one TimescaleDB, a FastAPI layer for the frontend, and simulators that generate realistic test data with ground truth. `README.md` is the user-facing reference for the schema, endpoints and every simulator scenario; read it before changing behavior it describes, and keep it up to date in the same change.
+Wellbeing backend for Junction 2026: wearable-style data (heart rate + HRV, sleep, activity), mood check-ins and a feeling journal in one TimescaleDB, a FastAPI layer for the frontend, and simulators that generate realistic test data with ground truth. `docs/` is the user-facing reference, indexed from `README.md`: `architecture.md` (data flow, tables), `api.md` (endpoints), `inference/` (anomaly rules, suggestions), `simulators/` (one page per simulator, every scenario), `development.md` and `deployment.md`. Read the page before changing behavior it describes, and keep it up to date in the same change.
 
 ## Layout
 
