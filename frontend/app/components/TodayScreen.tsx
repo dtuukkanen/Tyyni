@@ -371,8 +371,6 @@ export function TodayScreen({
                 ? "flex flex-col gap-1 bg-white/86 px-3.5 py-2.5 short:px-3.25 short:py-2.25"
                 : "bg-white/80 px-4 py-3.5 short:px-3.5 short:py-2.5",
             )}
-            // Bloomie shrinks to make room for a nudge (see globals.css).
-            data-nudge={compactCard || undefined}
           >
             {lowEnergy ? (
               <>
