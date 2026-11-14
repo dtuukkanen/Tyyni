@@ -7,6 +7,15 @@ import { Icon, type IconName } from "./icons";
 import { CapsuleForm } from "./ui/CapsuleForm";
 import { IconOrb, type Tone } from "./ui/IconOrb";
 import { SectionHeader } from "./ui/SectionHeader";
+import {
+  cx,
+  durationPill,
+  panelCard,
+  screenBody,
+  sectionBlock,
+  sectionLabel,
+  TONE,
+} from "./ui/styles";
 import type { GrowthStage } from "./useBloomieGrowth";
 
 type RecentWin = {
@@ -59,11 +68,19 @@ const JAR_PEBBLE_SPOTS: {
   { cx: 44, cy: 49, rx: 8, ry: 5.2, rot: 7, fill: "#f6dfb0" },
 ];
 
+/** Pebble colours in the jar's win list, repeating. */
+const PEBBLE_TONES = [
+  "bg-white/90 text-primary",
+  "bg-tertiary-fixed/60 text-tertiary",
+  "bg-[rgba(197,236,204,0.72)] text-on-secondary-container",
+  "bg-primary-fixed text-on-primary-fixed",
+];
+
 function SanctuaryJarIllustration({ count }: { count: number }) {
   const visibleCount = Math.min(count, JAR_PEBBLE_SPOTS.length);
   return (
     <svg
-      className="sanctuary-jar-svg"
+      className="block size-24 shrink-0"
       viewBox="0 0 120 120"
       role="img"
       aria-label={`Sanctuary jar holding ${count} ${count === 1 ? "win" : "wins"}`}
@@ -109,7 +126,7 @@ function SanctuaryJarIllustration({ count }: { count: number }) {
         <g
           // oxlint-disable-next-line react/no-array-index-key -- fixed coordinates inside SVG jar
           key={idx}
-          className="jar-svg-pebble"
+          className="animate-pebble-drop"
           transform={`translate(${spot.cx} ${spot.cy}) rotate(${spot.rot})`}
         >
           <ellipse
@@ -173,30 +190,30 @@ export function WinsScreen({
   }
 
   return (
-    <main className="screen-body">
+    <main className={screenBody()}>
       {/* 1. Visual Sanctuary Jar + Companion Showcase */}
       <section
-        className="wins-scene-card"
+        className="relative flex flex-col gap-3.5 overflow-hidden rounded-xl border border-secondary/14 bg-[linear-gradient(165deg,rgba(218,240,232,0.72)_0%,rgba(255,255,255,0.94)_55%,rgba(253,234,226,0.58)_100%)] p-4.5 shadow-ambient"
         aria-labelledby="sanctuary-jar-title"
       >
         <SectionHeader
           id="sanctuary-jar-title"
-          headingClassName="section-label"
+          headingClassName={sectionLabel}
           title={
             <>
               <Icon name="heartFilled" size={16} />
               <span>Sanctuary Jar</span>
             </>
           }
-          metaClassName="duration-pill is-moss"
+          metaClassName={durationPill({ moss: true })}
           meta={`${wins.length} today`}
         />
 
-        <div className="wins-visual-stage">
+        <div className="flex items-center gap-3.5 rounded-lg border border-white/85 bg-white/72 px-3 py-2.5">
           <SanctuaryJarIllustration count={wins.length} />
 
-          <div className="wins-companion-aside">
-            <div className="wins-mini-bloomie-row">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2.5">
               <FlowerCompanion
                 variant="mini"
                 mood={mood}
@@ -205,20 +222,30 @@ export function WinsScreen({
                 isGrowing={isGrowing}
                 isSettling={isSettling}
               />
-              <div className="wins-companion-copy">
-                <strong>Nurtures Bloomie</strong>
-                <span>Every logged win waters today’s growth.</span>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <strong className="text-[14px] font-semibold text-ink">
+                  Nurtures Bloomie
+                </strong>
+                <span className="text-[12.5px] leading-[1.38] text-ink-soft">
+                  Every logged win waters today’s growth.
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="win-pebble-list" aria-label="Wins in today’s jar">
+        <div
+          className="flex flex-wrap gap-1.75"
+          aria-label="Wins in today’s jar"
+        >
           {wins.map((win, idx) => (
             <span
               // oxlint-disable-next-line react/no-array-index-key -- wins are plain strings and may repeat
               key={`${win}-${idx}`}
-              className={`win-pebble win-variant-${idx % 4}`}
+              className={cx(
+                "inline-flex items-center gap-1.5 rounded-full border border-outline/14 px-3 py-1.75 text-[13px] font-medium",
+                PEBBLE_TONES[idx % PEBBLE_TONES.length],
+              )}
             >
               <Icon name="check" size={13} />
               <span>{win}</span>
@@ -229,30 +256,42 @@ export function WinsScreen({
 
       {/* 2. Quick Tap Grid + Custom Win Input */}
       <section
-        className="section-block frosted-panel-card"
+        className={cx(sectionBlock, panelCard)}
         aria-labelledby="acknowledge-win-heading"
       >
         <SectionHeader
           id="acknowledge-win-heading"
-          headingClassName="section-label"
+          headingClassName={sectionLabel}
           title="Log a Win"
           meta="Tap to drop in jar"
         />
 
-        <div className="wins-quick-grid">
+        <div className="grid grid-cols-[repeat(3,1fr)] gap-2">
           {WIN_SUGGESTIONS.map((item) => {
             const flashed = justAdded === item.label;
             return (
               <button
                 key={item.label}
                 type="button"
-                className={`win-quick-tile ${flashed ? "is-added" : ""}`}
+                className={cx(
+                  "flex min-h-19 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-2.5 text-center transition-[background-color,border-color,scale]",
+                  flashed
+                    ? "scale-98 border-secondary/35 bg-secondary-container"
+                    : "border-outline/10 bg-surface-low hover:border-primary-container/25 hover:bg-surface-container",
+                )}
                 onClick={() => handleQuickTap(item.label)}
               >
-                <span className={`win-tile-orb ${item.tone}`}>
+                <span
+                  className={cx(
+                    "inline-flex size-8.5 items-center justify-center rounded-full",
+                    TONE[item.tone],
+                  )}
+                >
                   <Icon name={flashed ? "check" : item.icon} size={18} />
                 </span>
-                <span className="win-tile-label">{item.label}</span>
+                <span className="text-[12px] leading-[1.25] font-semibold text-ink">
+                  {item.label}
+                </span>
               </button>
             );
           })}
@@ -271,22 +310,29 @@ export function WinsScreen({
 
       {/* 3. Compact Earlier Log */}
       <section
-        className="section-block frosted-panel-card"
+        className={cx(sectionBlock, panelCard)}
         aria-labelledby="recent-moments-heading"
       >
         <SectionHeader
           id="recent-moments-heading"
-          headingClassName="section-label"
+          headingClassName={sectionLabel}
           title="Earlier"
           meta="Recent log"
         />
 
-        <div className="wins-recent-list">
+        <div className="flex flex-col gap-2">
           {RECENT_WINS.map((item) => (
-            <div key={item.title} className="win-recent-row">
-              <IconOrb icon={item.icon} size={17} tone={item.tone} />
-              <span className="win-recent-title">{item.title}</span>
-              <span className="win-recent-when">{item.when}</span>
+            <div
+              key={item.title}
+              className="flex items-center gap-2.75 rounded-lg bg-surface-low px-3 py-2.5"
+            >
+              <IconOrb icon={item.icon} size={17} tone={item.tone} box="sm" />
+              <span className="min-w-0 flex-1 text-[13.5px] leading-[1.35] font-medium text-ink">
+                {item.title}
+              </span>
+              <span className="shrink-0 text-[12px] whitespace-nowrap text-ink-muted">
+                {item.when}
+              </span>
             </div>
           ))}
         </div>

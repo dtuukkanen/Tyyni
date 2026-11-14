@@ -7,6 +7,17 @@ import type { SoundPreset } from "./soundEngine";
 import { IconOrb, type Tone } from "./ui/IconOrb";
 import { ReassureBanner } from "./ui/ReassureBanner";
 import { ScreenHero } from "./ui/ScreenHero";
+import {
+  durationPill,
+  pillButton,
+  practiceDesc,
+  practiceNote,
+  practiceTitle,
+  screenBody,
+  sectionBlock,
+  statusDot,
+} from "./ui/styles";
+import { WaveBars } from "./ui/WaveBars";
 
 type GroundScreenProps = {
   activeSound: SoundPreset | null;
@@ -20,8 +31,8 @@ type PracticeCardProps = {
   title: string;
   desc: ReactNode;
   duration: string;
-  /** Extra class on the duration pill, e.g. `is-moss`. */
-  durationClassName?: string;
+  /** Green duration pill. */
+  durationMoss?: boolean;
   /** Small line in the footer, left of the action. */
   note: ReactNode;
   /** Footer button. */
@@ -36,34 +47,26 @@ function PracticeCard({
   title,
   desc,
   duration,
-  durationClassName,
+  durationMoss = false,
   note,
   action,
   children,
 }: PracticeCardProps) {
   return (
-    <article className="practice-card">
-      <div className="practice-top">
-        <div className="practice-lead">
+    <article className="flex flex-col gap-3.5 rounded-lg border border-outline/10 bg-surface-lowest p-4.5 shadow-pebble">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3.5">
           <IconOrb icon={icon} size={22} tone={tone} square />
           <div>
-            <h2 className="practice-title">{title}</h2>
-            <p className="practice-desc">{desc}</p>
+            <h2 className={practiceTitle}>{title}</h2>
+            <p className={practiceDesc}>{desc}</p>
           </div>
         </div>
-        <span
-          className={
-            durationClassName
-              ? `duration-pill ${durationClassName}`
-              : "duration-pill"
-          }
-        >
-          {duration}
-        </span>
+        <span className={durationPill({ moss: durationMoss })}>{duration}</span>
       </div>
       {children}
-      <div className="practice-footer">
-        <span className="practice-note">{note}</span>
+      <div className="flex items-center justify-between gap-3">
+        <span className={practiceNote}>{note}</span>
         {action}
       </div>
     </article>
@@ -111,7 +114,7 @@ const BODY_PRACTICES: GuidedPractice[] = [
     duration: "3 mins",
     note: (
       <>
-        <span className="status-dot" aria-hidden="true" />
+        <span className={statusDot()} aria-hidden="true" />
         <span>Seated or lying down</span>
       </>
     ),
@@ -275,7 +278,9 @@ export function GroundScreen({
         action={
           <button
             type="button"
-            className={primary ? "btn-primary-pill" : "btn-secondary-pill"}
+            className={pillButton({
+              variant: primary ? "primary" : "secondary",
+            })}
             onClick={() => onOpenModal(modal)}
           >
             {cta}
@@ -286,7 +291,7 @@ export function GroundScreen({
   }
 
   return (
-    <main className="screen-body">
+    <main className={screenBody()}>
       <ScreenHero
         badge={<Icon name="spa" size={14} />}
         badgeLabel="SOMATIC ANCHOR"
@@ -302,7 +307,10 @@ export function GroundScreen({
         </ReassureBanner>
       </ScreenHero>
 
-      <section className="practices-stack" aria-label="Grounding practices">
+      <section
+        className="flex flex-col gap-3.5"
+        aria-label="Grounding practices"
+      >
         {guided(BOX_BREATHING)}
 
         <PracticeCard
@@ -313,25 +321,14 @@ export function GroundScreen({
           duration="5 mins"
           note={
             <>
-              <span
-                className={`wave-bars ${sanctuaryPlaying ? "is-playing" : ""}`}
-                aria-hidden="true"
-              >
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-              </span>
+              <WaveBars playing={sanctuaryPlaying} />
               <span>Warm acoustic hum</span>
             </>
           }
           action={
             <button
               type="button"
-              className={`btn-secondary-pill ${
-                sanctuaryPlaying ? "is-active" : ""
-              }`}
+              className={pillButton({ active: sanctuaryPlaying })}
               onClick={() => onSoundToggle("sanctuary", "Sound Sanctuary")}
             >
               <Icon name={sanctuaryPlaying ? "pause" : "play"} size={15} />
@@ -346,21 +343,21 @@ export function GroundScreen({
           title="Nearby nature"
           desc="Quiet shaded trees, lake shores, riverbank, or open grass"
           duration="0.8 km"
-          durationClassName="is-moss"
+          durationMoss
           note="Open benches · Low foot traffic · Calming water"
           action={
             <button
               type="button"
-              className="btn-secondary-pill"
+              className={pillButton()}
               onClick={() => onOpenModal(NEARBY_NATURE_MODAL)}
             >
               Explore
             </button>
           }
         >
-          <div className="nature-map-card">
+          <div className="relative h-27 overflow-hidden rounded-md border border-secondary/16 bg-[#dceee4]">
             <svg
-              className="nature-map-svg"
+              className="block size-full"
               viewBox="0 0 360 110"
               preserveAspectRatio="xMidYMid slice"
               role="img"
@@ -395,7 +392,7 @@ export function GroundScreen({
                 fillOpacity="0.22"
               />
             </svg>
-            <div className="nature-map-caption">
+            <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-[linear-gradient(to_top,rgba(24,42,36,0.76),rgba(24,42,36,0.28)_68%,transparent)] px-3 py-2.5 text-[12.5px] font-medium text-white">
               <Icon name="pin" size={15} />
               <span>Linden Grove &amp; Lakeside Haven (8 min gentle walk)</span>
             </div>
@@ -405,18 +402,20 @@ export function GroundScreen({
         {BODY_PRACTICES.map(guided)}
       </section>
 
-      <div className="section-block">
-        <div className="reassure-footnote">
+      <div className={sectionBlock}>
+        <div className="flex items-center gap-3 rounded-lg bg-surface-low p-4 text-[13.5px] leading-[1.5] text-ink-soft">
           <Icon name="verified" size={20} />
           <span>
-            Doing even <strong>30 seconds</strong> counts as a full practice.
-            Showing up for your breath is already enough.
+            Doing even{" "}
+            <strong className="font-semibold text-ink">30 seconds</strong>{" "}
+            counts as a full practice. Showing up for your breath is already
+            enough.
           </span>
         </div>
 
         <button
           type="button"
-          className="sos-pill-btn"
+          className="inline-flex min-h-13.5 w-full items-center justify-center gap-2.25 rounded-full bg-tertiary-fixed px-4.5 py-3.5 text-[14.5px] font-semibold text-on-tertiary-fixed transition-colors hover:bg-tertiary-fixed-dim"
           onClick={() => onOpenModal(SOS_MODAL)}
         >
           <Icon name="sos" size={20} />

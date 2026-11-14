@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Icon } from "../icons";
+import { cx } from "./styles";
 import { useDismiss } from "./useDismiss";
 
 type ModalSheetProps = {
@@ -10,8 +11,8 @@ type ModalSheetProps = {
   /** Accessible label of the close button. */
   closeLabel: string;
   onClose: () => void;
-  /** Extra class on the sheet, next to `modal-sheet`. */
-  className?: string;
+  /** `center` stacks content centered (practices); `start` left-aligns it. */
+  align?: "center" | "start";
   children: ReactNode;
 };
 
@@ -20,7 +21,7 @@ export function ModalSheet({
   labelledBy,
   closeLabel,
   onClose,
-  className,
+  align = "center",
   children,
 }: ModalSheetProps) {
   useDismiss(true, onClose);
@@ -28,7 +29,7 @@ export function ModalSheet({
   return (
     // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- backdrop click closes; Escape is handled on window
     <div
-      className="modal-backdrop"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/42 p-5 backdrop-blur-[6px]"
       role="dialog"
       aria-modal="true"
       aria-labelledby={labelledBy}
@@ -36,10 +37,17 @@ export function ModalSheet({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={className ? `modal-sheet ${className}` : "modal-sheet"}>
+      <div
+        className={cx(
+          "relative flex w-full max-w-[380px] flex-col overflow-hidden rounded-xl bg-surface-lowest px-5.5 pt-6.5 pb-5.5 shadow-[0_24px_48px_rgba(27,28,26,0.18)]",
+          align === "center"
+            ? "items-center gap-3 text-center"
+            : "items-stretch gap-3.5 text-left",
+        )}
+      >
         <button
           type="button"
-          className="modal-close-btn"
+          className="absolute top-3 right-3 inline-flex size-11 items-center justify-center rounded-full text-ink-muted hover:bg-surface-container hover:text-ink"
           aria-label={closeLabel}
           onClick={onClose}
         >
