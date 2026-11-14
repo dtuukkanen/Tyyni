@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Gentle Wins - Tyyni</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Font: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with configuration -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-variant": "#e4e2df",
+            "inverse-primary": "#a6cfc4",
+            "error": "#ba1a1a",
+            "tertiary-fixed-dim": "#ffb4a1",
+            "on-secondary-fixed-variant": "#2c4e37",
+            "on-error-container": "#93000a",
+            "inverse-surface": "#30312e",
+            "secondary": "#43664d",
+            "inverse-on-surface": "#f2f1ed",
+            "on-surface": "#1b1c1a",
+            "primary": "#224840",
+            "secondary-fixed": "#c5eccc",
+            "error-container": "#ffdad6",
+            "on-secondary-fixed": "#00210e",
+            "primary-fixed": "#c2ebdf",
+            "tertiary": "#742914",
+            "on-tertiary-fixed-variant": "#7b2e19",
+            "surface-tint": "#3f655c",
+            "on-surface-variant": "#414846",
+            "tertiary-fixed": "#ffdbd2",
+            "secondary-fixed-dim": "#a9d0b1",
+            "surface": "#fbf9f5",
+            "on-secondary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "on-primary-fixed-variant": "#274d45",
+            "surface-container-low": "#f5f3f0",
+            "surface-container": "#efeeea",
+            "outline": "#717976",
+            "surface-container-high": "#e9e8e4",
+            "on-primary": "#ffffff",
+            "on-secondary-container": "#476a51",
+            "surface-dim": "#dbdad6",
+            "surface-container-highest": "#e4e2df",
+            "on-error": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "outline-variant": "#c0c8c5",
+            "on-primary-fixed": "#00201a",
+            "on-background": "#1b1c1a",
+            "on-tertiary-container": "#ffc2b2",
+            "surface-bright": "#fbf9f5",
+            "primary-fixed-dim": "#a6cfc4",
+            "secondary-container": "#c2e9ca",
+            "background": "#fbf9f5",
+            "primary-container": "#3a6057",
+            "on-primary-container": "#b0d9cd",
+            "on-tertiary-fixed": "#3c0800",
+            "tertiary-container": "#933f29"
+          },
+          "borderRadius": {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-lg": "1.5rem",
+            "space-xs": "0.25rem",
+            "space-xl": "2.5rem",
+            "space-md": "1rem",
+            "gutter-md": "1.5rem",
+            "margin": "1.25rem",
+            "margin-md": "2rem",
+            "gutter-lg": "2rem",
+            "space-sm": "0.5rem",
+            "margin-lg": "3rem",
+            "gutter": "1rem"
+          },
+          "fontFamily": {
+            "body-sm": ["Plus Jakarta Sans"],
+            "label-lg": ["Plus Jakarta Sans"],
+            "headline-sm": ["Plus Jakarta Sans"],
+            "display-lg": ["Plus Jakarta Sans"],
+            "display-lg-mobile": ["Plus Jakarta Sans"],
+            "headline-lg": ["Plus Jakarta Sans"],
+            "body-md": ["Plus Jakarta Sans"],
+            "label-sm": ["Plus Jakarta Sans"],
+            "headline-md": ["Plus Jakarta Sans"],
+            "label-md": ["Plus Jakarta Sans"],
+            "body-lg": ["Plus Jakarta Sans"]
+          },
+          "fontSize": {
+            "body-sm": ["13px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+            "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "headline-sm": ["20px", { "lineHeight": "28px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "display-lg": ["44px", { "lineHeight": "52px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "display-lg-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "body-md": ["15px", { "lineHeight": "24px", "letterSpacing": "0.005em", "fontWeight": "400" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "500" }],
+            "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+            "body-lg": ["17px", { "lineHeight": "26px", "letterSpacing": "0em", "fontWeight": "400" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .ambient-glow {
+      box-shadow: 0 16px 32px -4px rgba(58, 96, 87, 0.08), 0 4px 12px -2px rgba(58, 96, 87, 0.04);
+    }
+    .pebble-glow {
+      box-shadow: 0 8px 24px -2px rgba(58, 96, 87, 0.06);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased min-h-screen pb-32 font-body-md text-body-md selection:bg-secondary-container selection:text-on-secondary-container">
+<!-- Top App Bar (Shared Components Anchor) -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-space-md py-space-sm bg-surface/80 dark:bg-inverse-surface/80 backdrop-blur-md">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="spa">spa</span>
+<div class="flex flex-col">
+<span class="text-headline-sm font-headline-sm text-primary tracking-tight font-bold">Gentle Wins</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant tracking-wider -mt-1">TYYNI • WINS</span>
+</div>
+</div>
+<div class="flex items-center space-x-space-sm">
+<button aria-label="Profile" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary hover:bg-surface-variant transition-colors duration-200 active:scale-95">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="max-w-md mx-auto px-margin pt-20 flex flex-col space-y-space-lg">
+<!-- Reassurance & Title Hero -->
+<section class="flex flex-col items-start pt-space-sm space-y-space-sm">
+<!-- Micro-victories Pill Badge -->
+<div class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-secondary-container/70 text-on-secondary-container text-label-md font-label-md">
+<span class="material-symbols-outlined text-[15px]" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span>MICRO-VICTORIES</span>
+</div>
+<h1 class="text-headline-lg font-headline-lg text-primary tracking-tight">
+        Gentle Wins.
+      </h1>
+<p class="text-body-md font-body-md text-on-surface-variant leading-relaxed">
+        Nothing is too small. Surviving a hard moment, resting, or drinking water is already a triumph.
+      </p>
+<!-- Pebble Banner: No Scoreboards Here -->
+<div class="w-full mt-space-xs p-space-md rounded-lg bg-surface-container border border-outline/10 pebble-glow flex items-start space-x-3">
+<span class="material-symbols-outlined text-secondary mt-0.5" data-icon="nature">nature</span>
+<div class="flex flex-col">
+<span class="text-label-lg font-label-lg text-secondary font-semibold">No scoreboards here</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant mt-0.5">
+            Wins are not tallied for productivity, but gathered gently as soft proof of kindness to yourself.
+          </span>
+</div>
+</div>
+</section>
+<!-- The Gentle Jar Container -->
+<section class="w-full rounded-lg bg-surface-container-lowest/90 border border-outline/10 p-space-lg ambient-glow relative overflow-hidden flex flex-col space-y-space-md">
+<!-- Soft ambient gradient backdrop blob -->
+<div class="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-tertiary-fixed/40 blur-2xl pointer-events-none"></div>
+<div class="absolute -left-6 -bottom-6 w-32 h-32 rounded-full bg-secondary-fixed/50 blur-xl pointer-events-none"></div>
+<div class="flex items-center justify-between z-10">
+<div class="flex items-center space-x-2">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+<span class="text-label-lg font-label-lg text-on-surface font-semibold">Today’s Sanctuary Jar</span>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container text-primary text-label-sm font-label-sm font-semibold">
+          4 quiet wins today
+        </span>
+</div>
+<!-- Floating Pebble Chips inside the Jar -->
+<div class="relative z-10 flex flex-wrap gap-2 pt-space-xs pb-space-xs">
+<div class="px-3.5 py-2 rounded-full bg-surface-container border border-outline/15 text-primary text-body-sm font-body-sm flex items-center space-x-2 transition-transform hover:scale-102">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span>Drank a glass of water</span>
+</div>
+<div class="px-3.5 py-2 rounded-full bg-tertiary-fixed/50 text-tertiary border border-outline/10 text-body-sm font-body-sm flex items-center space-x-2">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-container"></span>
+<span>Stepped away from screen</span>
+</div>
+<div class="px-3.5 py-2 rounded-full bg-secondary-fixed/60 text-on-secondary-fixed-variant border border-outline/10 text-body-sm font-body-sm flex items-center space-x-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span>Breathed through tension</span>
+</div>
+<div class="px-3.5 py-2 rounded-full bg-surface-container border border-outline/15 text-primary text-body-sm font-body-sm flex items-center space-x-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span>Left bed despite fatigue</span>
+</div>
+</div>
+<!-- Grounding Whisper -->
+<div class="z-10 pt-space-xs flex items-center space-x-2 text-label-sm font-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="wb_sunny">wb_sunny</span>
+<span>Each one is a tiny breath of courage.</span>
+</div>
+</section>
+<!-- Quick Log: Acknowledge a Win -->
+<section class="flex flex-col space-y-space-sm">
+<div class="flex items-center justify-between">
+<h2 class="text-headline-sm font-headline-sm text-primary tracking-tight">
+          Acknowledge a Win
+        </h2>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Tap to place in jar</span>
+</div>
+<!-- Low-effort Suggestion Chips -->
+<div class="flex flex-wrap gap-2">
+<button class="px-space-md py-2 rounded-full bg-surface-container text-on-surface hover:bg-primary-container hover:text-surface transition-colors duration-200 active:scale-95 text-body-sm font-body-sm flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[16px]" data-icon="nature">nature</span>
+<span>Drank water</span>
+</button>
+<button class="px-space-md py-2 rounded-full bg-surface-container text-on-surface hover:bg-primary-container hover:text-surface transition-colors duration-200 active:scale-95 text-body-sm font-body-sm flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[16px]" data-icon="self_improvement">self_improvement</span>
+<span>Took 3 slow breaths</span>
+</button>
+<button class="px-space-md py-2 rounded-full bg-surface-container text-on-surface hover:bg-primary-container hover:text-surface transition-colors duration-200 active:scale-95 text-body-sm font-body-sm flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[16px]" data-icon="spa">spa</span>
+<span>Stretched my neck</span>
+</button>
+<button class="px-space-md py-2 rounded-full bg-surface-container text-on-surface hover:bg-primary-container hover:text-surface transition-colors duration-200 active:scale-95 text-body-sm font-body-sm flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[16px]" data-icon="wb_sunny">wb_sunny</span>
+<span>Ate something nourishing</span>
+</button>
+<button class="px-space-md py-2 rounded-full bg-surface-container text-on-surface hover:bg-primary-container hover:text-surface transition-colors duration-200 active:scale-95 text-body-sm font-body-sm flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[16px]" data-icon="favorite">favorite</span>
+<span>Said no to pressure</span>
+</button>
+<button class="px-space-md py-2 rounded-full bg-surface-container text-on-surface hover:bg-primary-container hover:text-surface transition-colors duration-200 active:scale-95 text-body-sm font-body-sm flex items-center space-x-1.5">
+<span class="material-symbols-outlined text-[16px]" data-icon="spa">spa</span>
+<span>Rested without guilt</span>
+</button>
+</div>
+<!-- Write your own quiet win -->
+<div class="mt-space-xs flex items-center rounded-full bg-surface-container border border-outline/20 px-space-md py-2 focus-within:border-primary-container/50 transition-all">
+<span class="material-symbols-outlined text-outline text-[18px] mr-2" data-icon="favorite">favorite</span>
+<input class="w-full bg-transparent border-none text-body-sm font-body-sm text-on-surface placeholder:text-on-surface-variant/70 focus:outline-none focus:ring-0 p-0" placeholder="Write your own quiet win..." type="text"/>
+<button class="ml-2 w-8 h-8 rounded-full bg-primary-container text-surface flex items-center justify-center shrink-0 active:scale-95 hover:bg-primary transition-colors">
+<span class="material-symbols-outlined text-[16px]" data-icon="spa">spa</span>
+</button>
+</div>
+</section>
+<!-- Recent Gentle Moments / Archive -->
+<section class="flex flex-col space-y-space-md pt-space-xs">
+<div class="flex items-center justify-between">
+<h2 class="text-headline-sm font-headline-sm text-primary tracking-tight">
+          Recent Gentle Moments
+        </h2>
+<span class="text-label-sm font-label-sm text-secondary font-medium">Safe Haven</span>
+</div>
+<!-- Group: Earlier Today -->
+<div class="flex flex-col space-y-space-sm">
+<div class="flex items-center space-x-2 text-label-md font-label-md text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span>Earlier Today</span>
+</div>
+<!-- Card 1 -->
+<div class="p-space-md rounded-lg bg-surface-container-lowest/80 border border-outline/10 flex items-start space-x-3.5 pebble-glow">
+<div class="w-9 h-9 rounded-full bg-secondary-fixed/50 flex items-center justify-center text-secondary shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[18px]" data-icon="nature">nature</span>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-center justify-between">
+<span class="text-body-md font-body-md text-on-surface font-medium">Stepped outside into the cool air</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">2 hrs ago</span>
+</div>
+<div class="mt-2 flex items-center space-x-2">
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-secondary text-label-sm font-label-sm">
+                Somatic release
+              </span>
+<span class="text-outline-variant text-[10px]">•</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">Felt shoulders relax</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="p-space-md rounded-lg bg-surface-container-lowest/80 border border-outline/10 flex items-start space-x-3.5 pebble-glow">
+<div class="w-9 h-9 rounded-full bg-tertiary-fixed/60 flex items-center justify-center text-tertiary shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[18px]" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-center justify-between">
+<span class="text-body-md font-body-md text-on-surface font-medium">Chose to rest instead of pushing through</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Morning</span>
+</div>
+<div class="mt-2 flex items-center space-x-2">
+<span class="px-2 py-0.5 rounded-full bg-tertiary-fixed/40 text-tertiary text-label-sm font-label-sm">
+                Self-compassion
+              </span>
+<span class="text-outline-variant text-[10px]">•</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">Nervous system honor</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Group: Yesterday -->
+<div class="flex flex-col space-y-space-sm pt-space-xs">
+<div class="flex items-center space-x-2 text-label-md font-label-md text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<span>Yesterday</span>
+</div>
+<!-- Card 3 -->
+<div class="p-space-md rounded-lg bg-surface-container-lowest/80 border border-outline/10 flex items-start space-x-3.5 pebble-glow">
+<div class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-primary shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[18px]" data-icon="spa">spa</span>
+</div>
+<div class="flex flex-col flex-1">
+<div class="flex items-center justify-between">
+<span class="text-body-md font-body-md text-on-surface font-medium">Sent a gentle message to my friend</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Yesterday</span>
+</div>
+<div class="mt-2 flex items-center space-x-2">
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-primary text-label-sm font-label-sm">
+                Gentle circle
+              </span>
+<span class="text-outline-variant text-[10px]">•</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant">No pressure conversation</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Warm Affirmation Footer Card -->
+<section class="rounded-lg bg-secondary-fixed/40 border border-outline/10 p-space-lg flex flex-col space-y-space-sm ambient-glow text-center items-center">
+<div class="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center text-secondary shadow-sm">
+<span class="material-symbols-outlined text-xl" data-icon="self_improvement">self_improvement</span>
+</div>
+<p class="text-headline-sm font-headline-sm text-primary tracking-tight italic">
+        “You do not need to earn your rest.”
+      </p>
+<p class="text-body-sm font-body-sm text-on-surface-variant max-w-xs leading-relaxed">
+        Return to these soft reflections whenever overwhelm strikes. You are doing enough simply by breathing.
+      </p>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Shared Components Anchor: Destination "Wins" Active) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-space-sm pt-space-xs pb-space-md bg-surface/90 dark:bg-inverse-surface/90 backdrop-blur-lg rounded-t-lg">
+<!-- Destination 1: Today -->
+<button aria-label="Today" class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-space-md py-space-xs hover:text-primary transition-colors duration-200 active:scale-95">
+<span class="material-symbols-outlined text-2xl" data-icon="wb_sunny">wb_sunny</span>
+<span class="text-label-sm font-label-sm mt-0.5">Today</span>
+</button>
+<!-- Destination 2: Ground -->
+<button aria-label="Ground" class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-space-md py-space-xs hover:text-primary transition-colors duration-200 active:scale-95">
+<span class="material-symbols-outlined text-2xl" data-icon="nature">nature</span>
+<span class="text-label-sm font-label-sm mt-0.5">Ground</span>
+</button>
+<!-- Destination 3: Wins (ACTIVE Destination) -->
+<button aria-current="page" aria-label="Wins" class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-space-md py-space-xs transition-all duration-300 active:scale-95">
+<span class="material-symbols-outlined text-2xl" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="text-label-sm font-label-sm mt-0.5 font-semibold">Wins</span>
+</button>
+<!-- Destination 4: Anchor -->
+<button aria-label="Anchor" class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant px-space-md py-space-xs hover:text-primary transition-colors duration-200 active:scale-95">
+<span class="material-symbols-outlined text-2xl" data-icon="self_improvement">self_improvement</span>
+<span class="text-label-sm font-label-sm mt-0.5">Anchor</span>
+</button>
+</nav>
+</body></html>
