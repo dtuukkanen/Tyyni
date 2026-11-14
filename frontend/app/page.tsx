@@ -9,6 +9,11 @@ import { PracticeModal } from "./components/PracticeModal";
 import { PwaSanctuarySheet, usePwa } from "./components/PwaSanctuarySheet";
 import { type SoundPreset, soundEngine } from "./components/soundEngine";
 import { TodayScreen } from "./components/TodayScreen";
+import {
+  GROWTH_STAGE_NAMES,
+  type GrowthStage,
+  useBloomieGrowth,
+} from "./components/useBloomieGrowth";
 import { WinsScreen } from "./components/WinsScreen";
 import {
   type BackendAnomaly,
@@ -67,6 +72,7 @@ export default function Home() {
   const pwa = usePwa();
   const toastTimerRef = useRef<number | null>(null);
   const joyTimerRef = useRef<number | null>(null);
+  const growthToastTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -129,6 +135,9 @@ export default function Home() {
       soundEngine.stop();
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
       if (joyTimerRef.current) window.clearTimeout(joyTimerRef.current);
+      if (growthToastTimerRef.current) {
+        window.clearTimeout(growthToastTimerRef.current);
+      }
     };
   }, []);
 
@@ -139,6 +148,26 @@ export default function Home() {
       setToast((current) => (current === message ? "" : current));
     }, 2800);
   }, []);
+
+  const checkedStepLabels = useMemo(
+    () => checked.flatMap((i) => (steps[i] === undefined ? [] : [steps[i]])),
+    [checked, steps],
+  );
+
+  const announceGrowth = useCallback(
+    (stage: GrowthStage) => {
+      // Land after the action's own toast, once the new growth is visible.
+      if (growthToastTimerRef.current) {
+        window.clearTimeout(growthToastTimerRef.current);
+      }
+      growthToastTimerRef.current = window.setTimeout(() => {
+        notify(`Bloomie is ${GROWTH_STAGE_NAMES[stage].toLowerCase()}.`);
+      }, 1100);
+    },
+    [notify],
+  );
+
+  const growth = useBloomieGrowth(checkedStepLabels, announceGrowth);
 
   const triggerBloomieJoy = useCallback(() => {
     setBloomieCelebrating(true);
@@ -190,11 +219,13 @@ export default function Home() {
   ]);
 
   function toggleStep(index: number) {
-    setChecked((prev) => {
-      const isCompleting = !prev.includes(index);
-      if (isCompleting) triggerBloomieJoy();
-      return isCompleting ? [...prev, index] : prev.filter((i) => i !== index);
-    });
+    const isCompleting = !checked.includes(index);
+    // Earn on uncheck too: the step was done, and Bloomie never shrinks.
+    growth.earnStep(steps[index]);
+    if (isCompleting) triggerBloomieJoy();
+    setChecked((prev) =>
+      isCompleting ? [...prev, index] : prev.filter((i) => i !== index),
+    );
   }
 
   function handleAddStep(trimmed: string) {
@@ -207,6 +238,7 @@ export default function Home() {
     const trimmed = label.trim();
     if (!trimmed) return;
     setWins((prev) => [trimmed, ...prev]);
+    growth.earn(`win:${trimmed}`);
     notify(`Placed “${trimmed}” in your Sanctuary Jar.`);
   }
 
@@ -248,6 +280,7 @@ export default function Home() {
       prev.includes(nudge.id) ? prev : [...prev, nudge.id],
     );
     postSuggestionFeedback(nudge.id, true, nudge.helped);
+    growth.earn(`nudge:${nudge.id}`);
     triggerBloomieJoy();
 
     const { action } = nudge;
@@ -271,6 +304,7 @@ export default function Home() {
       }
       case "message_friend":
         setWaveSent(true);
+        growth.earn("wave");
         notify("Sent a warm wave to your Gentle Circle.");
         document
           .getElementById("gentle-circle-section")
@@ -318,6 +352,8 @@ export default function Home() {
           mood={mood}
           lowEnergy={lowEnergy}
           isCelebrating={bloomieCelebrating}
+          growthStage={growth.stage}
+          isGrowing={growth.isGrowing}
         />
       )}
 
@@ -403,6 +439,7 @@ export default function Home() {
           mood={mood}
           onSelectMood={(nextMood) => {
             setMood(nextMood);
+            growth.earn("mood");
             triggerBloomieJoy();
           }}
           steps={steps}
@@ -412,9 +449,11 @@ export default function Home() {
           waveSent={waveSent}
           onSendWave={() => {
             setWaveSent(true);
+            growth.earn("wave");
             triggerBloomieJoy();
             notify("Sent a quiet wave to Liam, Maya, Sofia, and Marcus.");
           }}
+          growthStageName={growth.stageName}
           onInteractCompanion={() => {
             triggerBloomieJoy();
             notify("Bloomie sways happily in the gentle breeze with you.");
@@ -481,6 +520,7 @@ export default function Home() {
           onClose={closeModal}
           onCompleteSensory={() => {
             setModal(null);
+            growth.earn("sensory");
             notify("5–4–3–2–1 reset complete. Welcome back.");
           }}
         />

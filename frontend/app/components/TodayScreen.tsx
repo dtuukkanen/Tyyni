@@ -30,6 +30,7 @@ type TodayScreenProps = {
   onAddStep: (label: string) => void;
   waveSent: boolean;
   onSendWave: () => void;
+  growthStageName: string;
   onInteractCompanion: () => void;
 };
 
@@ -52,6 +53,7 @@ export function TodayScreen({
   onAddStep,
   waveSent,
   onSendWave,
+  growthStageName,
   onInteractCompanion,
 }: TodayScreenProps) {
   const [addingStep, setAddingStep] = useState(false);
@@ -212,6 +214,9 @@ export function TodayScreen({
                   {guestName}’s Companion: Bloomie
                 </span>
                 <span className="companion-pulse-dot" aria-hidden="true" />
+                <span className="companion-stage-chip" aria-live="polite">
+                  {growthStageName}
+                </span>
               </span>
               <span className="companion-status-sub">{companionSubtitle}</span>
             </span>

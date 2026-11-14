@@ -20,6 +20,15 @@ npm run dev
 
 The app works with sample content when the Python service is not configured (and lets you preview Today behavioral nudges via `?nudge=walk|meditate|friend|sleep` or the Sanctuary Sheet). To connect the FastAPI backend, set `PYTHON_SERVICE_URL` (and optionally `PYTHON_SERVICE_API_KEY` and `PYTHON_SERVICE_USER_ID`). The Next.js server proxies through `/api/prototype`: `GET /api/prototype` resolves the active user (`?userId=...`, `PYTHON_SERVICE_USER_ID`, or the first user from `GET /users`), queries `GET /users/{user_id}/today` (triggering `POST /users/{user_id}/suggestions` when behavioral suggestions are empty), and falls back to `GET /dashboard` or sample content if unavailable; `POST /api/prototype` forwards suggestion feedback (`done`, `helped`) to `POST /users/{user_id}/suggestions/{suggestion_id}/feedback`.
 
+## Bloomie growth
+
+Bloomie starts each day as a sprout and grows through five stages (Sprouting, Leafing out, Budding, Blooming, Flourishing) as the user completes things: checking a tiny step, the mood check-in, sending a wave, starting a suggestion, adding a win, or finishing the 5–4–3–2–1 practice. Each counts once a day (thresholds 1, 2, 4 and 6 for stages 1–4), and the plant never shrinks during a day. Progress is stored in `localStorage` under `tyyni.bloomie.<UTC date>` and resets the next day; delete that key to start over. The logic lives in `app/components/useBloomieGrowth.ts`, the animation in the `.grow-*` rules of `app/globals.css`.
+
+For demos and screen recordings:
+
+- `?growth=0` … `?growth=4` pins a stage.
+- `?growth=play` starts as a sprout and grows one stage every 2.5 s up to full bloom, without toasts.
+
 ## Lint and format
 
 [Oxlint](https://oxc.rs/docs/guide/usage/linter) and [Oxfmt](https://oxc.rs/docs/guide/usage/formatter) keep the code clean; CI runs both on every pull request.
