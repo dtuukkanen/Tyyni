@@ -136,7 +136,7 @@ def generate(
     for d in range(days):
         day = start + timedelta(days=d)
         shape = _shape(scenario, d, days)
-        wake, _ = _waking_window(schedule, d)
+        wake, _ = hrv.waking_window(schedule, d)
 
         day_z = rng.gauss(0, 1)
         bouts = _bouts(rng, walker, shape, wake, weekend=day.weekday() >= 5)
@@ -221,14 +221,6 @@ def _profile(since_wake_h: float) -> float:
 
 
 PROFILE_MEAN = statistics.fmean(_profile(m / 60) for m in range(WAKING_MIN))
-
-
-def _waking_window(schedule: hrv.Schedule, d: int) -> tuple[float, float]:
-    """(this morning's wake, tonight's bedtime), hours after day d's midnight."""
-    last, tonight = schedule.get(d - 1), schedule.get(d)
-    wake = last[-1].wake - 24 * d if last else hrv.SLEEP_END_H
-    bed = tonight[0].bed - 24 * d if tonight else hrv.SLEEP_START_H
-    return wake, bed
 
 
 def _bouts(

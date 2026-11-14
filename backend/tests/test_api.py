@@ -10,6 +10,7 @@ from sqlalchemy import text
 from app.api.main import app
 from app.db import get_session
 from app.db import repository as repo
+from app.simulators import journal
 
 client = TestClient(app)
 
@@ -78,7 +79,7 @@ def test_create_get_and_list_users(user_id):
 
 
 def test_unknown_user_is_404():
-    for path in ("", "/daily", "/today", "/mood", "/sleep"):
+    for path in ("", "/daily", "/today", "/mood", "/sleep", "/journal"):
         assert client.get(f"/users/{uuid.uuid4()}{path}").status_code == 404
 
 
@@ -117,6 +118,44 @@ def test_mood_defaults_to_today(user_id):
     today = client.get(f"/users/{user_id}/today").json()
     assert today["mood_logged"] is True
     assert today["metrics"]["mood_avg"] == pytest.approx(2.0)
+
+
+def test_record_and_list_journal(user_id):
+    r = client.post(
+        f"/users/{user_id}/journal",
+        json={"text": "Hyvä päivä, kävin kävelyllä.", "language": "fi", "ts": "2026-10-03T21:00"},
+    )
+    assert r.status_code == 201
+    created = r.json()
+    assert created["text"] == "Hyvä päivä, kävin kävelyllä."
+    assert created["language"] == "fi"
+    assert created["source"] == "app"
+    assert created["expected_label"] is None and created["expected_risk"] is None
+    assert datetime.fromisoformat(created["ts"]) == _at(date(2026, 10, 3), 21)
+
+    assert client.post(f"/users/{user_id}/journal", json={"text": "no language"}).status_code == 201
+    entries = client.get(
+        f"/users/{user_id}/journal", params={"start": "2026-10-01", "end": "2026-10-05"}
+    ).json()
+    assert [e["id"] for e in entries] == [created["id"]]
+
+
+def test_journal_lists_simulated_ground_truth(user_id):
+    with get_session() as s:
+        journal.simulate(s, user_id, START, 9, "isolated_risk", seed=1)
+    entries = client.get(
+        f"/users/{user_id}/journal", params={"start": str(START), "end": str(START + timedelta(8))}
+    ).json()
+    assert entries
+    assert {e["source"] for e in entries} == {"simulator:journal:isolated_risk"}
+    assert sum(e["expected_risk"] != "none" for e in entries) == 1
+
+
+@pytest.mark.parametrize(
+    "body", [{"text": ""}, {"text": "x" * 5001}, {"text": "ok", "language": "sv"}, {}]
+)
+def test_invalid_journal_body_is_422(user_id, body):
+    assert client.post(f"/users/{user_id}/journal", json=body).status_code == 422
 
 
 def test_daily(seeded):

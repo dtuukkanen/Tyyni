@@ -223,10 +223,7 @@ def _intraday_log_factor(
     """Within-day shape over waking hours, symmetric in log space so the daily mean is kept."""
     if timescale != "intraday" or scenario not in PATTERNS:
         return 0.0
-    # this morning's wake and tonight's bedtime, hours after today's midnight
-    last, tonight = schedule.get(d - 1), schedule.get(d)
-    wake = (last[-1].wake if last else 24 * d + SLEEP_END_H) - 24 * d
-    bed = (tonight[0].bed if tonight else 24 * d + SLEEP_START_H) - 24 * d
+    wake, bed = waking_window(schedule, d)
     p = min(max((hour - wake) / max(bed - wake, 1.0), 0.0), 1.0)
     if scenario == "rising":
         shape = math.log(1.25) * (2 * p - 1)
@@ -297,6 +294,14 @@ def _schedule_from(nights: Sequence[Mapping[str, Any]], origin: datetime) -> Sch
         n = math.floor(wake / 24) - 1  # the night that ends on day k starts on day k - 1
         schedule.setdefault(n, []).append(Night(bed, wake, gain))
     return schedule
+
+
+def waking_window(schedule: Schedule, d: int) -> tuple[float, float]:
+    """(this morning's wake, tonight's bedtime), hours after day d's midnight."""
+    last, tonight = schedule.get(d - 1), schedule.get(d)
+    wake = last[-1].wake - 24 * d if last else SLEEP_END_H
+    bed = tonight[0].bed - 24 * d if tonight else SLEEP_START_H
+    return wake, bed
 
 
 def asleep_at(schedule: Schedule, d: int, hour: float) -> tuple[float, float]:

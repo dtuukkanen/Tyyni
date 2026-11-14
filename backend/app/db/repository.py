@@ -1,4 +1,4 @@
-"""Single read/write entry point for simulators (#6-#8), inference (#2) and UI (#3).
+"""Single read/write entry point for simulators (#6-#8, journal), inference (#2) and UI (#3).
 
 Days are UTC calendar days. A sleep session counts toward the day the user woke up.
 """
@@ -12,7 +12,14 @@ from sqlalchemy import insert, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from app.db.models import ActivitySample, HeartSample, MoodCheckin, SleepSession, User
+from app.db.models import (
+    ActivitySample,
+    HeartSample,
+    JournalEntry,
+    MoodCheckin,
+    SleepSession,
+    User,
+)
 
 METRICS = (
     "hr_avg",
@@ -104,6 +111,30 @@ def record_mood(
     ).scalar_one()
 
 
+def record_journal_entry(
+    session: Session,
+    user_id: uuid.UUID,
+    text: str,
+    ts: datetime | None = None,
+    language: str | None = None,
+) -> int:
+    """A journal entry written in the app (no ground truth)."""
+    values: dict[str, Any] = {"user_id": user_id, "text": text, "language": language}
+    if ts is not None:
+        values["ts"] = ts
+    return session.execute(
+        insert(JournalEntry).values(**values).returning(JournalEntry.id)
+    ).scalar_one()
+
+
+def insert_journal_entries(session: Session, rows: Iterable[Mapping[str, Any]]) -> int:
+    """rows: {user_id, ts, text[, language, source, expected_label, expected_risk]}."""
+    rows = list(rows)
+    if rows:
+        session.execute(insert(JournalEntry), rows)
+    return len(rows)
+
+
 def _utc_day_start(day: date) -> datetime:
     return datetime(day.year, day.month, day.day, tzinfo=UTC)
 
@@ -172,10 +203,27 @@ def mood_checkins(
     )
 
 
+def journal_entries(
+    session: Session, user_id: uuid.UUID, start: date, end: date
+) -> list[JournalEntry]:
+    """Journal entries on UTC days [start, end], oldest first."""
+    return list(
+        session.scalars(
+            select(JournalEntry)
+            .where(
+                JournalEntry.user_id == user_id,
+                JournalEntry.ts >= _utc_day_start(start),
+                JournalEntry.ts < _utc_day_start(end + timedelta(days=1)),
+            )
+            .order_by(JournalEntry.ts, JournalEntry.id)
+        )
+    )
+
+
 def delete_source_data(session: Session, user_id: uuid.UUID, source_prefix: str) -> None:
     """Remove e.g. all 'simulator:%' data for a user so a scenario can be re-run."""
     params = {"u": user_id, "p": f"{source_prefix}%"}
-    for table in ("heart_samples", "activity_samples", "sleep_sessions"):
+    for table in ("heart_samples", "activity_samples", "sleep_sessions", "journal_entries"):
         session.execute(text(f"DELETE FROM {table} WHERE user_id = :u AND source LIKE :p"), params)
 
 
