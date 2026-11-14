@@ -94,13 +94,37 @@ From Python: `hrv.generate(...)` returns rows without touching the DB; `hrv.simu
 
 - `--artifacts` drops about 10 % of the nights (watch off); the remaining nights are unchanged.
 - `--with-hrv` also writes HRV + heart rate whose night-time rise follows these exact nights (poorer nights restore less). The HRV scenario is matched to the sleep scenario (e.g. `stress_period` → `stress_period`, `short_night` → `sudden_drop`, otherwise `stable_average`); override it with `--hrv-scenario`.
+- `--with-activity` also writes [steps](#activity) that stop while asleep and follow these wake times. The activity scenario is matched the same way (`stable_good` → `stable_active`, `stable_poor` → `stable_sedentary`, `short_night` → `sudden_drop`, same name for `stress_period` / `oversleep` / `late_sleep_shift`, otherwise `stable_average`); override it with `--activity-scenario`.
 - `--seed` and `--no-replace` work as for HRV.
 
 ```bash
-docker compose run --rm migrate python -m app.simulators.sleep --new-user demo --scenario oversleep --days 21 --seed 1 --with-hrv
+docker compose run --rm migrate python -m app.simulators.sleep --new-user demo --scenario oversleep --days 21 --seed 1 --with-hrv --with-activity
 ```
 
-From Python: `sleep.generate(...)` returns session rows, `sleep.simulate(session, user_id, start, days, scenario, ...)` writes them, and `hrv.generate(..., nights=sleep.nights(start, days, scenario, seed=...))` lines HRV up with the same nights.
+From Python: `sleep.generate(...)` returns session rows, `sleep.simulate(session, user_id, start, days, scenario, ...)` writes them, and `hrv.generate(..., nights=sleep.nights(start, days, scenario, seed=...))` lines HRV up with the same nights (`activity.generate(..., nights=...)` likewise).
+
+### Activity
+
+[`backend/app/simulators/activity.py`](backend/app/simulators/activity.py) writes steps into `activity_samples` (one row per 15 min by default), tagged `simulator:activity:<scenario>`. Steps are simulated minute by minute: low-cadence incidental movement spread over the waking day, plus walks at ~110 steps/min — two commutes on weekdays (about 1 h and 10 h after waking), a midday walk on most weekend days, and sometimes an evening exercise walk. `active_minutes` counts the minutes with at least 100 steps (brisk walking); `screen_time_min` is not simulated and stays 0. Nobody walks while asleep: the nights are 23:00–07:00 UTC by default, or the real nights from the [sleep simulator](#sleep) when passed `nights=`, and the walks move with each day's wake time.
+
+| Scenario | What it produces |
+|---|---|
+| `stable_active` / `stable_average` / `stable_sedentary` | Steady ≈ 12k / 7k / 3.5k steps a day (≈ 50 / 25 / 10 active minutes) |
+| `stress_period` | Same timeline as the HRV scenario: fewer steps and almost no exercise (about −35 %), then recovers |
+| `withdrawal` | From the first third, a gradual decline to under half the steps: exercise stops, walks shrink (staying home) |
+| `sudden_drop` | One near-bed-rest day (~20 % of the steps, no active minutes) on the HRV `sudden_drop` day, recovering over ~3 days |
+| `late_sleep_shift` | The day follows the HRV scenario's later wake times (up to ~2.4 h later), slightly less exercise |
+| `oversleep` | Same ramp as the sleep scenario: about −30 % incidental steps and little exercise |
+
+- `--interval` sets the minutes per row (must divide a day); daily totals don't depend on it.
+- `--artifacts` drops 1–3 h gaps on about half the days and about 5 % of whole days (device not carried); the remaining rows are unchanged.
+- `--seed` and `--no-replace` work as for HRV.
+
+```bash
+docker compose run --rm migrate python -m app.simulators.activity --new-user demo --scenario withdrawal --days 21 --seed 1
+```
+
+From Python: `activity.generate(...)` returns rows, `activity.simulate(session, user_id, start, days, scenario, ...)` writes them; pass `nights=sleep.nights(...)` to line the waking hours up with simulated sleep.
 
 ## Linting & formatting
 

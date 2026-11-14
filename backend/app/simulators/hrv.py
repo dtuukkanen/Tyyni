@@ -129,15 +129,13 @@ def generate(
     per_day = 1440 // interval_min
     origin = datetime(start.year, start.month, start.day, tzinfo=UTC)
     source = f"{SOURCE_PREFIX}:{scenario}"
-    schedule = (
-        _default_schedule(scenario, days) if nights is None else _schedule_from(nights, origin)
-    )
+    schedule = sleep_schedule(scenario, days, origin, nights)
 
     rows: list[dict[str, Any]] = []
     for d in range(days):
         day_log = _day_log_factor(scenario, timescale, d, days)
         day_offset = rng.gauss(0, DAY_OFFSET_SD)
-        gap = _draw_gap(artifact_rng) if artifacts else None
+        gap = draw_gap(artifact_rng) if artifacts else None
         for k in range(per_day):
             ar = phi * ar + rng.gauss(0, innovation_sd)
             hr_noise = rng.gauss(0, HR_NOISE_SD)
@@ -148,7 +146,7 @@ def generate(
             if gap and gap[0] <= hour < gap[1]:
                 continue
 
-            asleep, night_gain = _asleep(schedule, d, hour)
+            asleep, night_gain = asleep_at(schedule, d, hour)
             dev = (
                 day_log
                 + _intraday_log_factor(scenario, timescale, schedule, d, hour, asleep)
@@ -260,13 +258,24 @@ def default_night(scenario: str, night: int) -> tuple[float, float]:
 
 
 @dataclass(frozen=True)
-class _Night:
+class Night:
     bed: float  # hours after the origin (midnight of the first day)
     wake: float
     gain: float  # log RMSSD gain while asleep
 
 
-Schedule = dict[int, list[_Night]]  # keyed by the day the night starts on
+Schedule = dict[int, list[Night]]  # keyed by the day the night starts on
+
+
+def sleep_schedule(
+    scenario: str,
+    days: int,
+    origin: datetime,
+    nights: Sequence[Mapping[str, Any]] | None = None,
+) -> Schedule:
+    """Nights around `days` days from `origin`: the given sleep sessions, or the built-in
+    window (23:00-07:00 UTC, shifted for late_sleep_shift) when `nights` is None."""
+    return _default_schedule(scenario, days) if nights is None else _schedule_from(nights, origin)
 
 
 def _default_schedule(scenario: str, days: int) -> Schedule:
@@ -274,7 +283,7 @@ def _default_schedule(scenario: str, days: int) -> Schedule:
     for n in range(-1, days):
         bed, wake = default_night(scenario, n)
         gain = NIGHT_GAIN * (1 - 0.05 * _sleep_shift(scenario, n))  # later nights restore less
-        schedule[n] = [_Night(24 * n + bed, 24 * n + wake, gain)]
+        schedule[n] = [Night(24 * n + bed, 24 * n + wake, gain)]
     return schedule
 
 
@@ -286,11 +295,11 @@ def _schedule_from(nights: Sequence[Mapping[str, Any]], origin: datetime) -> Sch
         efficiency = row.get("efficiency") or REFERENCE_EFFICIENCY
         gain = NIGHT_GAIN * _clamp(efficiency / REFERENCE_EFFICIENCY, (0.6, 1.1))
         n = math.floor(wake / 24) - 1  # the night that ends on day k starts on day k - 1
-        schedule.setdefault(n, []).append(_Night(bed, wake, gain))
+        schedule.setdefault(n, []).append(Night(bed, wake, gain))
     return schedule
 
 
-def _asleep(schedule: Schedule, d: int, hour: float) -> tuple[float, float]:
+def asleep_at(schedule: Schedule, d: int, hour: float) -> tuple[float, float]:
     """(asleep weight 0..1, night gain) at `hour` on day d, from last night and tonight."""
     t = 24 * d + hour
     best = (0.0, NIGHT_GAIN)
@@ -304,7 +313,7 @@ def _asleep(schedule: Schedule, d: int, hour: float) -> tuple[float, float]:
     return best
 
 
-def _draw_gap(rng: random.Random) -> tuple[float, float] | None:
+def draw_gap(rng: random.Random) -> tuple[float, float] | None:
     if rng.random() >= GAP_DAY_PROB:
         return None
     length = rng.uniform(1.0, 3.0)

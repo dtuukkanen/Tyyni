@@ -15,11 +15,13 @@ Each night:
 All randomness comes from one seeded RNG with a fixed number of draws per night, so two
 scenarios generated with the same seed share the same noise and differ only by their shape.
 The average sleeper and late_sleep_shift use the HRV simulator's sleep window, and
-`nights(...)` can be passed to `hrv.generate(nights=...)` so night-time HRV follows them.
+`nights(...)` can be passed to `hrv.generate(nights=...)` so night-time HRV follows them, and
+to `activity.generate(nights=...)` so steps stop while asleep and follow the wake times.
 
 Times are UTC and whole minutes.
 
-Run: python -m app.simulators.sleep --new-user demo --scenario oversleep --days 21 --with-hrv
+Run: python -m app.simulators.sleep --new-user demo --scenario oversleep --days 21 --with-hrv \
+     --with-activity
 """
 
 from __future__ import annotations
@@ -35,7 +37,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.db import repository as repo
-from app.simulators import hrv
+from app.simulators import activity, hrv
 
 SCENARIOS = (
     "stable_good",
@@ -54,6 +56,16 @@ HRV_SCENARIO = {
     "stable_good": "stable_high",
     "stable_poor": "stable_low",
     "late_sleep_shift": "late_sleep_shift",
+    "stress_period": "stress_period",
+    "short_night": "sudden_drop",
+}
+
+# activity scenario that goes with each sleep scenario for --with-activity (default: stable_average)
+ACTIVITY_SCENARIO = {
+    "stable_good": "stable_active",
+    "stable_poor": "stable_sedentary",
+    "late_sleep_shift": "late_sleep_shift",
+    "oversleep": "oversleep",
     "stress_period": "stress_period",
     "short_night": "sudden_drop",
 }
@@ -106,7 +118,7 @@ def nights(
     *,
     seed: int | None = None,
 ) -> list[dict[str, Any]]:
-    """The full sleep schedule around `days` UTC days from `start`, for hrv.generate(nights=).
+    """The full sleep schedule around `days` UTC days from `start`, for hrv/activity nights=.
 
     days + 1 nights: the one before `start` through the evening of the last day (that last
     night ends after the period). Rows: {bedtime, wake_time, efficiency, stages}.
@@ -282,13 +294,24 @@ def main(argv: list[str] | None = None) -> None:
         choices=hrv.SCENARIOS,
         help="HRV scenario for --with-hrv (default: matched to --scenario)",
     )
+    parser.add_argument(
+        "--with-activity",
+        action="store_true",
+        help="also write steps whose waking hours follow these nights",
+    )
+    parser.add_argument(
+        "--activity-scenario",
+        choices=activity.SCENARIOS,
+        help="activity scenario for --with-activity (default: matched to --scenario)",
+    )
     args = parser.parse_args(argv)
 
     from app.db import get_session
 
     start = args.start or datetime.now(UTC).date() - timedelta(days=args.days - 1)
-    # nights() for HRV must see the same schedule as the sessions, so always fix a seed
+    # nights() for HRV and activity must see the same schedule as the sessions, so always fix a seed
     seed = args.seed if args.seed is not None else random.randrange(2**32)
+    schedule = nights(start, args.days, args.scenario, seed=seed)
     with get_session() as s:
         user_id = args.user or repo.create_user(s, args.new_user)
         n = simulate(
@@ -311,12 +334,31 @@ def main(argv: list[str] | None = None) -> None:
                 hrv_scenario,
                 replace=not args.no_replace,
                 seed=seed,
-                nights=nights(start, args.days, args.scenario, seed=seed),
+                nights=schedule,
+            )
+        if args.with_activity:
+            activity_scenario = args.activity_scenario or ACTIVITY_SCENARIO.get(
+                args.scenario, "stable_average"
+            )
+            n_activity = activity.simulate(
+                s,
+                user_id,
+                start,
+                args.days,
+                activity_scenario,
+                replace=not args.no_replace,
+                seed=seed,
+                nights=schedule,
             )
     end = start + timedelta(days=args.days - 1)
     print(f"user {user_id}: wrote {n} sleep sessions ({args.scenario}, {start} .. {end})")
     if args.with_hrv:
         print(f"user {user_id}: wrote {n_hrv} heart samples ({hrv_scenario}, same nights)")
+    if args.with_activity:
+        print(
+            f"user {user_id}: wrote {n_activity} activity samples "
+            f"({activity_scenario}, same nights)"
+        )
 
 
 if __name__ == "__main__":
