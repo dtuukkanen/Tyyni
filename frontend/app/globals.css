@@ -3432,6 +3432,13 @@ select:focus-visible {
   gap: 8px;
 }
 
+.bloomie-restart-btn {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
 .pwa-demo-chips {
   display: flex;
   flex-wrap: wrap;

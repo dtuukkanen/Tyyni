@@ -26,12 +26,16 @@ Bloomie has three states that follow the user's day. Each UTC day starts **Thirs
 
 Completed moments are checking a tiny step, the mood check-in, sending a wave, starting a suggestion, adding a win, or finishing the 5–4–3–2–1 practice; each counts once a day, and Bloomie never goes back down within a day. Progress is stored in `localStorage` under `tyyni.bloomie.<UTC date>`; delete that key to start over. The logic lives in `app/components/useBloomieGrowth.ts`, the drawing in `FlowerCompanion` (`app/components/CompanionWorld.tsx`) and the states and motion in the Bloomie growth rules of `app/globals.css`.
 
-For demos and screen recordings:
+To test or demo it, open the settings sheet (the profile button, top right) and use **Bloomie Growth**:
 
-- `?growth=0`, `?growth=1` or `?growth=2` pins a state.
-- `?growth=play` starts Thirsty and changes state every 4 s up to Flourishing, without toasts.
+- **Live** follows today's real progress (the default).
+- **Thirsty**, **Perking up** or **Flourishing** shows that state; moving up plays the full transition (watering shower, petal burst). The sheet closes and switches to Today first, so the change plays in view.
+- **Play all** starts Thirsty and changes state every 4 s up to Flourishing, without toasts; tap it again to restart.
+- **Restart Bloomie's day** clears today's growth and unchecks the steps, to try the real flow from Thirsty.
 
-While either is set, completing tasks doesn't change the state or store progress. On load the flower jumps straight to its state without animating; only new completions (and play mode) animate.
+The same previews work as URL parameters for screen recordings: `?growth=0`, `?growth=1` or `?growth=2` pins a state and `?growth=play` plays them all.
+
+While a preview is active, completing tasks doesn't change the state or store progress. On load the flower jumps straight to its state without animating; only new completions (and play mode) animate.
 
 ## Lint and format
 

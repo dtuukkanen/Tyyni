@@ -10,7 +10,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
  * invitation to care for the plant, and growth never goes down within a day.
  *
  * Demo overrides: `?growth=0..2` pins a state and `?growth=play` goes from
- * Thirsty to Flourishing on a timer, for screen recordings. While an override is
+ * Thirsty to Flourishing on a timer, for screen recordings. The same overrides
+ * can be picked in the app's settings sheet (`setDemo`). While an override is
  * active, completing tasks doesn't earn growth.
  *
  * Until the stored progress and the page's data have loaded, `isSettling` is
@@ -82,7 +83,9 @@ function writeEarned(earned: string[]) {
   }
 }
 
-type Override = GrowthStage | "play" | null;
+/** A pinned state, the timed "play" run, or `null` to follow real progress. */
+export type BloomieDemo = GrowthStage | "play" | null;
+type Override = BloomieDemo;
 
 function readOverride(): Override {
   const value = new URLSearchParams(window.location.search).get("growth");
@@ -117,6 +120,8 @@ export function useBloomieGrowth({
   const checkedRef = useRef(checkedStepLabels);
   const onStageUpRef = useRef(onStageUp);
   const growTimerRef = useRef<number | null>(null);
+  const stageRef = useRef<GrowthStage>(0);
+  const playTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     checkedRef.current = checkedStepLabels;
@@ -133,6 +138,24 @@ export function useBloomieGrowth({
     if (announce) onStageUpRef.current?.(stage);
   }, []);
 
+  const stopPlay = useCallback(() => {
+    if (playTimerRef.current) window.clearInterval(playTimerRef.current);
+    playTimerRef.current = null;
+  }, []);
+
+  // Play mode grows one state per tick and skips toasts, so recordings stay clean.
+  const startPlay = useCallback(() => {
+    stopPlay();
+    setPlayStage(0);
+    let current = 0;
+    playTimerRef.current = window.setInterval(() => {
+      current += 1;
+      setPlayStage(current as GrowthStage);
+      celebrate(current as GrowthStage, false);
+      if (current >= 2) stopPlay();
+    }, PLAY_INTERVAL_MS);
+  }, [celebrate, stopPlay]);
+
   useEffect(() => {
     const stored = readEarned();
     const initialOverride = readOverride();
@@ -143,10 +166,12 @@ export function useBloomieGrowth({
     setEarned(stored);
     setOverride(initialOverride);
     setStorageLoaded(true);
+    if (initialOverride === "play") startPlay();
     return () => {
       if (growTimerRef.current) window.clearTimeout(growTimerRef.current);
+      stopPlay();
     };
-  }, []);
+  }, [startPlay, stopPlay]);
 
   // Turn transitions back on two frames after the real stage has rendered, so
   // the browser has already applied it without animating.
@@ -162,23 +187,10 @@ export function useBloomieGrowth({
     };
   }, [settled, storageLoaded, dataReady]);
 
-  // Play mode grows one stage per tick and skips toasts, so recordings stay clean.
-  useEffect(() => {
-    if (override !== "play") return;
-    let current = 0;
-    const timer = window.setInterval(() => {
-      current += 1;
-      setPlayStage(current as GrowthStage);
-      celebrate(current as GrowthStage, false);
-      if (current >= 2) window.clearInterval(timer);
-    }, PLAY_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [override, celebrate]);
-
   const earn = useCallback(
     (key: string) => {
       if (overrideRef.current !== null) return;
-      // A tab left open past midnight (UTC) starts the new day from a sprout.
+      // A tab left open past midnight (UTC) starts the new day Thirsty.
       if (dayRef.current !== storageKey()) {
         dayRef.current = storageKey();
         earnedRef.current = [];
@@ -211,8 +223,44 @@ export function useBloomieGrowth({
         ? override
         : earnedStage;
 
+  useEffect(() => {
+    stageRef.current = stage;
+  });
+
+  /** Pick a demo override; going up plays the full celebration (no toast). */
+  const setDemo = useCallback(
+    (next: Override) => {
+      const from = stageRef.current;
+      overrideRef.current = next;
+      setOverride(next);
+      if (next === "play") {
+        startPlay();
+        return;
+      }
+      stopPlay();
+      const to =
+        next ?? stageFor(countPoints(earnedRef.current, checkedRef.current));
+      if (to > from) celebrate(to, false);
+    },
+    [celebrate, startPlay, stopPlay],
+  );
+
+  /** Forget today's growth and follow real progress again, from Thirsty. */
+  const restartDay = useCallback(() => {
+    stopPlay();
+    earnedRef.current = [];
+    dayRef.current = storageKey();
+    overrideRef.current = null;
+    setEarned([]);
+    setOverride(null);
+    writeEarned([]);
+  }, [stopPlay]);
+
   return {
     stage,
+    demo: override,
+    setDemo,
+    restartDay,
     isGrowing,
     isSettling: !settled,
     earn,

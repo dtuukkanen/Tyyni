@@ -6,6 +6,19 @@ import {
   type DemoNudgeKey,
 } from "../data/behavioralNudges";
 import { Icon, TyyniLogo } from "./icons";
+import {
+  type BloomieDemo,
+  GROWTH_STAGE_NAMES,
+  type GrowthStage,
+} from "./useBloomieGrowth";
+
+const BLOOMIE_DEMO_OPTIONS: { key: BloomieDemo; label: string }[] = [
+  { key: null, label: "Live" },
+  { key: 0, label: GROWTH_STAGE_NAMES[0] },
+  { key: 1, label: GROWTH_STAGE_NAMES[1] },
+  { key: 2, label: GROWTH_STAGE_NAMES[2] },
+  { key: "play", label: "Play all" },
+];
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -111,6 +124,10 @@ export interface PwaSanctuarySheetProps {
   demoNudgeKey: DemoNudgeKey;
   onSelectDemoNudge: (key: DemoNudgeKey) => void;
   hasLiveBackendSuggestions: boolean;
+  bloomieStage: GrowthStage;
+  bloomieDemo: BloomieDemo;
+  onSelectBloomieDemo: (demo: BloomieDemo) => void;
+  onRestartBloomie: () => void;
   pwa: PwaState;
   onClose: () => void;
   onInstalled: () => void;
@@ -123,6 +140,10 @@ export function PwaSanctuarySheet({
   demoNudgeKey,
   onSelectDemoNudge,
   hasLiveBackendSuggestions,
+  bloomieStage,
+  bloomieDemo,
+  onSelectBloomieDemo,
+  onRestartBloomie,
   pwa,
   onClose,
   onInstalled,
@@ -269,6 +290,46 @@ export function PwaSanctuarySheet({
               );
             })}
           </div>
+        </div>
+
+        {/* Bloomie growth preview (for testing and demoing the companion's states) */}
+        <div className="pwa-demo-section">
+          <div className="pwa-pref-copy">
+            <strong>Bloomie Growth</strong>
+            <span>
+              {bloomieDemo === null
+                ? `Live: ${GROWTH_STAGE_NAMES[bloomieStage]} — follows today’s completed steps`
+                : "Previewing — completed steps don’t change Bloomie until you pick Live"}
+            </span>
+          </div>
+          <div
+            className="pwa-demo-chips"
+            role="group"
+            aria-label="Bloomie growth preview"
+          >
+            {BLOOMIE_DEMO_OPTIONS.map((opt) => {
+              const isSelected = bloomieDemo === opt.key;
+              return (
+                <button
+                  key={String(opt.key)}
+                  type="button"
+                  aria-pressed={isSelected}
+                  className={`pwa-demo-chip ${isSelected ? "is-selected" : ""}`}
+                  onClick={() => onSelectBloomieDemo(opt.key)}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            className="btn-secondary-pill bloomie-restart-btn"
+            onClick={onRestartBloomie}
+          >
+            <Icon name="flower" size={15} />
+            <span>Restart Bloomie’s day</span>
+          </button>
         </div>
 
         {/* Quick Low-Energy Preference Row */}

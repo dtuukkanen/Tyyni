@@ -74,6 +74,7 @@ export default function Home() {
   const toastTimerRef = useRef<number | null>(null);
   const joyTimerRef = useRef<number | null>(null);
   const growthToastTimerRef = useRef<number | null>(null);
+  const bloomieDemoTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -139,6 +140,9 @@ export default function Home() {
       if (joyTimerRef.current) window.clearTimeout(joyTimerRef.current);
       if (growthToastTimerRef.current) {
         window.clearTimeout(growthToastTimerRef.current);
+      }
+      if (bloomieDemoTimerRef.current) {
+        window.clearTimeout(bloomieDemoTimerRef.current);
       }
     };
   }, []);
@@ -349,6 +353,18 @@ export default function Home() {
     notify("Noted — Tyyni will remember this felt helpful.");
   }
 
+  // Bloomie previews from the settings sheet: close the sheet and show Today
+  // first, so the change plays in view.
+  function showBloomieChange(apply: () => void) {
+    setPwaSheetOpen(false);
+    setTab("Today");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (bloomieDemoTimerRef.current) {
+      window.clearTimeout(bloomieDemoTimerRef.current);
+    }
+    bloomieDemoTimerRef.current = window.setTimeout(apply, 450);
+  }
+
   const closeModal = useCallback(() => setModal(null), []);
 
   return (
@@ -549,6 +565,20 @@ export default function Home() {
           }}
           hasLiveBackendSuggestions={
             backendSuggestions.length > 0 || backendAnomalies.length > 0
+          }
+          bloomieStage={growth.stage}
+          bloomieDemo={growth.demo}
+          onSelectBloomieDemo={(demo) =>
+            showBloomieChange(() => growth.setDemo(demo))
+          }
+          onRestartBloomie={() =>
+            showBloomieChange(() => {
+              setChecked([]);
+              growth.restartDay();
+              notify(
+                "Bloomie’s day restarted — complete steps to help it grow.",
+              );
+            })
           }
           pwa={pwa}
           onClose={() => setPwaSheetOpen(false)}
