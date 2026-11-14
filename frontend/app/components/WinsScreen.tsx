@@ -1,8 +1,84 @@
 "use client";
 
-import { useState } from "react";
 import { WIN_SUGGESTIONS } from "../data/sanctuaryData";
-import { Icon } from "./icons";
+import { Icon, type IconName } from "./icons";
+import { CapsuleForm } from "./ui/CapsuleForm";
+import { IconOrb, type Tone } from "./ui/IconOrb";
+import { ReassureBanner } from "./ui/ReassureBanner";
+import { ScreenHero } from "./ui/ScreenHero";
+import { SectionHeader } from "./ui/SectionHeader";
+
+type Moment = {
+  icon: IconName;
+  iconSize: number;
+  tone: Tone;
+  title: string;
+  time: string;
+  tag: string;
+  note: string;
+};
+
+/** Sample history shown under Recent Gentle Moments, grouped by day. */
+const MOMENT_DAYS: { label: string; muted: boolean; moments: Moment[] }[] = [
+  {
+    label: "Earlier Today",
+    muted: false,
+    moments: [
+      {
+        icon: "tree",
+        iconSize: 18,
+        tone: "tone-moss",
+        title: "Stepped outside into the cool air",
+        time: "2 hrs ago",
+        tag: "Somatic release",
+        note: "Felt shoulders relax",
+      },
+      {
+        icon: "heartFilled",
+        iconSize: 17,
+        tone: "tone-blush",
+        title: "Chose to rest instead of pushing through",
+        time: "Morning",
+        tag: "Self-compassion",
+        note: "Nervous system honor",
+      },
+    ],
+  },
+  {
+    label: "Yesterday",
+    muted: true,
+    moments: [
+      {
+        icon: "spa",
+        iconSize: 18,
+        tone: "tone-linen",
+        title: "Sent a gentle message to my friend",
+        time: "Yesterday",
+        tag: "Gentle circle",
+        note: "No pressure conversation",
+      },
+    ],
+  },
+];
+
+function MomentCard({ icon, iconSize, tone, title, time, tag, note }: Moment) {
+  return (
+    <article className="moment-card">
+      <IconOrb icon={icon} size={iconSize} tone={tone} />
+      <div className="moment-body">
+        <div className="moment-top">
+          <span className="moment-title">{title}</span>
+          <span className="moment-time">{time}</span>
+        </div>
+        <div className="moment-tags">
+          <span className={`moment-tag-pill ${tone}`}>{tag}</span>
+          <span aria-hidden="true">•</span>
+          <span>{note}</span>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 type WinsScreenProps = {
   wins: string[];
@@ -10,56 +86,42 @@ type WinsScreenProps = {
 };
 
 export function WinsScreen({ wins, onAddWin }: WinsScreenProps) {
-  const [winInput, setWinInput] = useState("");
-
-  function handleWinSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!winInput.trim()) return;
-    onAddWin(winInput);
-    setWinInput("");
-  }
-
   return (
     <main className="screen-body">
-      <div className="hero-header">
-        <span className="eyebrow-badge">
-          <Icon name="heartFilled" size={13} />
-          <span>MICRO-VICTORIES</span>
-        </span>
-        <h1 className="hero-title hero-title-green">Gentle Wins.</h1>
-        <p className="hero-subtitle">
-          Nothing is too small. Surviving a hard moment, resting, or drinking
-          water is already a triumph.
-        </p>
-
-        <div className="reassure-banner">
-          <span className="icon-orb icon-orb-round tone-moss">
-            <Icon name="tree" size={20} />
-          </span>
-          <div className="reassure-copy">
-            <strong>No scoreboards here</strong>
-            <span>
-              Wins are not tallied for productivity, but gathered gently as soft
-              proof of kindness to yourself.
-            </span>
-          </div>
-        </div>
-      </div>
+      <ScreenHero
+        badge={<Icon name="heartFilled" size={13} />}
+        badgeLabel="MICRO-VICTORIES"
+        title="Gentle Wins."
+        subtitle="Nothing is too small. Surviving a hard moment, resting, or drinking water is already a triumph."
+        green
+      >
+        <ReassureBanner
+          icon="tree"
+          tone="tone-moss"
+          title="No scoreboards here"
+        >
+          Wins are not tallied for productivity, but gathered gently as soft
+          proof of kindness to yourself.
+        </ReassureBanner>
+      </ScreenHero>
 
       {/* Sanctuary Jar */}
       <section className="jar-card" aria-labelledby="sanctuary-jar-title">
         <div className="jar-glow-warm" aria-hidden="true" />
         <div className="jar-glow-moss" aria-hidden="true" />
         <div className="jar-content">
-          <div className="section-header-row">
-            <h2 id="sanctuary-jar-title" className="section-label">
-              <span className="status-dot" aria-hidden="true" />
-              <span>Today’s Sanctuary Jar</span>
-            </h2>
-            <span className="duration-pill">
-              {wins.length} quiet {wins.length === 1 ? "win" : "wins"} today
-            </span>
-          </div>
+          <SectionHeader
+            id="sanctuary-jar-title"
+            headingClassName="section-label"
+            title={
+              <>
+                <span className="status-dot" aria-hidden="true" />
+                <span>Today’s Sanctuary Jar</span>
+              </>
+            }
+            metaClassName="duration-pill"
+            meta={`${wins.length} quiet ${wins.length === 1 ? "win" : "wins"} today`}
+          />
 
           <div className="win-pebble-list">
             {wins.map((win, idx) => (
@@ -86,15 +148,12 @@ export function WinsScreen({ wins, onAddWin }: WinsScreenProps) {
         className="section-block"
         aria-labelledby="acknowledge-win-heading"
       >
-        <div className="section-header-row">
-          <h2
-            id="acknowledge-win-heading"
-            className="section-heading section-heading-green"
-          >
-            Acknowledge a Win
-          </h2>
-          <span className="section-meta">Tap to place in jar</span>
-        </div>
+        <SectionHeader
+          id="acknowledge-win-heading"
+          headingClassName="section-heading section-heading-green"
+          title="Acknowledge a Win"
+          meta="Tap to place in jar"
+        />
 
         <div className="suggestion-chips">
           {WIN_SUGGESTIONS.map((item) => (
@@ -110,27 +169,15 @@ export function WinsScreen({ wins, onAddWin }: WinsScreenProps) {
           ))}
         </div>
 
-        <form className="capsule-form" onSubmit={handleWinSubmit}>
-          <Icon name="heart" size={18} />
-          <label htmlFor="custom-win-input" className="sr-only">
-            Write your own quiet win
-          </label>
-          <input
-            id="custom-win-input"
-            className="capsule-input"
-            type="text"
-            value={winInput}
-            onChange={(e) => setWinInput(e.target.value)}
-            placeholder="Write your own quiet win..."
-          />
-          <button
-            type="submit"
-            className="capsule-submit"
-            aria-label="Place quiet win in jar"
-          >
-            <Icon name="spa" size={17} />
-          </button>
-        </form>
+        <CapsuleForm
+          id="custom-win-input"
+          label="Write your own quiet win"
+          placeholder="Write your own quiet win..."
+          submitLabel="Place quiet win in jar"
+          submitIcon={<Icon name="spa" size={17} />}
+          leading={<Icon name="heart" size={18} />}
+          onSubmit={onAddWin}
+        />
       </section>
 
       {/* Recent Gentle Moments */}
@@ -138,98 +185,34 @@ export function WinsScreen({ wins, onAddWin }: WinsScreenProps) {
         className="section-block"
         aria-labelledby="recent-moments-heading"
       >
-        <div className="section-header-row">
-          <h2
-            id="recent-moments-heading"
-            className="section-heading section-heading-green"
-          >
-            Recent Gentle Moments
-          </h2>
-          <span className="section-meta">Safe Haven</span>
-        </div>
+        <SectionHeader
+          id="recent-moments-heading"
+          headingClassName="section-heading section-heading-green"
+          title="Recent Gentle Moments"
+          meta="Safe Haven"
+        />
 
-        <div className="moments-group">
-          <span className="moments-day-label">
-            <span className="status-dot" aria-hidden="true" />
-            <span>Earlier Today</span>
-          </span>
-
-          <article className="moment-card">
-            <span className="icon-orb icon-orb-round tone-moss">
-              <Icon name="tree" size={18} />
+        {MOMENT_DAYS.map((day) => (
+          <div key={day.label} className="moments-group">
+            <span className="moments-day-label">
+              <span
+                className={
+                  day.muted ? "status-dot status-dot-muted" : "status-dot"
+                }
+                aria-hidden="true"
+              />
+              <span>{day.label}</span>
             </span>
-            <div className="moment-body">
-              <div className="moment-top">
-                <span className="moment-title">
-                  Stepped outside into the cool air
-                </span>
-                <span className="moment-time">2 hrs ago</span>
-              </div>
-              <div className="moment-tags">
-                <span className="moment-tag-pill tone-moss">
-                  Somatic release
-                </span>
-                <span aria-hidden="true">•</span>
-                <span>Felt shoulders relax</span>
-              </div>
-            </div>
-          </article>
 
-          <article className="moment-card">
-            <span className="icon-orb icon-orb-round tone-blush">
-              <Icon name="heartFilled" size={17} />
-            </span>
-            <div className="moment-body">
-              <div className="moment-top">
-                <span className="moment-title">
-                  Chose to rest instead of pushing through
-                </span>
-                <span className="moment-time">Morning</span>
-              </div>
-              <div className="moment-tags">
-                <span className="moment-tag-pill tone-blush">
-                  Self-compassion
-                </span>
-                <span aria-hidden="true">•</span>
-                <span>Nervous system honor</span>
-              </div>
-            </div>
-          </article>
-        </div>
-
-        <div className="moments-group">
-          <span className="moments-day-label">
-            <span className="status-dot status-dot-muted" aria-hidden="true" />
-            <span>Yesterday</span>
-          </span>
-
-          <article className="moment-card">
-            <span className="icon-orb icon-orb-round tone-linen">
-              <Icon name="spa" size={18} />
-            </span>
-            <div className="moment-body">
-              <div className="moment-top">
-                <span className="moment-title">
-                  Sent a gentle message to my friend
-                </span>
-                <span className="moment-time">Yesterday</span>
-              </div>
-              <div className="moment-tags">
-                <span className="moment-tag-pill tone-linen">
-                  Gentle circle
-                </span>
-                <span aria-hidden="true">•</span>
-                <span>No pressure conversation</span>
-              </div>
-            </div>
-          </article>
-        </div>
+            {day.moments.map((moment) => (
+              <MomentCard key={moment.title} {...moment} />
+            ))}
+          </div>
+        ))}
       </section>
 
       <section className="affirmation-card" aria-label="Gentle reflection">
-        <span className="icon-orb icon-orb-round affirmation-orb">
-          <Icon name="meditate" size={20} />
-        </span>
+        <IconOrb icon="meditate" className="affirmation-orb" />
         <p className="affirmation-quote">
           “You do not need to earn your rest.”
         </p>

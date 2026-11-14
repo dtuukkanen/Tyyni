@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import type { ResolvedBehavioralNudge } from "../data/behavioralNudges";
 import {
   CIRCLE_MEMBERS,
   LOW_ENERGY_STEPS,
   MOOD_OPTIONS,
+  type MoodOption,
   STEP_ICONS,
 } from "../data/sanctuaryData";
 import { FlowerCompanion } from "./CompanionWorld";
-import { Icon } from "./icons";
+import { Icon, type IconName } from "./icons";
+import { CapsuleForm } from "./ui/CapsuleForm";
+import type { Tone } from "./ui/IconOrb";
+import { SectionHeader } from "./ui/SectionHeader";
+import { useDismiss } from "./ui/useDismiss";
 import { GROWTH_STAGE_NAMES, type GrowthStage } from "./useBloomieGrowth";
 
 const NO_NUDGES: ResolvedBehavioralNudge[] = [];
@@ -63,6 +68,82 @@ function bloomieLine(
         : "Everything’s tended. I’m in full bloom!";
   const lines = first ? [first, ...pool] : pool;
   return lines[index % lines.length];
+}
+
+type StepCardProps = {
+  icon: IconName;
+  label: string;
+  done: boolean;
+  onToggle: () => void;
+};
+
+function StepCard({ icon, label, done, onToggle }: StepCardProps) {
+  return (
+    <button
+      type="button"
+      className={`step-card ${done ? "is-done" : ""}`}
+      aria-pressed={done}
+      onClick={onToggle}
+    >
+      <span className="step-check">
+        <Icon name="check" size={16} />
+      </span>
+      <span className="step-text">{label}</span>
+      <span className="step-trailing-icon">
+        <Icon name={icon} size={20} />
+      </span>
+    </button>
+  );
+}
+
+/** How a circle member arrived today, or Resting when they haven't checked in. */
+function FeelingBadge({ feeling }: { feeling?: MoodOption }) {
+  return feeling ? (
+    <span className={`member-feeling feeling-${feeling.id.toLowerCase()}`}>
+      <Icon name={feeling.icon} size={12} />
+      <span>Feeling {feeling.label.toLowerCase()}</span>
+    </span>
+  ) : (
+    <span className="member-feeling is-resting">
+      <Icon name="moon" size={12} />
+      <span>Resting</span>
+    </span>
+  );
+}
+
+type MemberRowProps = {
+  initial: string;
+  tone: Tone;
+  name: string;
+  feeling?: MoodOption;
+  note: ReactNode;
+  /** The user's own row. */
+  self?: boolean;
+  action?: ReactNode;
+};
+
+function MemberRow({
+  initial,
+  tone,
+  name,
+  feeling,
+  note,
+  self = false,
+  action,
+}: MemberRowProps) {
+  return (
+    <li className={self ? "member-row is-self" : "member-row"}>
+      <div className={`member-avatar ${tone}`}>{initial}</div>
+      <div className="member-copy">
+        <span className="member-line">
+          <span className="member-name">{name}</span>
+          <FeelingBadge feeling={feeling} />
+        </span>
+        <span className="member-note">{note}</span>
+      </div>
+      {action}
+    </li>
+  );
 }
 
 type TodayScreenProps = {
@@ -140,28 +221,11 @@ export function TodayScreen({
   onInteractCompanion,
 }: TodayScreenProps) {
   const [addingStep, setAddingStep] = useState(false);
-  const [newStep, setNewStep] = useState("");
   const [bloomieIndex, setBloomieIndex] = useState(0);
   const [moodInfoOpen, setMoodInfoOpen] = useState(false);
   const moodInfoRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!moodInfoOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMoodInfoOpen(false);
-    };
-    const onPointerDown = (e: PointerEvent) => {
-      if (!moodInfoRef.current?.contains(e.target as Node)) {
-        setMoodInfoOpen(false);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, [moodInfoOpen]);
+  useDismiss(moodInfoOpen, () => setMoodInfoOpen(false), moodInfoRef);
 
   const tended = checked.filter((i) => i < steps.length).length;
   const shownSteps = Math.min(steps.length, 5);
@@ -182,15 +246,6 @@ export function TodayScreen({
         : growthStage === 1
           ? `${growthDone} of ${growthTotal} done · every bit helps.`
           : "Everything’s done — enjoy the bloom.";
-
-  function handleStepSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = newStep.trim();
-    if (!trimmed) return;
-    onAddStep(trimmed);
-    setNewStep("");
-    setAddingStep(false);
-  }
 
   return (
     <main className="screen-body today-world-body">
@@ -525,48 +580,25 @@ export function TodayScreen({
 
           <div className="steps-stack">
             {lowEnergy
-              ? LOW_ENERGY_STEPS.map((step, index) => {
-                  const isDone = restChecked.includes(index);
-                  return (
-                    <button
-                      key={step.label}
-                      type="button"
-                      className={`step-card ${isDone ? "is-done" : ""}`}
-                      aria-pressed={isDone}
-                      onClick={() => onToggleRestStep(index)}
-                    >
-                      <span className="step-check">
-                        <Icon name="check" size={16} />
-                      </span>
-                      <span className="step-text">{step.label}</span>
-                      <span className="step-trailing-icon">
-                        <Icon name={step.icon} size={20} />
-                      </span>
-                    </button>
-                  );
-                })
-              : steps.map((step, index) => {
-                  const isDone = checked.includes(index);
-                  const iconName = STEP_ICONS[index % STEP_ICONS.length];
-                  return (
-                    <button
-                      // oxlint-disable-next-line react/no-array-index-key -- steps are plain strings and may repeat
-                      key={`${step}-${index}`}
-                      type="button"
-                      className={`step-card ${isDone ? "is-done" : ""}`}
-                      aria-pressed={isDone}
-                      onClick={() => onToggleStep(index)}
-                    >
-                      <span className="step-check">
-                        <Icon name="check" size={16} />
-                      </span>
-                      <span className="step-text">{step}</span>
-                      <span className="step-trailing-icon">
-                        <Icon name={iconName} size={20} />
-                      </span>
-                    </button>
-                  );
-                })}
+              ? LOW_ENERGY_STEPS.map((step, index) => (
+                  <StepCard
+                    key={step.label}
+                    icon={step.icon}
+                    label={step.label}
+                    done={restChecked.includes(index)}
+                    onToggle={() => onToggleRestStep(index)}
+                  />
+                ))
+              : steps.map((step, index) => (
+                  <StepCard
+                    // oxlint-disable-next-line react/no-array-index-key -- steps are plain strings and may repeat
+                    key={`${step}-${index}`}
+                    icon={STEP_ICONS[index % STEP_ICONS.length]}
+                    label={step}
+                    done={checked.includes(index)}
+                    onToggle={() => onToggleStep(index)}
+                  />
+                ))}
           </div>
 
           {lowEnergy ? (
@@ -587,28 +619,18 @@ export function TodayScreen({
               <span>Add one small thing (optional)</span>
             </button>
           ) : (
-            <form className="capsule-form" onSubmit={handleStepSubmit}>
-              <label htmlFor="new-step-input" className="sr-only">
-                Add one small step for today
-              </label>
-              <input
-                id="new-step-input"
-                className="capsule-input"
-                type="text"
-                value={newStep}
-                onChange={(e) => setNewStep(e.target.value)}
-                placeholder="One gentle intention (e.g., sip warm tea)..."
-                // oxlint-disable-next-line jsx-a11y/no-autofocus -- the field appears only after the user asks to add a step
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="capsule-submit"
-                aria-label="Save small step"
-              >
-                <Icon name="plus" size={18} />
-              </button>
-            </form>
+            <CapsuleForm
+              id="new-step-input"
+              label="Add one small step for today"
+              placeholder="One gentle intention (e.g., sip warm tea)..."
+              submitLabel="Save small step"
+              submitIcon={<Icon name="plus" size={18} />}
+              focusOnOpen
+              onSubmit={(text) => {
+                onAddStep(text);
+                setAddingStep(false);
+              }}
+            />
           )}
         </section>
 
@@ -617,15 +639,17 @@ export function TodayScreen({
           className="circle-pod frosted-section-card"
           aria-labelledby="circle-heading"
         >
-          <div className="section-header-row">
-            <h2 id="circle-heading" className="section-label">
-              <Icon name="users" size={19} />
-              <span>Gentle Circle</span>
-            </h2>
-            <span className="section-meta">
-              {checkedInCount} checked in today
-            </span>
-          </div>
+          <SectionHeader
+            id="circle-heading"
+            headingClassName="section-label"
+            title={
+              <>
+                <Icon name="users" size={19} />
+                <span>Gentle Circle</span>
+              </>
+            }
+            meta={`${checkedInCount} checked in today`}
+          />
 
           <p className="circle-subcopy">
             Quietly present together. No pressure, just mutual care.
@@ -633,73 +657,50 @@ export function TodayScreen({
 
           <ul className="circle-list">
             {restingShared && (
-              <li className="member-row is-self">
-                <div className={`member-avatar tone-linen`}>
-                  {guestName.charAt(0)}
-                </div>
-                <div className="member-copy">
-                  <span className="member-line">
-                    <span className="member-name">You</span>
-                    <span className="member-feeling is-resting">
-                      <Icon name="moon" size={12} />
-                      <span>Resting</span>
-                    </span>
-                  </span>
-                  <span className="member-note">
-                    Your circle knows. No replies expected.
-                  </span>
-                </div>
-              </li>
+              <MemberRow
+                self
+                initial={guestName.charAt(0)}
+                tone="tone-linen"
+                name="You"
+                note="Your circle knows. No replies expected."
+              />
             )}
             {CIRCLE_MEMBERS.map((person) => {
-              const feeling = MOOD_OPTIONS.find((m) => m.id === person.feeling);
               const warmthSent = warmthSentTo.includes(person.name);
               return (
-                <li key={person.name} className="member-row">
-                  <div className={`member-avatar ${person.tone}`}>
-                    {person.initial}
-                  </div>
-                  <div className="member-copy">
-                    <span className="member-line">
-                      <span className="member-name">{person.name}</span>
-                      {feeling ? (
-                        <span
-                          className={`member-feeling feeling-${feeling.id.toLowerCase()}`}
-                        >
-                          <Icon name={feeling.icon} size={12} />
-                          <span>Feeling {feeling.label.toLowerCase()}</span>
-                        </span>
-                      ) : (
-                        <span className="member-feeling is-resting">
-                          <Icon name="moon" size={12} />
-                          <span>Resting</span>
-                        </span>
-                      )}
-                    </span>
-                    <span className="member-note">
+                <MemberRow
+                  key={person.name}
+                  initial={person.initial}
+                  tone={person.tone}
+                  name={person.name}
+                  feeling={MOOD_OPTIONS.find((m) => m.id === person.feeling)}
+                  note={
+                    <>
                       {person.note}
                       {person.when && (
                         <span className="member-when"> · {person.when}</span>
                       )}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`member-warmth-btn ${warmthSent ? "is-sent" : ""}`}
-                    aria-pressed={warmthSent}
-                    aria-label={
-                      warmthSent
-                        ? `Warmth sent to ${person.name}`
-                        : `Send warmth to ${person.name}`
-                    }
-                    onClick={() => onSendWarmth(person.name)}
-                  >
-                    <Icon
-                      name={warmthSent ? "heartFilled" : "heart"}
-                      size={17}
-                    />
-                  </button>
-                </li>
+                    </>
+                  }
+                  action={
+                    <button
+                      type="button"
+                      className={`member-warmth-btn ${warmthSent ? "is-sent" : ""}`}
+                      aria-pressed={warmthSent}
+                      aria-label={
+                        warmthSent
+                          ? `Warmth sent to ${person.name}`
+                          : `Send warmth to ${person.name}`
+                      }
+                      onClick={() => onSendWarmth(person.name)}
+                    >
+                      <Icon
+                        name={warmthSent ? "heartFilled" : "heart"}
+                        size={17}
+                      />
+                    </button>
+                  }
+                />
               );
             })}
           </ul>

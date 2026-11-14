@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Icon } from "./icons";
+import { IconOrb } from "./ui/IconOrb";
+import { ScreenHero } from "./ui/ScreenHero";
 
 // The unsent draft stays on this device so leaving the tab loses nothing.
 const DRAFT_KEY = "tyyni-journal-draft";
@@ -58,22 +60,17 @@ export function JournalScreen({ onSave }: JournalScreenProps) {
 
   return (
     <main className="screen-body">
-      <div className="hero-header">
-        <span className="eyebrow-badge">
-          <Icon name="pen" size={13} />
-          <span>QUIET PAGE</span>
-        </span>
-        <h1 className="hero-title hero-title-green">Just write.</h1>
-        <p className="hero-subtitle">
-          No prompts, no right way. A single word is enough.
-        </p>
-      </div>
+      <ScreenHero
+        badge={<Icon name="pen" size={13} />}
+        badgeLabel="QUIET PAGE"
+        title="Just write."
+        subtitle="No prompts, no right way. A single word is enough."
+        green
+      />
 
       {status === "saved" ? (
         <section className="journal-card journal-saved" aria-live="polite">
-          <span className="icon-orb icon-orb-round tone-moss">
-            <Icon name="checkCircle" size={20} />
-          </span>
+          <IconOrb icon="checkCircle" tone="tone-moss" />
           <p className="journal-saved-title">Saved.</p>
           <p className="journal-saved-sub">You can set it down now.</p>
           <button
