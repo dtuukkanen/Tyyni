@@ -66,10 +66,13 @@ class Anomaly(_FromOrm):
     severity: Severity
     metric: str | None = Field(description="The most deviating metric")
     value: float | None
-    baseline: float | None = Field(description="The metric's median over the 14 days before")
+    baseline: float | None = Field(
+        description="The metric's median over the 14 days before (for low_mood the mean of the "
+        "usual check-ins); null for a very low mood without a usual one"
+    )
     explanation: dict[str, Any] | None = Field(
         description="summary (text), signals (every metric that fired) and escalation "
-        "(why it is critical: extreme, sustained, multiple_signals)"
+        "(why it is critical: extreme, very_low, sustained, multiple_signals)"
     )
     created_at: datetime
 

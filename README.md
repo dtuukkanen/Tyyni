@@ -102,7 +102,7 @@ A rule fires when a metric is at least 2.5 spreads out *and* moves by at least i
 | `sleep_shift` | Bedtime or wake time ≥ 1.5 h later |
 | `low_activity` | Steps ≥ 40 % fewer |
 | `screen_time` | Screen time ≥ 1 h more (not simulated yet, so it doesn't fire on simulated data) |
-| `low_mood` | Mood check-in ≥ 1 point lower |
+| `low_mood` | The mood check-ins have dropped; see [below](#low-mood) |
 
 Each anomaly is one row per day and kind. `metric` / `value` / `baseline` hold the most deviating metric. `explanation` holds a `summary` ("HRV 31 ms vs usual 47 ms (-34 %); heart rate 76 bpm vs usual 64 bpm (+12 bpm)"), every `signal` that fired with its `z`, and `escalation`. An anomaly is `attention`, or `critical` when it is:
 
@@ -117,6 +117,16 @@ docker compose run --rm migrate python -m app.inference.anomalies --user <id> --
 ```
 
 From Python: `anomalies.find(daily_rows, start, end, today=...)` is pure (rows of `repository.daily_metrics` in, anomaly rows out); `anomalies.detect(session, user_id, start, end)` reads, stores and returns them.
+
+### Low mood
+
+The 1-tap mood is one score from 1 to 5 a day, too coarse for a median and its absolute deviation: a user who always taps 4 would get a critical anomaly from a single 2, and a user who wobbles between 3 and 5 would never be flagged. So `low_mood` has its own rule. On each day with a check-in it compares today's score and the *recent mood* (the mean of the last 3 check-ins within 4 days) with the *usual mood*: the mean and standard deviation (at least 0.5) of the normal check-ins in the 14 days before those 4, so the first low days of a dip don't drag the usual mood down before it fires. It needs 7 such check-ins. It fires on:
+
+- a dip: today's check-in and the recent mood are both ≥ 1 point below usual, and the recent mood is ≥ 1.5 deviations below it. One bad check-in among good ones is not a dip.
+- a sharp drop: today's check-in alone is ≥ 2 points and ≥ 3 deviations below usual (a bad day for a steady user, not for a wobbly one).
+- a very low mood: the last 3 check-ins average 1.5 or less. This needs no usual mood and never becomes the new normal, so a new user or a slow decline (`crisis`) is still caught.
+
+A low mood is `critical` when it is very low (`very_low`) or the recent mood is ≥ 2 points below usual (`extreme`), besides `sustained` and `multiple_signals`. The `low_mood` signal holds today's check-in as `value`, the usual mood as `baseline` (`null` without one) and the recent mood as `recent`; its summary reads "mood 2.0/5 vs usual 3.9/5 (-1.9), last 3 check-ins 2.3/5". Over 200 seeds of the 21-day [mood scenarios](#mood), a stable user gets a `low_mood` in about 1 run in 8 and a critical one in about 1 in 100 (`stable_low` more often, since its user does have runs of 1s), while it fires in about three quarters of `stress_period` runs and nine in ten `crisis` runs.
 
 ## Simulators
 
