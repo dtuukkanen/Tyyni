@@ -71,7 +71,7 @@ Interactive docs are at <http://localhost:8000/docs>. A frontend can generate a 
 | `GET /health` | `{"status": "ok"}` once the DB answers |
 | `GET /users`, `POST /users` | All users; create one with `{"display_name": "demo"}` |
 | `GET /users/{id}` | One user (404 if unknown) |
-| `GET /users/{id}/today` | Today's metrics, the 14-day baseline, whether mood was logged and the stored anomalies of yesterday and today: everything the day view needs |
+| `GET /users/{id}/today` | Today's metrics, the 14-day baseline, whether mood was logged, the stored anomalies of yesterday and today and today's stored suggestions: everything the day view needs |
 | `GET /users/{id}/daily?start=&end=` | One row per day with all metrics (default: the last 14 days; at most 366) |
 | `GET /users/{id}/baseline?day=&window=14` | Mean of each metric over the `window` days before `day` |
 | `GET /users/{id}/heart?start=&end=` | Raw HR + HRV samples in `[start, end)` (default: the last 24 h; at most 31 days) |
@@ -82,6 +82,9 @@ Interactive docs are at <http://localhost:8000/docs>. A frontend can generate a 
 | `GET /users/{id}/journal?start=&end=`, `POST /users/{id}/journal` | Journal entries by UTC day; post `{"text": "...", "language"?: "fi"\|"en", "ts"?}` |
 | `GET /users/{id}/anomalies?start=&end=` | Stored [anomalies](#anomaly-detection) by day |
 | `POST /users/{id}/anomalies/detect?start=&end=` | Detects the anomalies again from the current data, stores them and returns them (default: the last 14 days) |
+| `GET /users/{id}/suggestions?start=&end=` | Stored [suggestions](#suggestions) by day, each with its practice (`title`, `text`, `minutes`, `category`), the anomaly and `reason` it answers and the latest feedback (`done`, `helped`) |
+| `POST /users/{id}/suggestions?day=` | Detects the anomalies of the day and the day before, adds suggestions for them and returns all of the day's suggestions (default: today). Calling it again keeps the ones already made |
+| `POST /users/{id}/suggestions/{sid}/feedback` | Post `{"done": true, "helped": true\|false\|null}` or `{"done": false}`; the latest answer counts and steers later suggestions |
 
 `start` / `end` are dates (`2026-11-14`) for day endpoints and datetimes (`2026-11-14T08:00:00Z`) for `heart` / `activity`; times without a zone are UTC. Days are UTC calendar days, as in the repository.
 
@@ -129,6 +132,38 @@ The 1-tap mood is one score from 1 to 5 a day, too coarse for a median and its a
 - a very low mood: the last 3 check-ins average 1.5 or less. This needs no usual mood and never becomes the new normal, so a new user or a slow decline (`crisis`) is still caught.
 
 A low mood is `critical` when it is very low (`very_low`) or the recent mood is ≥ 2 points below usual (`extreme`), besides `sustained` and `multiple_signals`. The `low_mood` signal holds today's check-in as `value`, the usual mood as `baseline` (`null` without one) and the recent mood as `recent`; its summary reads "mood 2.0/5 vs usual 3.9/5 (-1.9), last 3 check-ins 2.3/5". Over 200 seeds of the 21-day [mood scenarios](#mood), a stable user gets a `low_mood` in about 1 run in 8 and a critical one in about 1 in 100 (`stable_low` more often, since its user does have runs of 1s), while it fires in about three quarters of `stress_period` runs and nine in ten `crisis` runs.
+
+## Suggestions
+
+[`backend/app/inference/suggestions.py`](backend/app/inference/suggestions.py) turns the anomalies into a few small practices and stores them in `suggestions`; the user's answers go to `suggestion_feedback`. The practices (`CATALOG`) match the ones in the app: box breathing, the double inhale sigh, a body scan, a slow walk, nearby nature, a stretch, calm sounds, 5-4-3-2-1 grounding, a screen-free wind-down, an earlier night, a short rest, morning daylight, a regular wake-up time, a phone-free hour, writing it down, reaching out to a friend, and talking to someone today.
+
+Each anomaly kind has its practices in order (`FOR_KIND`):
+
+| Anomaly | Practices, best first |
+|---|---|
+| `stress` | box breathing, double inhale sigh, slow walk, body scan, calm sounds |
+| `short_sleep` | screen-free wind-down, earlier night, short rest, body scan |
+| `long_sleep` | morning daylight, regular wake-up, slow walk, reach out to a friend |
+| `sleep_shift` | screen-free wind-down, morning daylight, regular wake-up, phone-free hour; led by a late wake-up: morning daylight, regular wake-up, slow walk |
+| `low_activity` | slow walk, nearby nature, stretch |
+| `screen_time` | phone-free hour, nearby nature, screen-free wind-down, grounding |
+| `low_mood` | nearby nature, reach out to a friend, writing it down, grounding, calm sounds |
+
+Suggestions for a day answer the anomalies of that day and the day before (heart rate and steps are judged once a day is over), at most 3 a day:
+
+- A kind that fired on both days counts once, as today's anomaly.
+- Critical anomalies come first. A very low mood (`very_low`) gets *talk to someone today*, with the MIELI crisis line and 112, ahead of everything else and every day while it lasts. Another critical low mood, or a critical anomaly with several signals at once (`multiple_signals`), gets *reach out to a friend* first. A critical anomaly that is only `sustained` or `extreme` gets no support practice, so a long stress week doesn't nudge the user to message someone every day.
+- The anomalies take turns, so two anomalies get one practice each before either gets a second. An anomaly that already has suggestions gets no more.
+- A practice suggested in the 2 days before waits until the others are used up, so the user isn't told the same thing every day.
+- Feedback reorders the practices: the share of times a practice helped, smoothed towards one half, where skipping it counts as half a "didn't help". Three "helped" lift a practice about three places; three "didn't help" drop it as far.
+
+Making suggestions again on the same day only adds ones for new anomalies, so the list the user already saw stays put. A suggestion keeps its `reason` (the anomaly's summary) after re-detection removes its anomaly. Over 5 seeds of the 21-day scenarios with every simulator, a stable user gets no suggestions; `stress_period` gets them on about 7 days, led by box breathing and the double inhale sigh; `oversleep` on about 8, led by morning daylight and a regular wake-up.
+
+```bash
+docker compose run --rm migrate python -m app.inference.suggestions --user <id> --day 2026-11-14
+```
+
+From Python: `suggestions.choose(anomalies, history, day)` is pure (anomalies and earlier suggestions with their feedback in, new suggestions out); `suggestions.suggest(session, user_id, day)` detects, stores and returns the day's suggestions.
 
 ## Simulators
 

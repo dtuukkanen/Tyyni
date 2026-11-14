@@ -180,12 +180,17 @@ class Anomaly(Base):
 
 
 class Suggestion(Base):
+    """A practice offered for a day; kind is a key of app.inference.suggestions.CATALOG."""
+
     __tablename__ = "suggestions"
+    __table_args__ = (Index("ix_suggestions_user_day", "user_id", "day"),)
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    user_id: Mapped[uuid.UUID] = _user_fk()
+    user_id: Mapped[uuid.UUID] = _user_fk(index=False)
+    day: Mapped[date] = mapped_column(Date)
     anomaly_id: Mapped[int | None] = mapped_column(ForeignKey("anomalies.id", ondelete="SET NULL"))
-    kind: Mapped[str] = mapped_column(Text)  # e.g. "walk", "breathing", "music", "message_friend"
+    kind: Mapped[str] = mapped_column(Text)  # e.g. "box_breathing", "message_friend"
+    reason: Mapped[str | None] = mapped_column(Text)  # the anomaly's summary when it was made
     shown_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

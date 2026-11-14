@@ -8,7 +8,7 @@ from collections.abc import Iterable, Mapping
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import insert, select, text
+from sqlalchemy import func, insert, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,8 @@ from app.db.models import (
     MoodCheckin,
     ScreenSample,
     SleepSession,
+    Suggestion,
+    SuggestionFeedback,
     User,
 )
 
@@ -296,6 +298,74 @@ def replace_anomalies(
         session.delete(a)
     session.flush()
     return kept
+
+
+def suggestions(
+    session: Session, user_id: uuid.UUID, start: date, end: date
+) -> list[dict[str, Any]]:
+    """Suggestions for days [start, end], by day and id, each with its latest feedback.
+
+    Rows: {id, day, kind, anomaly_id, anomaly_kind, severity, reason, shown_at, done, helped,
+    feedback_at}; the anomaly fields are null once the anomaly is gone, the feedback fields
+    before any feedback.
+    """
+    fb = SuggestionFeedback
+    latest = select(
+        fb.suggestion_id,
+        fb.done,
+        fb.helped,
+        fb.ts,
+        func.row_number()
+        .over(partition_by=fb.suggestion_id, order_by=(fb.ts.desc(), fb.id.desc()))
+        .label("n"),
+    ).subquery()
+    query = (
+        select(
+            Suggestion.id,
+            Suggestion.day,
+            Suggestion.kind,
+            Suggestion.anomaly_id,
+            Anomaly.kind.label("anomaly_kind"),
+            Anomaly.severity,
+            Suggestion.reason,
+            Suggestion.shown_at,
+            latest.c.done,
+            latest.c.helped,
+            latest.c.ts.label("feedback_at"),
+        )
+        .outerjoin(Anomaly, Anomaly.id == Suggestion.anomaly_id)
+        .outerjoin(latest, (latest.c.suggestion_id == Suggestion.id) & (latest.c.n == 1))
+        .where(Suggestion.user_id == user_id, Suggestion.day >= start, Suggestion.day <= end)
+        .order_by(Suggestion.day, Suggestion.id)
+    )
+    return [dict(r) for r in session.execute(query).mappings()]
+
+
+def add_suggestions(
+    session: Session, user_id: uuid.UUID, rows: Iterable[Mapping[str, Any]]
+) -> list[int]:
+    """Store suggestions {day, kind, anomaly_id, reason}; returns their ids."""
+    added = [Suggestion(user_id=user_id, **row) for row in rows]
+    session.add_all(added)
+    session.flush()
+    return [s.id for s in added]
+
+
+def get_suggestion(session: Session, user_id: uuid.UUID, suggestion_id: int) -> Suggestion | None:
+    """The user's suggestion, or None (also when it belongs to someone else)."""
+    s = session.get(Suggestion, suggestion_id)
+    return s if s is not None and s.user_id == user_id else None
+
+
+def add_suggestion_feedback(
+    session: Session, suggestion_id: int, *, done: bool, helped: bool | None = None
+) -> SuggestionFeedback:
+    """Record whether the user did the suggestion and whether it helped. The latest counts."""
+    fb = SuggestionFeedback(suggestion_id=suggestion_id, done=done, helped=helped)
+    session.add(fb)
+    session.flush()
+    session.refresh(fb)
+    return fb
 
 
 def delete_source_data(session: Session, user_id: uuid.UUID, source_prefix: str) -> None:

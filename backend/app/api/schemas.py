@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class _FromOrm(BaseModel):
@@ -77,6 +77,38 @@ class Anomaly(_FromOrm):
     created_at: datetime
 
 
+class Suggestion(BaseModel):
+    id: int
+    day: date = Field(description="The day it was suggested for")
+    kind: str = Field(description="The practice, a key of the catalog (e.g. box_breathing)")
+    title: str
+    text: str
+    minutes: int = Field(description="About how long it takes")
+    category: str = Field(
+        description="breathing, movement, rest, grounding, sleep, screen, reflection, social "
+        "or support"
+    )
+    anomaly_id: int | None = Field(description="The anomaly it answers; null once it is gone")
+    anomaly_kind: str | None
+    severity: Severity | None
+    reason: str | None = Field(description="The anomaly's summary when it was suggested")
+    shown_at: datetime
+    done: bool | None = Field(description="Latest feedback: did the user do it")
+    helped: bool | None = Field(description="Latest feedback: did it help")
+    feedback_at: datetime | None
+
+
+class SuggestionFeedbackCreate(BaseModel):
+    done: bool
+    helped: bool | None = Field(None, description="Only when done; null if not answered")
+
+    @model_validator(mode="after")
+    def _helped_needs_done(self) -> "SuggestionFeedbackCreate":
+        if self.helped is not None and not self.done:
+            raise ValueError("helped needs done=true")
+        return self
+
+
 class Today(BaseModel):
     day: date
     metrics: DailyMetrics
@@ -84,6 +116,9 @@ class Today(BaseModel):
     mood_logged: bool
     anomalies: list[Anomaly] = Field(
         description="Stored anomalies for yesterday and today (run detect to refresh them)"
+    )
+    suggestions: list[Suggestion] = Field(
+        description="Today's stored suggestions (POST /suggestions makes them)"
     )
 
 
