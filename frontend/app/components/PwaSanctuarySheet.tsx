@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  DEMO_NUDGE_OPTIONS,
+  type DemoNudgeKey,
+} from "../data/behavioralNudges";
 import { Icon, TyyniLogo } from "./icons";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -103,6 +107,9 @@ export interface PwaSanctuarySheetProps {
   guestName: string;
   lowEnergy: boolean;
   onToggleLowEnergy: () => void;
+  demoNudgeKey: DemoNudgeKey;
+  onSelectDemoNudge: (key: DemoNudgeKey) => void;
+  hasLiveBackendSuggestions: boolean;
   pwa: PwaState;
   onClose: () => void;
   onInstalled: () => void;
@@ -112,6 +119,9 @@ export function PwaSanctuarySheet({
   guestName,
   lowEnergy,
   onToggleLowEnergy,
+  demoNudgeKey,
+  onSelectDemoNudge,
+  hasLiveBackendSuggestions,
   pwa,
   onClose,
   onInstalled,
@@ -222,6 +232,34 @@ export function PwaSanctuarySheet({
               </p>
             </div>
           )}
+        </div>
+
+        {/* Behavioral Nudge Preview Row (for testing Today page behavioral space) */}
+        <div className="pwa-demo-section">
+          <div className="pwa-pref-copy">
+            <strong>Today Behavioral Nudge</strong>
+            <span>
+              {hasLiveBackendSuggestions
+                ? "Connected to live backend suggestions (override to preview)"
+                : "Preview how Today adapts when backend detects signal changes"}
+            </span>
+          </div>
+          <div className="pwa-demo-chips" role="group" aria-label="Behavioral nudge preview">
+            {DEMO_NUDGE_OPTIONS.map((opt) => {
+              const isSelected = demoNudgeKey === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  aria-pressed={isSelected}
+                  className={`pwa-demo-chip ${isSelected ? "is-selected" : ""}`}
+                  onClick={() => onSelectDemoNudge(opt.key)}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Quick Low-Energy Preference Row */}

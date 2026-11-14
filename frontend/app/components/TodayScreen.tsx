@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ResolvedBehavioralNudge } from "../data/behavioralNudges";
 import {
   CIRCLE_MEMBERS,
   MOOD_OPTIONS,
@@ -13,6 +14,12 @@ type TodayScreenProps = {
   dateLabel: string;
   lowEnergy: boolean;
   onExitLowEnergy: () => void;
+  behavioralNudges: ResolvedBehavioralNudge[];
+  activeNudgeIndex: number;
+  onCycleNudge: () => void;
+  onDismissNudge: (nudge: ResolvedBehavioralNudge) => void;
+  onStartNudge: (nudge: ResolvedBehavioralNudge) => void;
+  onMarkNudgeHelped: (nudge: ResolvedBehavioralNudge) => void;
   mood: string;
   onSelectMood: (moodId: string) => void;
   steps: string[];
@@ -29,6 +36,12 @@ export function TodayScreen({
   dateLabel,
   lowEnergy,
   onExitLowEnergy,
+  behavioralNudges = [],
+  activeNudgeIndex = 0,
+  onCycleNudge,
+  onDismissNudge,
+  onStartNudge,
+  onMarkNudgeHelped,
   mood,
   onSelectMood,
   steps,
@@ -45,6 +58,11 @@ export function TodayScreen({
   const selectedMood =
     MOOD_OPTIONS.find((m) => m.id === mood) ?? MOOD_OPTIONS[2];
   const visibleSteps = lowEnergy ? steps.slice(0, 1) : steps;
+
+  const activeNudge =
+    behavioralNudges.length > 0
+      ? behavioralNudges[activeNudgeIndex % behavioralNudges.length]
+      : null;
 
   const companionSubtitle = lowEnergy
     ? "Resting quietly with you · Soft sanctuary"
@@ -67,7 +85,7 @@ export function TodayScreen({
 
   return (
     <main className="screen-body today-world-body">
-      {/* 1. First Fold: Greeting, Unobstructed Animated Flower Showcase & Somatic Check-In */}
+      {/* 1. First Fold: Greeting / Optional Behavioral Nudge, Bloomie Showcase & Check-In */}
       <section className="today-hero-fold">
         <div className="today-hero-top">
           <div className="top-meta-row">
@@ -77,11 +95,91 @@ export function TodayScreen({
             </span>
           </div>
 
-          <div className="hero-greeting-card">
-            <h1 className="hero-title">Good morning, {guestName}.</h1>
-            <p className="hero-subtitle">
-              Take a slow breath. You don’t have to carry tomorrow today.
-            </p>
+          <div
+            className={`hero-greeting-card ${
+              activeNudge ? "has-behavioral-nudge" : ""
+            }`}
+          >
+            {activeNudge ? (
+              <>
+                <div className="nudge-top-row">
+                  <span className={`nudge-badge nudge-tone-${activeNudge.tone}`}>
+                    <Icon
+                      name={
+                        activeNudge.tone === "blush" ? "heart" : "spa"
+                      }
+                      size={12}
+                    />
+                    <span>{activeNudge.badgeLabel}</span>
+                  </span>
+
+                  <div className="nudge-meta-controls">
+                    {behavioralNudges.length > 1 && (
+                      <button
+                        type="button"
+                        className="nudge-ghost-btn"
+                        onClick={onCycleNudge}
+                        aria-label="Show next gentle suggestion"
+                      >
+                        {(activeNudgeIndex % behavioralNudges.length) + 1}/
+                        {behavioralNudges.length} · Next
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="nudge-ghost-btn"
+                      onClick={() => onDismissNudge(activeNudge)}
+                      aria-label="Dismiss suggestion for now"
+                    >
+                      Later
+                    </button>
+                  </div>
+                </div>
+
+                <h1 className="hero-title">{activeNudge.headline}</h1>
+                <p className="hero-subtitle">{activeNudge.subtitle}</p>
+
+                {activeNudge.reason && (
+                  <p className="nudge-reason">{activeNudge.reason}</p>
+                )}
+
+                <div className="nudge-actions-row">
+                  <button
+                    type="button"
+                    className={`nudge-primary-btn ${
+                      activeNudge.tone === "blush" ? "is-warm" : ""
+                    }`}
+                    onClick={() => onStartNudge(activeNudge)}
+                  >
+                    <Icon name={activeNudge.ctaIcon} size={15} />
+                    <span>{activeNudge.ctaLabel}</span>
+                  </button>
+
+                  {activeNudge.done && (
+                    <button
+                      type="button"
+                      className={`nudge-helped-btn ${
+                        activeNudge.helped ? "is-helped" : ""
+                      }`}
+                      aria-pressed={Boolean(activeNudge.helped)}
+                      onClick={() => onMarkNudgeHelped(activeNudge)}
+                    >
+                      <Icon name="check" size={13} />
+                      <span>
+                        {activeNudge.helped ? "Helped" : "This helped"}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <h1 className="hero-title">Good morning, {guestName}.</h1>
+                <p className="hero-subtitle">
+                  Take a slow breath. You don’t have to carry tomorrow today.
+                </p>
+              </>
+            )}
           </div>
 
           {lowEnergy && (
@@ -260,6 +358,7 @@ export function TodayScreen({
         </section>
 
         <section
+          id="gentle-circle-section"
           className="circle-pod frosted-section-card"
           aria-labelledby="circle-heading"
         >

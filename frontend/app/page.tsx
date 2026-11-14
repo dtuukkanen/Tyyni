@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnchorScreen } from "./components/AnchorScreen";
 import { CompanionWorld } from "./components/CompanionWorld";
 import { GroundScreen } from "./components/GroundScreen";
@@ -10,6 +10,14 @@ import { PwaSanctuarySheet, usePwa } from "./components/PwaSanctuarySheet";
 import { type SoundPreset, soundEngine } from "./components/soundEngine";
 import { TodayScreen } from "./components/TodayScreen";
 import { WinsScreen } from "./components/WinsScreen";
+import {
+  type BackendAnomaly,
+  type BackendSuggestion,
+  DEMO_NUDGE_OPTIONS,
+  type DemoNudgeKey,
+  type ResolvedBehavioralNudge,
+  resolveBehavioralNudges,
+} from "./data/behavioralNudges";
 import {
   type AnchorItem,
   type DashboardData,
@@ -23,6 +31,7 @@ import {
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>("Today");
+  const [userId, setUserId] = useState<string | undefined>(undefined);
   const [guestName, setGuestName] = useState("Elena");
   const [dateLabel, setDateLabel] = useState("Wednesday, October 24");
   const [lowEnergy, setLowEnergy] = useState(false);
@@ -32,6 +41,18 @@ export default function Home() {
   const [checked, setChecked] = useState<number[]>([0]);
   const [waveSent, setWaveSent] = useState(false);
   const [bloomieCelebrating, setBloomieCelebrating] = useState(false);
+
+  const [backendSuggestions, setBackendSuggestions] = useState<
+    BackendSuggestion[]
+  >([]);
+  const [backendAnomalies, setBackendAnomalies] = useState<BackendAnomaly[]>(
+    [],
+  );
+  const [demoNudgeKey, setDemoNudgeKey] = useState<DemoNudgeKey>("none");
+  const [dismissedNudgeIds, setDismissedNudgeIds] = useState<number[]>([]);
+  const [completedNudgeIds, setCompletedNudgeIds] = useState<number[]>([]);
+  const [helpedNudgeIds, setHelpedNudgeIds] = useState<number[]>([]);
+  const [nudgeIndex, setNudgeIndex] = useState(0);
 
   const [wins, setWins] = useState<string[]>(STARTER_WINS);
   const [anchors, setAnchors] = useState<AnchorItem[]>(INITIAL_ANCHORS);
@@ -55,6 +76,16 @@ export default function Home() {
     else if (requestedTab === "wins") setTab("Wins");
     else if (requestedTab === "anchor") setTab("Anchor");
 
+    const requestedNudge = params.get("nudge")?.toLowerCase() as
+      | DemoNudgeKey
+      | undefined;
+    if (
+      requestedNudge &&
+      DEMO_NUDGE_OPTIONS.some((o) => o.key === requestedNudge)
+    ) {
+      setDemoNudgeKey(requestedNudge);
+    }
+
     if (params.get("sos") === "1") {
       setTab("Ground");
       setModal({
@@ -73,6 +104,7 @@ export default function Home() {
       .then((data) => {
         if (!data?.dashboard) return;
         const next = data.dashboard as DashboardData;
+        if (next.userId) setUserId(next.userId);
         if (next.displayName) setGuestName(next.displayName);
         if (next.dateLabel) setDateLabel(next.dateLabel);
         if (next.mood) setMood(next.mood);
@@ -84,6 +116,12 @@ export default function Home() {
         }
         if (next.wins && next.wins.length > 0) {
           setWins(next.wins);
+        }
+        if (Array.isArray(next.suggestions)) {
+          setBackendSuggestions(next.suggestions);
+        }
+        if (Array.isArray(next.anomalies)) {
+          setBackendAnomalies(next.anomalies);
         }
       })
       .catch(() => undefined);
@@ -110,6 +148,47 @@ export default function Home() {
       setBloomieCelebrating(false);
     }, 1700);
   }, []);
+
+  const postSuggestionFeedback = useCallback(
+    (suggestionId: number, done: boolean, helped?: boolean | null) => {
+      if (suggestionId < 0) return;
+      fetch("/api/prototype", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, suggestionId, done, helped }),
+      }).catch(() => undefined);
+    },
+    [userId],
+  );
+
+  const behavioralNudges = useMemo(() => {
+    const demoPreset = DEMO_NUDGE_OPTIONS.find((o) => o.key === demoNudgeKey);
+    const activeSuggestions =
+      demoNudgeKey !== "none" && demoPreset
+        ? demoPreset.suggestions
+        : backendSuggestions;
+    const activeAnomalies = demoNudgeKey !== "none" ? [] : backendAnomalies;
+
+    return resolveBehavioralNudges(
+      guestName,
+      activeSuggestions,
+      activeAnomalies,
+    )
+      .filter((nudge) => !dismissedNudgeIds.includes(nudge.id))
+      .map((nudge) => ({
+        ...nudge,
+        done: nudge.done || completedNudgeIds.includes(nudge.id),
+        helped: helpedNudgeIds.includes(nudge.id) ? true : nudge.helped,
+      }));
+  }, [
+    guestName,
+    demoNudgeKey,
+    backendSuggestions,
+    backendAnomalies,
+    dismissedNudgeIds,
+    completedNudgeIds,
+    helpedNudgeIds,
+  ]);
 
   function toggleStep(index: number) {
     setChecked((prev) => {
@@ -163,6 +242,70 @@ export default function Home() {
       description: "Move gently through each sense at your own pace.",
       icon: "flower",
     });
+  }
+
+  function handleStartBehavioralNudge(nudge: ResolvedBehavioralNudge) {
+    setCompletedNudgeIds((prev) =>
+      prev.includes(nudge.id) ? prev : [...prev, nudge.id],
+    );
+    postSuggestionFeedback(nudge.id, true, nudge.helped);
+    triggerBloomieJoy();
+
+    const { action } = nudge;
+    switch (action.type) {
+      case "open_practice":
+        setModal(action.modal);
+        break;
+      case "open_sensory":
+        openSensoryGuide(0);
+        break;
+      case "play_sound": {
+        const next =
+          activeSound === action.preset
+            ? activeSound
+            : soundEngine.toggle(action.preset);
+        setActiveSound(next);
+        notify(`Playing ${action.label} — tap Sound on above anytime to pause.`);
+        break;
+      }
+      case "message_friend":
+        setWaveSent(true);
+        notify("Sent a warm wave to your Gentle Circle.");
+        document
+          .getElementById("gentle-circle-section")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        break;
+      case "navigate_tab":
+        setTab(action.tab);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        notify(action.toast);
+        break;
+      case "add_step":
+        setSteps((prev) =>
+          prev.includes(action.stepLabel) ? prev : [action.stepLabel, ...prev],
+        );
+        notify("Added gentle suggestion to Today’s Tiny Steps.");
+        document
+          .getElementById("today-steps")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        break;
+    }
+  }
+
+  function handleDismissBehavioralNudge(nudge: ResolvedBehavioralNudge) {
+    setDismissedNudgeIds((prev) => [...prev, nudge.id]);
+    if (!nudge.done) {
+      postSuggestionFeedback(nudge.id, false, null);
+    }
+  }
+
+  function handleMarkNudgeHelped(nudge: ResolvedBehavioralNudge) {
+    setHelpedNudgeIds((prev) =>
+      prev.includes(nudge.id) ? prev : [...prev, nudge.id],
+    );
+    postSuggestionFeedback(nudge.id, true, true);
+    triggerBloomieJoy();
+    notify("Noted — Tyyni will remember this felt helpful.");
   }
 
   const closeModal = useCallback(() => setModal(null), []);
@@ -250,6 +393,12 @@ export default function Home() {
           dateLabel={dateLabel}
           lowEnergy={lowEnergy}
           onExitLowEnergy={() => setLowEnergy(false)}
+          behavioralNudges={behavioralNudges}
+          activeNudgeIndex={nudgeIndex}
+          onCycleNudge={() => setNudgeIndex((i) => i + 1)}
+          onDismissNudge={handleDismissBehavioralNudge}
+          onStartNudge={handleStartBehavioralNudge}
+          onMarkNudgeHelped={handleMarkNudgeHelped}
           mood={mood}
           onSelectMood={(nextMood) => {
             setMood(nextMood);
@@ -342,6 +491,17 @@ export default function Home() {
           guestName={guestName}
           lowEnergy={lowEnergy}
           onToggleLowEnergy={() => setLowEnergy((v) => !v)}
+          demoNudgeKey={demoNudgeKey}
+          onSelectDemoNudge={(key) => {
+            setDemoNudgeKey(key);
+            setDismissedNudgeIds([]);
+            setNudgeIndex(0);
+            setTab("Today");
+            setPwaSheetOpen(false);
+          }}
+          hasLiveBackendSuggestions={
+            backendSuggestions.length > 0 || backendAnomalies.length > 0
+          }
           pwa={pwa}
           onClose={() => setPwaSheetOpen(false)}
           onInstalled={() =>
