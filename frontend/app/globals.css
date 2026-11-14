@@ -566,11 +566,11 @@ select:focus-visible {
   animation: flowerWholeSway 5.6s ease-in-out infinite;
 }
 
-.companion-flower-stage.is-low-energy .flower-whole-sway {
+.bloomie.is-low-energy .flower-whole-sway {
   animation-duration: 8.4s;
 }
 
-.companion-flower-stage.is-celebrating .flower-whole-sway {
+.bloomie.is-celebrating .flower-whole-sway {
   animation: flowerHappyBounce 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) 2;
 }
 
@@ -772,7 +772,7 @@ select:focus-visible {
   animation-delay: -3.6s;
 }
 
-.companion-flower-stage.is-celebrating .sparkle-dot {
+.bloomie.is-celebrating .sparkle-dot {
   background: #f79ca2;
   box-shadow: 0 0 10px rgba(247, 156, 162, 0.9);
   animation-duration: 1.7s;
@@ -791,6 +791,582 @@ select:focus-visible {
     transform: translateY(-18px) scale(1.1);
     opacity: 0;
   }
+}
+
+/* Bloomie growth states: 0 Thirsty, 1 Perking up, 2 Flourishing.
+   See useBloomieGrowth.ts and FlowerCompanion. Parts that arrive with a
+   state grow in on a per-part stagger (`--d`); `is-dormant` parts are hidden.
+   Thirsty posture and colors are set under [data-stage="0"]. */
+
+/* Stems draw themselves in from the soil */
+.grow-stem {
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 0;
+  opacity: 1;
+  transition:
+    stroke-dashoffset 950ms cubic-bezier(0.45, 0.05, 0.25, 1) var(--d, 0ms),
+    opacity 120ms linear var(--d, 0ms),
+    stroke 1200ms ease 700ms;
+}
+
+.grow-stem.is-dormant {
+  stroke-dashoffset: 1;
+  opacity: 0;
+  transition-duration: 320ms;
+  transition-delay: 0ms;
+}
+
+/* Loose leaves (rim, vines) pop open around their center */
+.grow-leaf {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(1);
+  opacity: 1;
+  transition:
+    transform 700ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0ms),
+    opacity 160ms linear var(--d, 0ms);
+}
+
+.grow-leaf.is-dormant {
+  transform: scale(0);
+  opacity: 0;
+  transition-duration: 280ms;
+  transition-delay: 0ms;
+}
+
+/* Shoot leaves and buds sprout from their attachment point, the local (0, 0) */
+.grow-sprig {
+  transform-origin: 0 0;
+  transform: scale(1);
+  opacity: 1;
+  transition:
+    transform 750ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0ms),
+    opacity 160ms linear var(--d, 0ms);
+}
+
+.grow-sprig.is-dormant {
+  transform: scale(0);
+  opacity: 0;
+  transition-duration: 300ms;
+  transition-delay: 0ms;
+}
+
+/* Blossoms unfurl around their stem tip */
+.grow-bloom {
+  transform-origin: 0 0;
+  transform: scale(1) rotate(0deg);
+  opacity: 1;
+  transition:
+    transform 900ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--d, 0ms),
+    opacity 200ms linear var(--d, 0ms);
+}
+
+.grow-bloom.is-dormant {
+  transform: scale(0) rotate(-50deg);
+  opacity: 0;
+  transition-duration: 300ms;
+  transition-delay: 0ms;
+}
+
+/* Posture: thirsty shoots lean at the soil, bend at the joint and nod at the
+   head; watering springs them upright base first, then joint, then head. */
+.bloomie-lean,
+.bloomie-bend,
+.bloomie-nod {
+  transform-origin: 0 0;
+  transform: rotate(0deg);
+  transition: transform 1500ms cubic-bezier(0.34, 1.45, 0.64, 1) var(--d, 0ms);
+}
+
+.bloomie[data-stage="0"] .bloomie-lean {
+  transform: rotate(var(--lean));
+}
+
+.bloomie[data-stage="0"] .bloomie-bend {
+  transform: rotate(var(--bend));
+}
+
+.bloomie[data-stage="0"] .bloomie-nod {
+  transform: rotate(var(--nod));
+}
+
+.bloomie-leaf-droop {
+  transform-origin: 0 0;
+  transform: rotate(0deg);
+  transition: transform 1300ms cubic-bezier(0.34, 1.4, 0.64, 1) 800ms;
+}
+
+.bloomie[data-stage="0"] .bloomie-leaf-droop {
+  transform: rotate(var(--droop));
+}
+
+/* Colors: olive and pale when thirsty, green once watered */
+.bloomie-stem {
+  stroke: #465937;
+}
+
+.bloomie-blade {
+  stroke: #435435;
+  transition:
+    fill 1200ms ease 700ms,
+    stroke 1200ms ease 700ms;
+}
+
+.bloomie-blade.tone-a {
+  fill: #82b667;
+}
+
+.bloomie-blade.tone-b {
+  fill: #95c777;
+}
+
+.bloomie-blade.tone-c {
+  fill: #9fd07f;
+}
+
+.bloomie-leaf-rib {
+  stroke: #5e7d4a;
+  opacity: 0.55;
+  transition: stroke 1200ms ease 700ms;
+}
+
+.bloomie-leaf-tip {
+  fill: #a8743e;
+  opacity: 0;
+  transition: opacity 900ms ease 700ms;
+}
+
+.bloomie-bud {
+  fill: #f7a3a8;
+  transition: fill 1200ms ease 700ms;
+}
+
+.bloomie-sepal {
+  fill: #82b667;
+  stroke: #435435;
+  transition:
+    fill 1200ms ease 700ms,
+    stroke 1200ms ease 700ms;
+}
+
+.bloomie-soil {
+  fill: #5e3f30;
+  transition: fill 1100ms ease 450ms;
+}
+
+.bloomie-soil-cracks {
+  stroke: #7a5a40;
+  opacity: 0;
+  transition: opacity 600ms ease 500ms;
+}
+
+.bloomie[data-stage="0"] .bloomie-stem {
+  stroke: #857a48;
+}
+
+.bloomie[data-stage="0"] .bloomie-blade {
+  stroke: #6e6240;
+}
+
+.bloomie[data-stage="0"] .bloomie-blade.tone-a {
+  fill: #bdb26a;
+}
+
+.bloomie[data-stage="0"] .bloomie-blade.tone-b {
+  fill: #c8ba70;
+}
+
+.bloomie[data-stage="0"] .bloomie-blade.tone-c {
+  fill: #d2c27c;
+}
+
+.bloomie[data-stage="0"] .bloomie-leaf-rib {
+  stroke: #8a7a48;
+}
+
+.bloomie[data-stage="0"] .bloomie-leaf-tip,
+.bloomie[data-stage="0"] .bloomie-soil-cracks {
+  opacity: 1;
+}
+
+.bloomie[data-stage="0"] .bloomie-bud {
+  fill: #d9b2a6;
+}
+
+.bloomie[data-stage="0"] .bloomie-sepal {
+  fill: #b8ae68;
+  stroke: #6e6240;
+}
+
+.bloomie[data-stage="0"] .bloomie-soil {
+  fill: #a88566;
+}
+
+/* Pot face: one variant per state, cross-faded once the plant has perked up */
+.bloomie-face {
+  opacity: 0;
+  transition: opacity 500ms ease 900ms;
+}
+
+.bloomie[data-stage="0"] .bloomie-face.is-thirsty,
+.bloomie[data-stage="1"] .bloomie-face.is-perky,
+.bloomie[data-stage="2"] .bloomie-face.is-joyful {
+  opacity: 1;
+}
+
+.bloomie[data-stage="2"] .bloomie-face {
+  transition-delay: 250ms;
+}
+
+.bloomie-cheeks {
+  opacity: 0.9;
+  transition: opacity 800ms ease 900ms;
+}
+
+.bloomie[data-stage="0"] .bloomie-cheeks {
+  opacity: 0.35;
+}
+
+.bloomie[data-stage="2"] .bloomie-cheeks {
+  opacity: 1;
+}
+
+.bloomie-sweat {
+  animation: bloomieSweat 3.4s ease-in infinite;
+}
+
+@keyframes bloomieSweat {
+  0%,
+  35% {
+    transform: translateY(-2px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(9px);
+    opacity: 0;
+  }
+}
+
+/* Thirsty props: fallen leaves blow away and the thought bubble pops once watered */
+.bloomie-fallen-leaf {
+  transform-origin: 11px 0;
+  opacity: 0;
+  transition:
+    transform 1400ms cubic-bezier(0.3, 0.7, 0.4, 1) 250ms,
+    opacity 900ms ease 650ms;
+}
+
+.bloomie-fallen-leaf.is-left {
+  transform: translate(-40px, -36px) rotate(-150deg);
+}
+
+.bloomie-fallen-leaf.is-right {
+  transform: translate(-28px, 46px) rotate(150deg);
+}
+
+.bloomie[data-stage="0"] .bloomie-fallen-leaf {
+  transform: none;
+  opacity: 1;
+}
+
+.bloomie-thought {
+  transform-origin: 26px 40px;
+  transform: scale(0);
+  opacity: 0;
+  transition:
+    transform 450ms cubic-bezier(0.55, 0, 0.75, 0.3),
+    opacity 300ms ease 150ms;
+}
+
+.bloomie[data-stage="0"] .bloomie-thought {
+  transform: scale(1);
+  opacity: 1;
+  transition:
+    transform 700ms cubic-bezier(0.34, 1.56, 0.64, 1) 400ms,
+    opacity 200ms ease 400ms;
+}
+
+.bloomie-thought-bob {
+  animation: bloomieThoughtBob 3.2s ease-in-out infinite;
+}
+
+@keyframes bloomieThoughtBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Watering shower when Bloomie perks up */
+.bloomie-water-drop {
+  opacity: 0;
+}
+
+.bloomie.is-growing[data-stage="1"] .bloomie-water-drop {
+  animation: bloomieWaterFall 850ms cubic-bezier(0.55, 0, 0.9, 0.5)
+    var(--d, 0ms) both;
+}
+
+@keyframes bloomieWaterFall {
+  0% {
+    transform: translateY(-130px);
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+}
+
+/* State-up moment: aura flash, expanding ring, sparkle burst and a happy bounce */
+.bloomie.is-growing .flower-whole-sway {
+  animation: flowerHappyBounce 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) 2;
+}
+
+.bloomie.is-growing .companion-aura {
+  animation: auraGrowthFlash 1.8s ease-out;
+}
+
+.growth-burst {
+  position: absolute;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-full);
+  border: 3px solid rgba(255, 244, 196, 0.95);
+  box-shadow: 0 0 18px rgba(252, 225, 129, 0.75);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bloomie[data-stage="1"] .growth-burst {
+  border-color: rgba(214, 244, 222, 0.95);
+  box-shadow: 0 0 18px rgba(150, 214, 170, 0.75);
+}
+
+.bloomie.is-growing .growth-burst {
+  animation: growthBurstRing 1.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bloomie.is-growing .sparkle-dot {
+  display: block;
+  background: #fff4c4;
+  box-shadow: 0 0 12px rgba(252, 225, 129, 1);
+  animation-duration: 1.5s;
+}
+
+@keyframes auraGrowthFlash {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  30% {
+    transform: scale(1.32);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+}
+
+@keyframes growthBurstRing {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+/* Petals thrown out as Bloomie bursts into flower */
+.petal-burst {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.petal-burst span {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 10px;
+  height: 7px;
+  border-radius: 50% 50% 50% 0;
+  opacity: 0;
+}
+
+.bloomie.is-growing[data-stage="2"] .petal-burst span {
+  animation: bloomiePetalBurst 1.7s cubic-bezier(0.2, 0.8, 0.3, 1) 250ms both;
+}
+
+@keyframes bloomiePetalBurst {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--px)), calc(-50% + var(--py) + 34px))
+      scale(1) rotate(260deg);
+    opacity: 0;
+  }
+}
+
+/* The aura is faint while thirsty and turns golden in full bloom */
+.bloomie[data-stage="0"] .companion-aura {
+  width: 62%;
+  height: 62%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 250, 232, 0.34) 0%,
+    rgba(255, 250, 232, 0) 70%
+  );
+}
+
+.bloomie[data-stage="2"] .companion-aura {
+  width: 104%;
+  height: 104%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 236, 160, 0.78) 0%,
+    rgba(255, 214, 204, 0.4) 46%,
+    rgba(255, 236, 160, 0) 74%
+  );
+}
+
+/* No pollen while thirsty; extra pollen sparkles in full bloom */
+.bloomie[data-stage="0"] .sparkle-dot,
+.sparkle-extra {
+  display: none;
+}
+
+.bloomie[data-stage="2"] .sparkle-extra {
+  display: block;
+}
+
+.sparkle-4 {
+  left: 12%;
+  top: 58%;
+  width: 6px;
+  height: 6px;
+  animation-delay: -0.8s;
+}
+
+.sparkle-5 {
+  left: 86%;
+  top: 52%;
+  animation-delay: -2.7s;
+}
+
+.sparkle-6 {
+  left: 36%;
+  top: 6%;
+  width: 5px;
+  height: 5px;
+  animation-delay: -4.4s;
+}
+
+/* While the real state loads, jump to it without animating */
+.bloomie.is-settling,
+.bloomie.is-settling * {
+  transition: none !important;
+}
+
+/* Full-bloom butterfly: drifts on a lazy loop while its wings flap */
+.butterfly-drift {
+  transform-origin: 0 0;
+  animation: butterflyDrift 9s ease-in-out infinite;
+}
+
+.butterfly-wings {
+  transform-origin: 0 0;
+  animation: butterflyFlap 0.38s ease-in-out infinite alternate;
+}
+
+@keyframes butterflyDrift {
+  0%,
+  100% {
+    transform: translate(-96px, 14px) rotate(-10deg);
+  }
+  25% {
+    transform: translate(-40px, -20px) rotate(8deg);
+  }
+  50% {
+    transform: translate(92px, -4px) rotate(14deg);
+  }
+  75% {
+    transform: translate(36px, 20px) rotate(-6deg);
+  }
+}
+
+@keyframes butterflyFlap {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0.45);
+  }
+}
+
+/* Mini Bloomie in the Tiny Steps card, so its changes show while checking steps */
+.bloomie-steps-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 6px 14px 6px 4px;
+  border-radius: var(--radius-md);
+  background: rgba(194, 235, 223, 0.32);
+}
+
+.bloomie-mini {
+  position: relative;
+  flex: none;
+  width: 80px;
+  height: 95px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bloomie-mini .petal-burst,
+.bloomie-mini .companion-sparkles,
+.bloomie-mini .butterfly-drift {
+  display: none;
+}
+
+.bloomie-steps-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bloomie-steps-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.bloomie-steps-copy span {
+  font-size: 12.5px;
+  color: var(--secondary);
 }
 
 /* Constant-radius frosted scroll veil — driven purely by GPU opacity (no transition lag) */
@@ -3222,5 +3798,11 @@ select:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Change Bloomie's state at once instead of staggering it in */
+  .bloomie,
+  .bloomie * {
+    transition-delay: 0ms !important;
   }
 }

@@ -9,6 +9,11 @@ import { PracticeModal } from "./components/PracticeModal";
 import { PwaSanctuarySheet, usePwa } from "./components/PwaSanctuarySheet";
 import { type SoundPreset, soundEngine } from "./components/soundEngine";
 import { TodayScreen } from "./components/TodayScreen";
+import {
+  GROWTH_STAGE_NAMES,
+  type GrowthStage,
+  useBloomieGrowth,
+} from "./components/useBloomieGrowth";
 import { WinsScreen } from "./components/WinsScreen";
 import {
   type BackendAnomaly,
@@ -23,6 +28,7 @@ import {
   type DashboardData,
   INITIAL_ANCHORS,
   LOW_ENERGY_BREATH,
+  LOW_ENERGY_STEPS,
   type PracticeModalState,
   STARTER_STEPS,
   STARTER_WINS,
@@ -39,7 +45,7 @@ export default function Home() {
 
   const [mood, setMood] = useState("Steady");
   const [steps, setSteps] = useState<string[]>(STARTER_STEPS);
-  const [checked, setChecked] = useState<number[]>([0]);
+  const [checked, setChecked] = useState<number[]>([]);
   const [waveSent, setWaveSent] = useState(false);
   const [warmthSentTo, setWarmthSentTo] = useState<string[]>([]);
   const [restChecked, setRestChecked] = useState<number[]>([]);
@@ -59,6 +65,8 @@ export default function Home() {
   const [nudgeIndex, setNudgeIndex] = useState(0);
 
   const [wins, setWins] = useState<string[]>(STARTER_WINS);
+  // Wins logged now (not the sample history); each counts as a done task.
+  const [winsLogged, setWinsLogged] = useState(0);
   const [anchors, setAnchors] = useState<AnchorItem[]>(INITIAL_ANCHORS);
   const [favoritedIds, setFavoritedIds] = useState<string[]>(["blanket"]);
 
@@ -67,10 +75,13 @@ export default function Home() {
   const [pwaSheetOpen, setPwaSheetOpen] = useState(false);
   const [sensoryIndex, setSensoryIndex] = useState(0);
   const [toast, setToast] = useState("");
+  const [dataReady, setDataReady] = useState(false);
 
   const pwa = usePwa();
   const toastTimerRef = useRef<number | null>(null);
   const joyTimerRef = useRef<number | null>(null);
+  const growthToastTimerRef = useRef<number | null>(null);
+  const bloomieDemoTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -127,12 +138,19 @@ export default function Home() {
           setBackendAnomalies(next.anomalies);
         }
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setDataReady(true));
 
     return () => {
       soundEngine.stop();
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
       if (joyTimerRef.current) window.clearTimeout(joyTimerRef.current);
+      if (growthToastTimerRef.current) {
+        window.clearTimeout(growthToastTimerRef.current);
+      }
+      if (bloomieDemoTimerRef.current) {
+        window.clearTimeout(bloomieDemoTimerRef.current);
+      }
     };
   }, []);
 
@@ -143,6 +161,33 @@ export default function Home() {
       setToast((current) => (current === message ? "" : current));
     }, 2800);
   }, []);
+
+  const announceGrowth = useCallback(
+    (stage: GrowthStage) => {
+      // Land after any other toast, once the new growth is visible.
+      if (growthToastTimerRef.current) {
+        window.clearTimeout(growthToastTimerRef.current);
+      }
+      growthToastTimerRef.current = window.setTimeout(() => {
+        notify(`Bloomie is ${GROWTH_STAGE_NAMES[stage].toLowerCase()}.`);
+      }, 1100);
+    },
+    [notify],
+  );
+
+  // Bloomie follows the checklist on screen (Just the Basics in low-energy
+  // mode) plus logged wins; resting in low-energy mode never looks thirsty.
+  const doneTasks =
+    (lowEnergy ? restChecked.length : checked.length) + winsLogged;
+  const totalTasks =
+    (lowEnergy ? LOW_ENERGY_STEPS.length : steps.length) + winsLogged;
+  const growth = useBloomieGrowth({
+    doneTasks,
+    totalTasks,
+    floor: lowEnergy ? 1 : 0,
+    dataReady,
+    onStageUp: announceGrowth,
+  });
 
   const triggerBloomieJoy = useCallback(() => {
     setBloomieCelebrating(true);
@@ -194,11 +239,16 @@ export default function Home() {
   ]);
 
   function toggleStep(index: number) {
-    setChecked((prev) => {
-      const isCompleting = !prev.includes(index);
-      if (isCompleting) triggerBloomieJoy();
-      return isCompleting ? [...prev, index] : prev.filter((i) => i !== index);
-    });
+    const isCompleting = !checked.includes(index);
+    const nextChecked = isCompleting
+      ? [...checked, index]
+      : checked.filter((i) => i !== index);
+    growth.tasksChanged(
+      nextChecked.length + winsLogged,
+      steps.length + winsLogged,
+    );
+    if (isCompleting) triggerBloomieJoy();
+    setChecked(nextChecked);
   }
 
   function toggleLowEnergy() {
@@ -210,11 +260,16 @@ export default function Home() {
   }
 
   function toggleRestStep(index: number) {
-    setRestChecked((prev) => {
-      const isCompleting = !prev.includes(index);
-      if (isCompleting) triggerBloomieJoy();
-      return isCompleting ? [...prev, index] : prev.filter((i) => i !== index);
-    });
+    const isCompleting = !restChecked.includes(index);
+    const nextRest = isCompleting
+      ? [...restChecked, index]
+      : restChecked.filter((i) => i !== index);
+    growth.tasksChanged(
+      nextRest.length + winsLogged,
+      LOW_ENERGY_STEPS.length + winsLogged,
+    );
+    if (isCompleting) triggerBloomieJoy();
+    setRestChecked(nextRest);
   }
 
   function handleAddStep(trimmed: string) {
@@ -227,6 +282,8 @@ export default function Home() {
     const trimmed = label.trim();
     if (!trimmed) return;
     setWins((prev) => [trimmed, ...prev]);
+    setWinsLogged(winsLogged + 1);
+    growth.tasksChanged(doneTasks + 1, totalTasks + 1);
     notify(`Placed “${trimmed}” in your Sanctuary Jar.`);
   }
 
@@ -302,9 +359,11 @@ export default function Home() {
         notify(action.toast);
         break;
       case "add_step":
-        setSteps((prev) =>
-          prev.includes(action.stepLabel) ? prev : [action.stepLabel, ...prev],
-        );
+        if (!steps.includes(action.stepLabel)) {
+          // The new step goes first, so shift the checked marks with their steps.
+          setSteps([action.stepLabel, ...steps]);
+          setChecked(checked.map((i) => i + 1));
+        }
         notify("Added gentle suggestion to Today’s Tiny Steps.");
         document
           .getElementById("today-steps")
@@ -329,6 +388,18 @@ export default function Home() {
     notify("Noted — Tyyni will remember this felt helpful.");
   }
 
+  // Bloomie previews from the settings sheet: close the sheet and show Today
+  // first, so the change plays in view.
+  function showBloomieChange(apply: () => void) {
+    setPwaSheetOpen(false);
+    setTab("Today");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (bloomieDemoTimerRef.current) {
+      window.clearTimeout(bloomieDemoTimerRef.current);
+    }
+    bloomieDemoTimerRef.current = window.setTimeout(apply, 450);
+  }
+
   const closeModal = useCallback(() => setModal(null), []);
 
   return (
@@ -342,6 +413,9 @@ export default function Home() {
           mood={mood}
           lowEnergy={lowEnergy}
           isCelebrating={bloomieCelebrating}
+          growthStage={growth.stage}
+          isGrowing={growth.isGrowing}
+          isSettling={growth.isSettling}
         />
       )}
 
@@ -456,6 +530,12 @@ export default function Home() {
             triggerBloomieJoy();
             notify(`${name} will see a little warmth from you.`);
           }}
+          growthStage={growth.stage}
+          growthDone={doneTasks}
+          growthTotal={totalTasks}
+          growthPreview={growth.demo !== null}
+          isGrowing={growth.isGrowing}
+          isSettling={growth.isSettling}
           onInteractCompanion={triggerBloomieJoy}
         />
       )}
@@ -540,6 +620,11 @@ export default function Home() {
           }}
           hasLiveBackendSuggestions={
             backendSuggestions.length > 0 || backendAnomalies.length > 0
+          }
+          bloomieStage={growth.stage}
+          bloomieDemo={growth.demo}
+          onSelectBloomieDemo={(demo) =>
+            showBloomieChange(() => growth.setDemo(demo))
           }
           pwa={pwa}
           onClose={() => setPwaSheetOpen(false)}

@@ -8,7 +8,9 @@ import {
   MOOD_OPTIONS,
   STEP_ICONS,
 } from "../data/sanctuaryData";
+import { FlowerCompanion } from "./CompanionWorld";
 import { Icon } from "./icons";
+import { GROWTH_STAGE_NAMES, type GrowthStage } from "./useBloomieGrowth";
 
 const NO_NUDGES: ResolvedBehavioralNudge[] = [];
 
@@ -46,17 +48,20 @@ function bloomieLine(
   lowEnergy: boolean,
   tended: number,
   index: number,
+  stage: GrowthStage,
 ) {
   const pool =
     BLOOMIE_LINES[lowEnergy ? "lowEnergy" : mood] ?? BLOOMIE_LINES.Steady;
-  // Once a step is tended, Bloomie notices it first.
-  const lines =
-    tended > 0 && !lowEnergy
-      ? [
-          `${tended} tiny step${tended === 1 ? "" : "s"} tended. I can feel it in my roots.`,
-          ...pool,
-        ]
-      : pool;
+  // Bloomie speaks to its growth first: thirsty, then tended steps, then bloom.
+  const first =
+    lowEnergy || stage === 1
+      ? tended > 0 && !lowEnergy
+        ? `${tended} tiny step${tended === 1 ? "" : "s"} tended. I can feel it in my roots.`
+        : null
+      : stage === 0
+        ? "I’m a little thirsty. One tiny step would perk me up."
+        : "Everything’s tended. I’m in full bloom!";
+  const lines = first ? [first, ...pool] : pool;
   return lines[index % lines.length];
 }
 
@@ -86,6 +91,13 @@ type TodayScreenProps = {
   onShareResting: () => void;
   waveSent: boolean;
   onSendWave: () => void;
+  growthStage: GrowthStage;
+  growthDone: number;
+  growthTotal: number;
+  /** A state picked in settings is showing instead of the live one. */
+  growthPreview: boolean;
+  isGrowing: boolean;
+  isSettling: boolean;
   warmthSentTo: string[];
   onSendWarmth: (name: string) => void;
   onInteractCompanion: () => void;
@@ -117,6 +129,12 @@ export function TodayScreen({
   onShareResting,
   waveSent,
   onSendWave,
+  growthStage,
+  growthDone,
+  growthTotal,
+  growthPreview,
+  isGrowing,
+  isSettling,
   warmthSentTo,
   onSendWarmth,
   onInteractCompanion,
@@ -153,6 +171,17 @@ export function TodayScreen({
     behavioralNudges.length > 0
       ? behavioralNudges[activeNudgeIndex % behavioralNudges.length]
       : null;
+
+  const isResting = lowEnergy && growthDone === 0 && !growthPreview;
+  const growthLine = growthPreview
+    ? "Previewing from settings · pick Live to use your steps."
+    : isResting
+      ? "Resting with you · nothing needs to grow today."
+      : growthStage === 0
+        ? "Check off a tiny step to perk Bloomie up."
+        : growthStage === 1
+          ? `${growthDone} of ${growthTotal} done · every bit helps.`
+          : "Everything’s done — enjoy the bloom.";
 
   function handleStepSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -355,7 +384,15 @@ export function TodayScreen({
                 )}
               </span>
               <span className="companion-status-sub" aria-live="polite">
-                “{bloomieLine(mood, lowEnergy, tended, bloomieIndex)}”
+                “
+                {bloomieLine(
+                  mood,
+                  lowEnergy,
+                  tended,
+                  bloomieIndex,
+                  growthStage,
+                )}
+                ”
               </span>
             </span>
           </button>
@@ -463,6 +500,27 @@ export function TodayScreen({
                 ? "Basic needs first. Everything else can wait."
                 : "No streaks · No penalties"}
             </span>
+          </div>
+
+          {/* Live mini Bloomie, visible while checking steps off */}
+          <div className="bloomie-steps-strip">
+            <FlowerCompanion
+              variant="mini"
+              mood={mood}
+              lowEnergy={lowEnergy}
+              stage={growthStage}
+              isGrowing={isGrowing}
+              isSettling={isSettling}
+            />
+            <div className="bloomie-steps-copy" aria-live="polite">
+              <strong>
+                Bloomie is{" "}
+                {isResting
+                  ? "resting"
+                  : GROWTH_STAGE_NAMES[growthStage].toLowerCase()}
+              </strong>
+              <span>{growthLine}</span>
+            </div>
           </div>
 
           <div className="steps-stack">

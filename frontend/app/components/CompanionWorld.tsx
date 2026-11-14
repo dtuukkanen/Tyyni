@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { type CSSProperties, useEffect, useRef } from "react";
+import type { GrowthStage } from "./useBloomieGrowth";
 
 type CompanionWorldProps = {
   mood: string;
   lowEnergy: boolean;
   isCelebrating?: boolean;
+  growthStage?: GrowthStage;
+  isGrowing?: boolean;
+  isSettling?: boolean;
 };
 
 /**
@@ -524,42 +528,367 @@ export function EnvironmentLayer() {
   );
 }
 
+/** Inline style setting a part's transition delay (`--d`) and extra variables. */
+const delay = (ms: number, vars: Record<string, string> = {}) =>
+  ({ "--d": `${ms}ms`, ...vars }) as CSSProperties;
+
+type LeafSpec = {
+  /** Distance up the segment where the leaf attaches. */
+  y: number;
+  angle: number;
+  scale: number;
+  tone: "a" | "b" | "c";
+  /** Growth stage the leaf appears at. */
+  from: GrowthStage;
+  d: number;
+};
+
+type ShootSpec = {
+  x: number;
+  angle: number;
+  /** Lower and upper segment lengths; the joint between them bends. */
+  l1: number;
+  l2: number;
+  /** Thirsty posture: lean at the soil, bend at the joint, nod at the head. */
+  lean: number;
+  bend: number;
+  nod: number;
+  sway: string;
+  from: GrowthStage;
+  d: number;
+  lower: LeafSpec[];
+  upper: LeafSpec[];
+  bloom: { petal: string; center: string; scale: number; d: number };
+};
+
+const PINK = { petal: "#F79CA2", center: "#FCE283" };
+const YELLOW = { petal: "#FCE181", center: "#E99A54" };
+const LILAC = { petal: "#CDB8F4", center: "#FCE283" };
+
+/** Bloomie's five shoots, left to right, in pot-base coordinates. */
+const SHOOTS: ShootSpec[] = [
+  {
+    x: -26,
+    angle: -40,
+    l1: 40,
+    l2: 34,
+    lean: -22,
+    bend: -38,
+    nod: -30,
+    sway: "stem-sway-left",
+    from: 1,
+    d: 1000,
+    lower: [
+      {
+        y: -20,
+
+        angle: -150,
+        scale: 0.9,
+        tone: "b",
+        from: 1,
+        d: 1500,
+      },
+    ],
+    upper: [
+      {
+        y: -12,
+
+        angle: -30,
+        scale: 0.75,
+        tone: "a",
+        from: 1,
+        d: 1700,
+      },
+      {
+        y: -24,
+
+        angle: -150,
+        scale: 0.7,
+        tone: "c",
+        from: 2,
+        d: 700,
+      },
+    ],
+    bloom: { ...PINK, scale: 0.78, d: 500 },
+  },
+  {
+    x: -12,
+    angle: -16,
+    l1: 50,
+    l2: 46,
+    lean: -26,
+    bend: -48,
+    nod: -35,
+    sway: "stem-sway-mid-left",
+    from: 0,
+    d: 0,
+    lower: [
+      { y: -18, angle: -150, scale: 0.95, tone: "a", from: 0, d: 0 },
+      {
+        y: -34,
+
+        angle: -28,
+        scale: 0.85,
+        tone: "b",
+        from: 1,
+        d: 1300,
+      },
+    ],
+    upper: [
+      {
+        y: -16,
+
+        angle: -140,
+        scale: 0.85,
+        tone: "c",
+        from: 1,
+        d: 1450,
+      },
+      {
+        y: -30,
+
+        angle: -35,
+        scale: 0.75,
+        tone: "a",
+        from: 2,
+        d: 600,
+      },
+    ],
+    bloom: { ...PINK, scale: 1, d: 200 },
+  },
+  {
+    x: 2,
+    angle: 3,
+    l1: 60,
+    l2: 58,
+    lean: 16,
+    bend: 52,
+    nod: 40,
+    sway: "stem-sway-center",
+    from: 0,
+    d: 0,
+    lower: [
+      { y: -22, angle: -30, scale: 1, tone: "b", from: 0, d: 0 },
+      {
+        y: -40,
+
+        angle: -150,
+        scale: 0.95,
+        tone: "a",
+        from: 1,
+        d: 1250,
+      },
+    ],
+    upper: [
+      { y: -14, angle: -35, scale: 0.95, tone: "c", from: 0, d: 0 },
+      {
+        y: -30,
+
+        angle: -145,
+        scale: 0.85,
+        tone: "b",
+        from: 1,
+        d: 1400,
+      },
+      {
+        y: -44,
+
+        angle: -40,
+        scale: 0.75,
+        tone: "a",
+        from: 2,
+        d: 500,
+      },
+    ],
+    bloom: { ...YELLOW, scale: 1.12, d: 0 },
+  },
+  {
+    x: 14,
+    angle: 20,
+    l1: 48,
+    l2: 42,
+    lean: 26,
+    bend: 46,
+    nod: 34,
+    sway: "stem-sway-mid-right",
+    from: 0,
+    d: 0,
+    lower: [
+      { y: -20, angle: -30, scale: 0.95, tone: "a", from: 0, d: 0 },
+      {
+        y: -36,
+
+        angle: -150,
+        scale: 0.85,
+        tone: "c",
+        from: 1,
+        d: 1350,
+      },
+    ],
+    upper: [
+      {
+        y: -22,
+
+        angle: -35,
+        scale: 0.8,
+        tone: "b",
+        from: 1,
+        d: 1500,
+      },
+    ],
+    bloom: { ...LILAC, scale: 0.95, d: 350 },
+  },
+  {
+    x: 26,
+    angle: 42,
+    l1: 38,
+    l2: 32,
+    lean: 22,
+    bend: 36,
+    nod: 28,
+    sway: "stem-sway-right",
+    from: 1,
+    d: 1100,
+    lower: [
+      {
+        y: -18,
+
+        angle: -30,
+        scale: 0.9,
+        tone: "c",
+        from: 1,
+        d: 1600,
+      },
+    ],
+    upper: [
+      {
+        y: -14,
+
+        angle: -150,
+        scale: 0.75,
+        tone: "a",
+        from: 1,
+        d: 1800,
+      },
+      { y: -24, angle: -30, scale: 0.7, tone: "b", from: 2, d: 800 },
+    ],
+    bloom: { ...PINK, scale: 0.78, d: 650 },
+  },
+];
+
+/**
+ * How far a leaf turns when Bloomie is thirsty so it hangs down: towards
+ * 120° (down-left) or 60° (down-right), whichever side it already points to,
+ * given its angle in the shoot and the shoot's thirsty posture. Clamped so
+ * the wilt stays gentle.
+ */
+function droopFor(leafAngle: number, frameAngle: number) {
+  const absolute = leafAngle + frameAngle;
+  const pointsLeft = Math.cos((absolute * Math.PI) / 180) < 0;
+  let turn = (pointsLeft ? 120 : 60) - absolute;
+  turn = ((((turn + 180) % 360) + 360) % 360) - 180;
+  return Math.max(-75, Math.min(75, turn));
+}
+
+/** Small droplets that rain into the soil when Bloomie perks up. */
+const WATER_DROPS = [
+  { x: -34, d: 0 },
+  { x: -12, d: 140 },
+  { x: 8, d: 60 },
+  { x: 26, d: 220 },
+  { x: -22, d: 320 },
+  { x: 18, d: 400 },
+  { x: 38, d: 280 },
+];
+
+/** Petals thrown out when Bloomie bursts into flower. */
+const PETAL_BURST = [
+  { x: "-92px", y: "-70px", c: "#F79CA2" },
+  { x: "-40px", y: "-104px", c: "#FCE181" },
+  { x: "18px", y: "-110px", c: "#CDB8F4" },
+  { x: "80px", y: "-82px", c: "#F79CA2" },
+  { x: "104px", y: "-20px", c: "#FCE181" },
+  { x: "-108px", y: "-12px", c: "#CDB8F4" },
+  { x: "-66px", y: "40px", c: "#FCE181" },
+  { x: "70px", y: "44px", c: "#F79CA2" },
+];
+
 /**
  * 3. SEPARATE ANIMATED FLOWER COMPANION ("Bloomie")
- * Every stem, leaf, bud, and 5-petal blossom is anchored in local coordinates
- * around its exact `(0, 0)` pivot inside nested `<g>` groups so CSS animations
- * never override SVG `transform` attributes and every petal stays 100% attached
- * to its stem tip throughout every sway cycle.
+ * Every stem, leaf, bud, and blossom is anchored in local coordinates around
+ * its exact `(0, 0)` pivot inside nested `<g>` groups so CSS animations never
+ * override SVG `transform` attributes and every part stays attached to its
+ * stem throughout every sway cycle.
+ *
+ * Bloomie has three growth states (see `useBloomieGrowth`):
+ * 0 Thirsty: limp stems, olive leaves with brown tips, pale drooping buds,
+ *   dry cracked soil, fallen leaves and a thought bubble asking for water.
+ * 1 Perking up: watered soil, stems spring upright, leaves turn green, new
+ *   shoots and leaves grow, and the pot smiles.
+ * 2 Flourishing: buds burst into flowers, vines spill over the rim, a
+ *   golden aura, pollen, a butterfly and a beaming face.
+ * Each shoot has a lower and an upper segment so it can bend at its joint;
+ * the state's posture and colors live in globals.css (`.bloomie-*`).
  */
 export function FlowerCompanion({
   mood,
   lowEnergy,
   isCelebrating,
+  stage = 2,
+  isGrowing,
+  isSettling,
+  variant = "hero",
 }: {
   mood: string;
   lowEnergy: boolean;
   isCelebrating?: boolean;
+  stage?: GrowthStage;
+  isGrowing?: boolean;
+  isSettling?: boolean;
+  /** `hero` is the big scene companion; `mini` sits inline (Tiny Steps card). */
+  variant?: "hero" | "mini";
 }) {
   const isRestingMood = mood === "Tired" || lowEnergy;
+  const at = (from: GrowthStage) => (stage >= from ? "" : " is-dormant");
+  const until = (to: GrowthStage) => (stage < to ? "" : " is-dormant");
 
   return (
     <div
-      className={`companion-flower-stage ${lowEnergy ? "is-low-energy" : ""} ${
+      className={`bloomie ${
+        variant === "mini" ? "bloomie-mini" : "companion-flower-stage"
+      } ${lowEnergy ? "is-low-energy" : ""} ${
         isCelebrating ? "is-celebrating" : ""
-      }`}
+      } ${isGrowing ? "is-growing" : ""} ${isSettling ? "is-settling" : ""}`}
+      data-stage={stage}
       aria-hidden="true"
     >
       <div className="companion-aura" />
+      <div className="growth-burst" />
 
       <div className="companion-sparkles">
         <span className="sparkle-dot sparkle-1" />
         <span className="sparkle-dot sparkle-2" />
         <span className="sparkle-dot sparkle-3" />
+        <span className="sparkle-dot sparkle-extra sparkle-4" />
+        <span className="sparkle-dot sparkle-extra sparkle-5" />
+        <span className="sparkle-dot sparkle-extra sparkle-6" />
+      </div>
+
+      <div className="petal-burst">
+        {PETAL_BURST.map((p) => (
+          <span
+            key={`${p.x}${p.y}`}
+            style={
+              { "--px": p.x, "--py": p.y, background: p.c } as CSSProperties
+            }
+          />
+        ))}
       </div>
 
       <svg
         className="companion-flower-svg"
-        viewBox="0 0 320 330"
+        // The mini crops the sky around the plant so it draws larger.
+        viewBox={variant === "mini" ? "56 64 208 248" : "0 0 320 330"}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -573,10 +902,22 @@ export function FlowerCompanion({
           fillOpacity="0.6"
         />
 
-        {/* Whole plant pivots gently around pot base center (160, 294) */}
         <g transform="translate(160, 294)">
+          {/* Fallen dry leaves on the ground; they blow away once watered */}
+          <g transform="translate(-84, -4) rotate(-12)">
+            <g className="bloomie-fallen-leaf is-left">
+              <FallenLeaf />
+            </g>
+          </g>
+          <g transform="translate(76, -2) rotate(196)">
+            <g className="bloomie-fallen-leaf is-right">
+              <FallenLeaf />
+            </g>
+          </g>
+
+          {/* Whole plant pivots gently around pot base center (160, 294) */}
           <g className="flower-whole-sway">
-            {/* 1. Back half of pot rim & warm soil bed so stems grow from INSIDE the pot */}
+            {/* 1. Back half of pot rim & soil bed so stems grow from INSIDE the pot */}
             <ellipse
               cx="0"
               cy="-104"
@@ -586,212 +927,40 @@ export function FlowerCompanion({
               stroke="#4A3429"
               strokeWidth="2.5"
             />
-            <ellipse cx="0" cy="-102" rx="52" ry="6.5" fill="#634535" />
+            <ellipse
+              className="bloomie-soil"
+              cx="0"
+              cy="-102"
+              rx="52"
+              ry="6.5"
+            />
+            <path
+              className="bloomie-soil-cracks"
+              d="M -38 -101 L -30 -103 L -24 -100 M -6 -104 L 0 -101 L 7 -103 M 22 -100 L 30 -103 L 36 -101"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
 
-            {/* 2. Upright Stems + Leaves + Attached Flowers emerging from the soil */}
+            {/* 2. Five articulated shoots */}
+            {SHOOTS.map((shoot) => (
+              <Shoot key={shoot.x} shoot={shoot} at={at} until={until} />
+            ))}
 
-            {/* Stem A: Far-Left Leafy Shoot — anchored at (-22, -102) */}
-            <g transform="translate(-22, -102)">
-              <g className="stem-sway-left">
-                <path
-                  d="M 0 0 C -12 -32, -32 -60, -56 -80"
-                  stroke="#465937"
-                  strokeWidth="3.2"
-                  strokeLinecap="round"
-                />
-                {/* Leaves along stem */}
-                <path
-                  d="M -22 -40 C -38 -44, -46 -34, -36 -24 C -28 -18, -18 -28, -22 -40 Z"
-                  fill="#82B667"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                <path
-                  d="M -18 -46 C -14 -62, -4 -68, 2 -58 C 8 -50, -6 -42, -18 -46 Z"
-                  fill="#97C879"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                {/* Terminal leaf at (-56, -80) */}
-                <path
-                  d="M -54 -78 C -68 -88, -76 -76, -66 -66 C -58 -58, -48 -68, -54 -78 Z"
-                  fill="#9FD07F"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-              </g>
-            </g>
-
-            {/* Stem B: Left Pink Blossom Stem + Side Pink Bud — anchored at (-12, -102) */}
-            <g transform="translate(-12, -102)">
-              <g className="stem-sway-mid-left">
-                {/* Main stem to (-32, -106) and side bud twig to (-48, -56) */}
-                <path
-                  d="M 0 0 C -6 -36, -18 -72, -32 -106 M -14 -44 C -26 -48, -38 -52, -48 -56"
-                  stroke="#465937"
-                  strokeWidth="3.3"
-                  strokeLinecap="round"
-                />
-                {/* Stem leaves */}
-                <path
-                  d="M -18 -66 C -34 -72, -42 -60, -32 -52 C -24 -46, -14 -56, -18 -66 Z"
-                  fill="#95C777"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                <path
-                  d="M -22 -76 C -18 -92, -6 -96, 0 -86 C 4 -78, -10 -70, -22 -76 Z"
-                  fill="#86B96B"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                {/* Attached Pink Bud at twig tip (-48, -56) */}
-                <g transform="translate(-48, -56)">
-                  <g className="blossom-flutter-delayed">
-                    <FlowerBud rotation={-38} />
-                  </g>
+            {/* Watering shower: drops fall behind the front rim into the soil */}
+            <g className="bloomie-watering">
+              {WATER_DROPS.map((drop) => (
+                <g key={drop.x} transform={`translate(${drop.x}, -112)`}>
+                  <path
+                    className="bloomie-water-drop"
+                    style={delay(drop.d)}
+                    d="M 0 -9 C -4 -3, -5 0, 0 3 C 5 0, 4 -3, 0 -9 Z"
+                    fill="#9FD8F2"
+                    stroke="#4A7D93"
+                    strokeWidth="1.4"
+                  />
                 </g>
-                {/* Attached Pink 5-Petal Blossom at exact stem tip (-32, -106) */}
-                <g transform="translate(-32, -106)">
-                  <g className="blossom-flutter">
-                    <FivePetalFlower
-                      petalColor="#F79CA2"
-                      centerColor="#FCE283"
-                      scale={1.08}
-                    />
-                  </g>
-                </g>
-              </g>
-            </g>
-
-            {/* Stem C: Tall Center-Right Leafy Shoot — anchored at (6, -102) */}
-            <g transform="translate(6, -102)">
-              <g className="stem-sway-center">
-                <path
-                  d="M 0 0 C 4 -44, 14 -90, 26 -132"
-                  stroke="#465937"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                />
-                {/* Terminal top leaf at (26, -132) */}
-                <path
-                  d="M 25 -130 C 19 -150, 31 -162, 39 -150 C 45 -140, 35 -128, 25 -130 Z"
-                  fill="#9FD07F"
-                  stroke="#435435"
-                  strokeWidth="2.3"
-                />
-                {/* Paired leaves along tall shoot */}
-                <path
-                  d="M 19 -108 C 5 -118, 1 -134, 13 -134 C 23 -134, 25 -118, 19 -108 Z"
-                  fill="#95C777"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                <path
-                  d="M 22 -102 C 36 -112, 52 -108, 46 -96 C 40 -88, 26 -92, 22 -102 Z"
-                  fill="#86B96B"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                <path
-                  d="M 11 -74 C -5 -84, -9 -100, 3 -100 C 13 -100, 17 -84, 11 -74 Z"
-                  fill="#95C777"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                <path
-                  d="M 14 -68 C 30 -76, 44 -72, 38 -60 C 32 -52, 18 -58, 14 -68 Z"
-                  fill="#86B96B"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-              </g>
-            </g>
-
-            {/* Stem D: Right Leafy Shoot — anchored at (20, -102) */}
-            <g transform="translate(20, -102)">
-              <g className="stem-sway-right">
-                <path
-                  d="M 0 0 C 18 -34, 42 -66, 68 -88"
-                  stroke="#465937"
-                  strokeWidth="3.2"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 65 -86 C 75 -100, 91 -98, 85 -84 C 79 -74, 67 -78, 65 -86 Z"
-                  fill="#9FD07F"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                <path
-                  d="M 42 -66 C 36 -82, 46 -94, 56 -84 C 62 -76, 52 -64, 42 -66 Z"
-                  fill="#95C777"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                <path
-                  d="M 46 -60 C 60 -64, 70 -56, 62 -46 C 54 -40, 44 -50, 46 -60 Z"
-                  fill="#82B667"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-              </g>
-            </g>
-
-            {/* Stem E: Center-Left Yellow Blossom Stem — anchored at (-4, -102) */}
-            <g transform="translate(-4, -102)">
-              <g className="stem-sway-center">
-                <path
-                  d="M 0 0 C -2 -24, -6 -48, -10 -72"
-                  stroke="#465937"
-                  strokeWidth="3.3"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M -6 -34 C -22 -40, -28 -28, -18 -20 C -10 -16, -2 -24, -6 -34 Z"
-                  fill="#97C879"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                {/* Attached Yellow 5-Petal Blossom at exact stem tip (-10, -72) */}
-                <g transform="translate(-10, -72)">
-                  <g className="blossom-flutter-delayed">
-                    <FivePetalFlower
-                      petalColor="#FCE181"
-                      centerColor="#E99A54"
-                      scale={1.04}
-                    />
-                  </g>
-                </g>
-              </g>
-            </g>
-
-            {/* Stem F: Center-Right Yellow Blossom + Side Pink Bud — anchored at (14, -102) */}
-            <g transform="translate(14, -102)">
-              <g className="stem-sway-mid-right">
-                <path
-                  d="M 0 0 C 8 -22, 16 -44, 24 -64 M 12 -32 C 20 -34, 28 -36, 34 -38"
-                  stroke="#465937"
-                  strokeWidth="3.2"
-                  strokeLinecap="round"
-                />
-                {/* Attached Pink Bud at twig tip (34, -38) */}
-                <g transform="translate(34, -38)">
-                  <g className="blossom-flutter">
-                    <FlowerBud rotation={35} />
-                  </g>
-                </g>
-                {/* Attached Yellow 5-Petal Blossom at exact stem tip (24, -64) */}
-                <g transform="translate(24, -64)">
-                  <g className="blossom-flutter">
-                    <FivePetalFlower
-                      petalColor="#FCE181"
-                      centerColor="#E99A54"
-                      scale={0.98}
-                    />
-                  </g>
-                </g>
-              </g>
+              ))}
             </g>
 
             {/* 3. Terracotta Pot Body, Front Rim Lip, and Kawaii Face */}
@@ -831,141 +1000,280 @@ export function FlowerCompanion({
                 strokeLinecap="round"
               />
 
-              {/* Kawaii Face */}
+              {/* Kawaii Face: one variant per growth state, cross-faded */}
               <g className="pot-face">
-                <ellipse cx="-29" cy="-35" rx="8.5" ry="4.2" fill="#F4A892" />
-                <ellipse cx="29" cy="-35" rx="8.5" ry="4.2" fill="#F4A892" />
-
-                {/* Eyes centered at y = 0 inside translate(0, -46) for clean blink pivot */}
-                <g transform="translate(0, -46)">
-                  <g className="pot-eyes">
-                    <circle cx="-23" cy="0" r="5.2" fill="#3F2A1E" />
-                    <circle cx="-24.5" cy="-1.8" r="1.6" fill="#FFFDF9" />
-                    <circle cx="23" cy="0" r="5.2" fill="#3F2A1E" />
-                    <circle cx="21.5" cy="-1.8" r="1.6" fill="#FFFDF9" />
-                  </g>
+                <g className="bloomie-cheeks">
+                  <ellipse cx="-29" cy="-35" rx="8.5" ry="4.2" fill="#F4A892" />
+                  <ellipse cx="29" cy="-35" rx="8.5" ry="4.2" fill="#F4A892" />
                 </g>
 
-                {isRestingMood ? (
+                {/* Thirsty: heavy-lidded eyes, wavy mouth, a sweat drop */}
+                <g className="bloomie-face is-thirsty">
+                  <g transform="translate(0, -46)" fill="#3F2A1E">
+                    <path d="M -28.2 -0.6 A 5.2 5.2 0 0 0 -17.8 -0.6 Z" />
+                    <path d="M 17.8 -0.6 A 5.2 5.2 0 0 0 28.2 -0.6 Z" />
+                    <path
+                      d="M -29.5 -0.4 L -16.5 -2.6 M 16.5 -2.6 L 29.5 -0.4"
+                      stroke="#3F2A1E"
+                      strokeWidth="2.4"
+                      strokeLinecap="round"
+                    />
+                  </g>
                   <path
-                    d="M -6 -39 Q 0 -35 6 -39"
+                    d="M -7 -37 q 3.5 -3.5 7 0 t 7 0"
                     stroke="#3F2A1E"
                     strokeWidth="2.4"
                     strokeLinecap="round"
                   />
-                ) : (
                   <path
-                    d="M -8 -41 Q 0 -33 8 -41"
-                    stroke="#3F2A1E"
-                    strokeWidth="2.6"
-                    strokeLinecap="round"
+                    className="bloomie-sweat"
+                    d="M 41 -68 C 38 -63, 37 -60, 41 -58 C 45 -60, 44 -63, 41 -68 Z"
+                    fill="#BFE6F5"
+                    stroke="#4A7D93"
+                    strokeWidth="1.4"
                   />
-                )}
+                </g>
+
+                {/* Perking up: bright open eyes and a soft smile */}
+                <g className="bloomie-face is-perky">
+                  <g transform="translate(0, -46)">
+                    <g className="pot-eyes">
+                      <circle cx="-23" cy="0" r="5.2" fill="#3F2A1E" />
+                      <circle cx="-24.5" cy="-1.8" r="1.6" fill="#FFFDF9" />
+                      <circle cx="23" cy="0" r="5.2" fill="#3F2A1E" />
+                      <circle cx="21.5" cy="-1.8" r="1.6" fill="#FFFDF9" />
+                    </g>
+                  </g>
+                  {isRestingMood ? (
+                    <path
+                      d="M -6 -39 Q 0 -35 6 -39"
+                      stroke="#3F2A1E"
+                      strokeWidth="2.4"
+                      strokeLinecap="round"
+                    />
+                  ) : (
+                    <path
+                      d="M -8 -41 Q 0 -33 8 -41"
+                      stroke="#3F2A1E"
+                      strokeWidth="2.6"
+                      strokeLinecap="round"
+                    />
+                  )}
+                </g>
+
+                {/* Flourishing: "^ ^" eyes and a beaming open smile */}
+                <g className="bloomie-face is-joyful">
+                  <g
+                    transform="translate(0, -46)"
+                    stroke="#3F2A1E"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M -29 2 Q -23 -6 -17 2" />
+                    <path d="M 17 2 Q 23 -6 29 2" />
+                  </g>
+                  <path
+                    d="M -9 -41 Q 0 -28 9 -41 Z"
+                    fill="#7A3A2C"
+                    stroke="#3F2A1E"
+                    strokeWidth="2.2"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M -4.5 -35.4 Q 0 -31.6 4.5 -35.4 Q 0 -37.4 -4.5 -35.4 Z"
+                    fill="#F28F8F"
+                  />
+                </g>
               </g>
             </g>
 
-            {/* 4. Cascading Left & Right Vines + Front Rim Leaves Draping Over Pot */}
-
-            {/* Front rim overhanging leaves */}
+            {/* 4. Front rim leaves · from Perking up */}
             <path
+              className={`grow-leaf${at(1)}`}
+              style={delay(1550)}
               d="M -28 -100 C -42 -90, -46 -74, -34 -72 C -22 -72, -14 -88, -28 -100 Z"
               fill="#97C879"
               stroke="#435435"
               strokeWidth="2.3"
             />
             <path
+              className={`grow-leaf${at(1)}`}
+              style={delay(1700)}
               d="M 28 -100 C 42 -90, 46 -74, 34 -72 C 22 -72, 14 -88, 28 -100 Z"
               fill="#97C879"
               stroke="#435435"
               strokeWidth="2.3"
             />
 
-            {/* Left Cascading Vine — anchored at (-36, -100) */}
+            {/* 5. Cascading vines with hanging blossoms · Flourishing */}
             <g transform="translate(-36, -100)">
               <g className="vine-sway-left">
                 <path
+                  className={`grow-stem${at(2)}`}
+                  pathLength={1}
+                  style={delay(150)}
                   d="M 0 0 C -30 -6, -52 18, -58 64"
                   stroke="#465937"
                   strokeWidth="3.2"
                   strokeLinecap="round"
                 />
                 <path
+                  className={`grow-leaf${at(2)}`}
+                  style={delay(450)}
                   d="M -28 2 C -44 -8, -56 0, -46 12 C -38 20, -26 12, -28 2 Z"
                   fill="#95C777"
                   stroke="#435435"
                   strokeWidth="2.2"
                 />
                 <path
+                  className={`grow-leaf${at(2)}`}
+                  style={delay(600)}
                   d="M -46 24 C -64 20, -74 30, -62 40 C -54 46, -42 36, -46 24 Z"
                   fill="#86B96B"
                   stroke="#435435"
                   strokeWidth="2.2"
                 />
                 <path
+                  className={`grow-leaf${at(2)}`}
+                  style={delay(700)}
                   d="M -40 34 C -26 34, -20 46, -32 52 C -40 56, -46 44, -40 34 Z"
                   fill="#78AC5E"
                   stroke="#435435"
                   strokeWidth="2.2"
                 />
                 <path
+                  className={`grow-leaf${at(2)}`}
+                  style={delay(850)}
                   d="M -56 52 C -74 52, -80 64, -68 72 C -58 76, -50 64, -56 52 Z"
                   fill="#86B96B"
                   stroke="#435435"
                   strokeWidth="2.2"
                 />
-                <path
-                  d="M -58 64 C -68 76, -58 88, -48 78 C -42 70, -50 62, -58 64 Z"
-                  fill="#95C777"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
+                <g transform="translate(-58, 66)">
+                  <g className={`grow-bloom${at(2)}`} style={delay(1000)}>
+                    <g className="blossom-flutter-delayed">
+                      <FivePetalFlower
+                        petalColor={LILAC.petal}
+                        centerColor={LILAC.center}
+                        scale={0.74}
+                      />
+                    </g>
+                  </g>
+                </g>
               </g>
             </g>
 
-            {/* Right Cascading Vine with Attached Hanging Pink Blossom — anchored at (36, -100) */}
             <g transform="translate(36, -100)">
               <g className="vine-sway-right">
                 <path
-                  d="M 0 0 C 30 -6, 50 18, 54 62 M 46 34 C 54 40, 60 46, 66 52"
+                  className={`grow-stem${at(2)}`}
+                  pathLength={1}
+                  style={delay(250)}
+                  d="M 0 0 C 30 -6, 50 18, 54 62"
                   stroke="#465937"
                   strokeWidth="3.2"
                   strokeLinecap="round"
                 />
                 <path
+                  className={`grow-stem${at(2)}`}
+                  pathLength={1}
+                  style={delay(750)}
+                  d="M 46 34 C 54 40, 60 46, 66 52"
+                  stroke="#465937"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                />
+                <path
+                  className={`grow-leaf${at(2)}`}
+                  style={delay(500)}
                   d="M 26 4 C 42 -4, 54 4, 44 16 C 36 22, 24 14, 26 4 Z"
                   fill="#95C777"
                   stroke="#435435"
                   strokeWidth="2.2"
                 />
                 <path
+                  className={`grow-leaf${at(2)}`}
+                  style={delay(650)}
                   d="M 46 26 C 62 24, 70 34, 58 42 C 50 48, 40 38, 46 26 Z"
                   fill="#86B96B"
                   stroke="#435435"
                   strokeWidth="2.2"
                 />
                 <path
-                  d="M 40 40 C 26 42, 22 54, 34 60 C 42 64, 48 50, 40 40 Z"
-                  fill="#78AC5E"
-                  stroke="#435435"
-                  strokeWidth="2.2"
-                />
-                <path
+                  className={`grow-leaf${at(2)}`}
+                  style={delay(800)}
                   d="M 52 62 C 62 72, 54 84, 42 76 C 36 68, 44 60, 52 62 Z"
                   fill="#86B96B"
                   stroke="#435435"
                   strokeWidth="2.2"
                 />
-                {/* Attached Hanging Pink Blossom at twig tip (66, 52) */}
                 <g transform="translate(66, 52)">
-                  <g className="blossom-flutter">
-                    <FivePetalFlower
-                      petalColor="#F69CA2"
-                      centerColor="#FCE181"
-                      scale={0.82}
-                    />
+                  <g className={`grow-bloom${at(2)}`} style={delay(1100)}>
+                    <g className="blossom-flutter">
+                      <FivePetalFlower
+                        petalColor={PINK.petal}
+                        centerColor={PINK.center}
+                        scale={0.82}
+                      />
+                    </g>
                   </g>
                 </g>
               </g>
+            </g>
+          </g>
+
+          {/* Thirsty thought bubble asking for a little water */}
+          <g transform="translate(-62, -206)">
+            <g className="bloomie-thought">
+              <g className="bloomie-thought-bob">
+                <circle
+                  cx="26"
+                  cy="40"
+                  r="4"
+                  fill="#FFFDF7"
+                  stroke="#4A362D"
+                  strokeWidth="1.8"
+                />
+                <circle
+                  cx="17"
+                  cy="27"
+                  r="6"
+                  fill="#FFFDF7"
+                  stroke="#4A362D"
+                  strokeWidth="1.8"
+                />
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="19"
+                  fill="#FFFDF7"
+                  stroke="#4A362D"
+                  strokeWidth="2.2"
+                />
+                <path
+                  d="M 0 -11 C -6 -3, -8 2, -8 5 C -8 10, -4 13, 0 13 C 4 13, 8 10, 8 5 C 8 2, 6 -3, 0 -11 Z"
+                  fill="#8FD0EE"
+                  stroke="#3E6E84"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M -3.5 4 C -3.5 7, -2 8.5, 0 9"
+                  stroke="#E8F7FD"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </g>
+            </g>
+          </g>
+        </g>
+
+        {/* Full-bloom visitor: a butterfly drifting above the blossoms */}
+        <g transform="translate(160, 44)">
+          <g className={`grow-bloom${at(2)}`} style={delay(1300)}>
+            <g className="butterfly-drift">
+              <Butterfly />
             </g>
           </g>
         </g>
@@ -984,6 +1292,208 @@ export function FlowerCompanion({
         </g>
       </svg>
     </div>
+  );
+}
+
+/**
+ * One articulated shoot: the lower segment leans at the soil, the upper one
+ * bends at the joint, and the head (bud, then blossom) nods at the tip.
+ */
+function Shoot({
+  shoot,
+  at,
+  until,
+}: {
+  shoot: ShootSpec;
+  at: (from: GrowthStage) => string;
+  until: (to: GrowthStage) => string;
+}) {
+  const vars = {
+    "--lean": `${shoot.lean}deg`,
+    "--bend": `${shoot.bend}deg`,
+    "--nod": `${shoot.nod}deg`,
+  };
+  return (
+    <g transform={`translate(${shoot.x}, -102) rotate(${shoot.angle})`}>
+      <g className="bloomie-lean" style={delay(450, vars)}>
+        <g className={shoot.sway}>
+          <path
+            className={`bloomie-stem grow-stem${at(shoot.from)}`}
+            pathLength={1}
+            style={delay(shoot.d)}
+            d={`M 0 0 C 2 ${-shoot.l1 * 0.35}, -2 ${-shoot.l1 * 0.7}, 0 ${-shoot.l1}`}
+            strokeWidth="3.3"
+            strokeLinecap="round"
+          />
+          {shoot.lower.map((leaf) => (
+            <Leaf
+              key={leaf.y}
+              leaf={leaf}
+              droop={droopFor(leaf.angle, shoot.angle + shoot.lean)}
+              at={at}
+            />
+          ))}
+          <g transform={`translate(0, ${-shoot.l1})`}>
+            <g className="bloomie-bend" style={delay(550, vars)}>
+              <path
+                className={`bloomie-stem grow-stem${at(shoot.from)}`}
+                pathLength={1}
+                style={delay(shoot.d + 380)}
+                d={`M 0 0 C 2 ${-shoot.l2 * 0.4}, 1 ${-shoot.l2 * 0.75}, 0 ${-shoot.l2}`}
+                strokeWidth="3.1"
+                strokeLinecap="round"
+              />
+              {shoot.upper.map((leaf) => (
+                <Leaf
+                  key={leaf.y}
+                  leaf={leaf}
+                  droop={droopFor(
+                    leaf.angle,
+                    shoot.angle + shoot.lean + shoot.bend,
+                  )}
+                  at={at}
+                />
+              ))}
+              <g transform={`translate(0, ${-shoot.l2})`}>
+                <g className="bloomie-nod" style={delay(650, vars)}>
+                  <g
+                    className={`grow-sprig${at(shoot.from)}${until(2)}`}
+                    style={delay(shoot.from === 0 ? 0 : shoot.d + 700)}
+                  >
+                    <Bud />
+                  </g>
+                  <g
+                    className={`grow-bloom${at(2)}`}
+                    style={delay(shoot.bloom.d)}
+                  >
+                    <g className="blossom-flutter">
+                      <FivePetalFlower
+                        petalColor={shoot.bloom.petal}
+                        centerColor={shoot.bloom.center}
+                        scale={shoot.bloom.scale}
+                      />
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  );
+}
+
+/** A leaf pointing along +x from its attachment point on the stem. */
+function Leaf({
+  leaf,
+  droop,
+  at,
+}: {
+  leaf: LeafSpec;
+  droop: number;
+  at: (from: GrowthStage) => string;
+}) {
+  return (
+    <g
+      transform={`translate(0, ${leaf.y}) rotate(${leaf.angle}) scale(${leaf.scale})`}
+    >
+      <g className={`grow-sprig${at(leaf.from)}`} style={delay(leaf.d)}>
+        <g
+          className="bloomie-leaf-droop"
+          style={{ "--droop": `${droop}deg` } as CSSProperties}
+        >
+          <path
+            className={`bloomie-blade tone-${leaf.tone}`}
+            d="M 0 0 C 5 -9, 17 -11, 26 0 C 17 11, 5 9, 0 0 Z"
+            strokeWidth="2.2"
+            strokeLinejoin="round"
+          />
+          <path
+            className="bloomie-leaf-tip"
+            d="M 18 -5.6 C 22 -4.6, 25 -1.6, 26 0 C 25 1.6, 22 4.6, 18 5.6 C 19.4 2, 19.4 -2, 18 -5.6 Z"
+          />
+          <path
+            className="bloomie-leaf-rib"
+            d="M 3 0 Q 13 -1, 21 0"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+        </g>
+      </g>
+    </g>
+  );
+}
+
+/** A closed flower bud with two sepals, pointing up from its stem tip. */
+function Bud() {
+  return (
+    <g transform="scale(1.15)">
+      <path
+        className="bloomie-bud"
+        d="M 0 -1 C -7 -7, -6 -17, 0 -21 C 6 -17, 7 -7, 0 -1 Z"
+        stroke="#4E3A32"
+        strokeWidth="1.9"
+        strokeLinejoin="round"
+      />
+      <path
+        className="bloomie-sepal"
+        d="M 0 1 C -6 -1, -8 -7, -6 -11 C -4 -7, -2 -4, 0 -2 Z M 0 1 C 6 -1, 8 -7, 6 -11 C 4 -7, 2 -4, 0 -2 Z"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </g>
+  );
+}
+
+/** A dry, curled leaf lying on the ground. */
+function FallenLeaf() {
+  return (
+    <g>
+      <path
+        d="M 0 0 C 5 -8, 16 -9, 22 -1 C 16 6, 6 6, 0 0 Z"
+        fill="#C9A15E"
+        stroke="#6E5233"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M 2 0 Q 11 -2, 18 -1"
+        stroke="#8A6A3E"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </g>
+  );
+}
+
+/** Lavender butterfly centered on its body at (0, 0); wings flap via CSS. */
+function Butterfly() {
+  return (
+    <g transform="scale(1.5)">
+      <g className="butterfly-wings" stroke="#4A362D" strokeWidth="1.4">
+        <path
+          d="M 0 -1 C -6 -14, -20 -16, -18 -5 C -17 1, -8 2, 0 -1 Z"
+          fill="#C9B6F2"
+        />
+        <path
+          d="M 0 1 C -5 4, -14 9, -10 14 C -6 17, -1 9, 0 1 Z"
+          fill="#F7B6C2"
+        />
+        <path
+          d="M 0 -1 C 6 -14, 20 -16, 18 -5 C 17 1, 8 2, 0 -1 Z"
+          fill="#C9B6F2"
+        />
+        <path d="M 0 1 C 5 4, 14 9, 10 14 C 6 17, 1 9, 0 1 Z" fill="#F7B6C2" />
+      </g>
+      <ellipse cx="0" cy="1" rx="2" ry="7" fill="#4A362D" />
+      <path
+        d="M -1 -6 C -3 -10, -5 -12, -7 -13 M 1 -6 C 3 -10, 5 -12, 7 -13"
+        stroke="#4A362D"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+    </g>
   );
 }
 
@@ -1022,20 +1532,6 @@ function FivePetalFlower({
   );
 }
 
-function FlowerBud({ rotation = 0 }: { rotation?: number }) {
-  return (
-    <g transform={`rotate(${rotation})`}>
-      <path
-        d="M 0 0 C -8 -7, -4 -17, 0 -12 C 4 -17, 8 -7, 0 0 Z"
-        fill="#F7A3A8"
-        stroke="#4E3A32"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </g>
-  );
-}
-
 /**
  * COMBINED 2D CUTE COMPANION WORLD BACKGROUND
  * Uses a zero-rerender requestAnimationFrame scroll listener driving a single
@@ -1046,6 +1542,9 @@ export function CompanionWorld({
   mood,
   lowEnergy,
   isCelebrating,
+  growthStage,
+  isGrowing,
+  isSettling,
 }: CompanionWorldProps) {
   const veilRef = useRef<HTMLDivElement>(null);
 
@@ -1093,6 +1592,9 @@ export function CompanionWorld({
           mood={mood}
           lowEnergy={lowEnergy}
           isCelebrating={isCelebrating}
+          stage={growthStage}
+          isGrowing={isGrowing}
+          isSettling={isSettling}
         />
       </div>
 
