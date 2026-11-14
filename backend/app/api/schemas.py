@@ -120,6 +120,7 @@ class Mood(_FromOrm):
     ts: datetime
     score: int
     note: str | None
+    source: str
 
 
 Language = Literal["fi", "en"]

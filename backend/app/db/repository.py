@@ -112,6 +112,14 @@ def record_mood(
     ).scalar_one()
 
 
+def insert_mood_checkins(session: Session, rows: Iterable[Mapping[str, Any]]) -> int:
+    """rows: {user_id, ts, score[, note, source]}."""
+    rows = list(rows)
+    if rows:
+        session.execute(insert(MoodCheckin), rows)
+    return len(rows)
+
+
 def record_journal_entry(
     session: Session,
     user_id: uuid.UUID,
@@ -270,7 +278,14 @@ def replace_anomalies(
 def delete_source_data(session: Session, user_id: uuid.UUID, source_prefix: str) -> None:
     """Remove e.g. all 'simulator:%' data for a user so a scenario can be re-run."""
     params = {"u": user_id, "p": f"{source_prefix}%"}
-    for table in ("heart_samples", "activity_samples", "sleep_sessions", "journal_entries"):
+    tables = (
+        "heart_samples",
+        "activity_samples",
+        "sleep_sessions",
+        "mood_checkins",
+        "journal_entries",
+    )
+    for table in tables:
         session.execute(text(f"DELETE FROM {table} WHERE user_id = :u AND source LIKE :p"), params)
 
 
