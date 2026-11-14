@@ -1,6 +1,6 @@
 """Daily rollups and baselines, straight from repository.daily_metrics / rolling_baseline."""
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Query
@@ -33,7 +33,9 @@ def baseline(
 
 @router.get("/today", response_model=schemas.Today)
 def today(user: PathUser, db: Db):
-    """Everything the day view needs: today's metrics, the usual level, and the mood state."""
+    """Everything the day view needs: today's metrics, the usual level, the mood state and
+    the stored anomalies of yesterday and today (heart and activity are judged once a day is
+    over, so yesterday's are the latest)."""
     day = today_utc()
     (metrics,) = repo.daily_metrics(db, user.id, day, day)
     base = repo.rolling_baseline(db, user.id, day, DEFAULT_DAYS)
@@ -42,4 +44,5 @@ def today(user: PathUser, db: Db):
         "metrics": metrics,
         "baseline": {"day": day, "window": DEFAULT_DAYS, **base},
         "mood_logged": metrics["mood_avg"] is not None,
+        "anomalies": repo.anomalies(db, user.id, day - timedelta(days=1), day),
     }

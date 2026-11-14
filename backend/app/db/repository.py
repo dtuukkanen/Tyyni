@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     ActivitySample,
+    Anomaly,
     HeartSample,
     JournalEntry,
     MoodCheckin,
@@ -218,6 +219,52 @@ def journal_entries(
             .order_by(JournalEntry.ts, JournalEntry.id)
         )
     )
+
+
+def anomalies(session: Session, user_id: uuid.UUID, start: date, end: date) -> list[Anomaly]:
+    """Stored anomalies on days [start, end], by day and id."""
+    return list(
+        session.scalars(
+            select(Anomaly)
+            .where(Anomaly.user_id == user_id, Anomaly.day >= start, Anomaly.day <= end)
+            .order_by(Anomaly.day, Anomaly.id)
+        )
+    )
+
+
+def replace_anomalies(
+    session: Session,
+    user_id: uuid.UUID,
+    start: date,
+    end: date,
+    rows: Iterable[Mapping[str, Any]],
+) -> list[Anomaly]:
+    """Make the stored anomalies on days [start, end] equal `rows`.
+
+    rows: {day, kind, severity, metric, value, baseline, explanation}. A stored anomaly with
+    the same day and kind is updated in place and keeps its id (suggestions and alerts point
+    at it); stored anomalies that are no longer in `rows` are deleted.
+    """
+    existing: dict[tuple[date, str], Anomaly] = {}
+    for a in anomalies(session, user_id, start, end):
+        if (a.day, a.kind) in existing:
+            session.delete(a)
+        else:
+            existing[(a.day, a.kind)] = a
+    kept: list[Anomaly] = []
+    for row in rows:
+        a = existing.pop((row["day"], row["kind"]), None)
+        if a is None:
+            a = Anomaly(user_id=user_id, **row)
+            session.add(a)
+        else:
+            for k, v in row.items():
+                setattr(a, k, v)
+        kept.append(a)
+    for a in existing.values():
+        session.delete(a)
+    session.flush()
+    return kept
 
 
 def delete_source_data(session: Session, user_id: uuid.UUID, source_prefix: str) -> None:
