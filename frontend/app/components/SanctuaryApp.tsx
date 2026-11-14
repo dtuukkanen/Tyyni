@@ -1,22 +1,35 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnchorScreen } from "./components/AnchorScreen";
-import { CompanionWorld } from "./components/CompanionWorld";
-import { GroundScreen } from "./components/GroundScreen";
-import { Icon, TyyniLogo } from "./components/icons";
-import { JournalScreen } from "./components/JournalScreen";
-import { PracticeModal } from "./components/PracticeModal";
-import { PwaSanctuarySheet, usePwa } from "./components/PwaSanctuarySheet";
-import { type SoundPreset, soundEngine } from "./components/soundEngine";
-import { TodayScreen } from "./components/TodayScreen";
-import { cx } from "./components/ui/styles";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  type ComponentProps,
+  createContext,
+  type ReactNode,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { AnchorScreen } from "./AnchorScreen";
+import { CompanionWorld } from "./CompanionWorld";
+import type { GroundScreen } from "./GroundScreen";
+import { Icon, TyyniLogo } from "./icons";
+import type { JournalScreen } from "./JournalScreen";
+import { type SoundPreset, soundEngine } from "./soundEngine";
+import type { TodayScreen } from "./TodayScreen";
+import { cx } from "./ui/styles";
+import {
+  type BloomieDemo,
   GROWTH_STAGE_NAMES,
   type GrowthStage,
   useBloomieGrowth,
-} from "./components/useBloomieGrowth";
-import { WinsScreen } from "./components/WinsScreen";
+} from "./useBloomieGrowth";
+import { usePwa } from "./usePwa";
+import type { WinsScreen } from "./WinsScreen";
 import {
   type BackendAnomaly,
   type BackendSuggestion,
@@ -24,7 +37,7 @@ import {
   type DemoNudgeKey,
   type ResolvedBehavioralNudge,
   resolveBehavioralNudges,
-} from "./data/behavioralNudges";
+} from "../data/behavioralNudges";
 import {
   type AnchorItem,
   type DashboardData,
@@ -36,48 +49,142 @@ import {
   STARTER_WINS,
   TABS,
   type Tab,
-} from "./data/sanctuaryData";
+  tabForPath,
+  tabHref,
+} from "../data/sanctuaryData";
 
-export default function Home() {
-  const [tab, setTab] = useState<Tab>("Today");
-  const [userId, setUserId] = useState<string | undefined>(undefined);
-  const [guestName, setGuestName] = useState("Elena");
-  const [dateLabel, setDateLabel] = useState("Wednesday, October 24");
+// Only shown on demand, so they load in their own chunks when first opened.
+const PracticeModal = dynamic(() =>
+  import("./PracticeModal").then((m) => m.PracticeModal),
+);
+const PwaSanctuarySheet = dynamic(() =>
+  import("./PwaSanctuarySheet").then((m) => m.PwaSanctuarySheet),
+);
+
+const SOS_MODAL: PracticeModalState = {
+  mode: "breath",
+  category: "Immediate Grounding",
+  title: "1-Tap SOS Breathing",
+  description:
+    "Follow the soft circle. Double inhale gently, then let go with a long, slow sigh.",
+  icon: "sos",
+};
+
+export type SanctuaryAppProps = {
+  /** Today's data, read on the server; empty fields keep the sample content. */
+  dashboard: DashboardData;
+  /** The current tab's page. */
+  children: ReactNode;
+};
+
+/**
+ * Props for every tab's screen. The state lives here in the layout, so it
+ * survives moving between tabs; each tab's page picks its own entry, and
+ * only that page's chunk imports the screen component.
+ */
+export type SanctuaryScreens = {
+  today: ComponentProps<typeof TodayScreen>;
+  ground: ComponentProps<typeof GroundScreen>;
+  wins: ComponentProps<typeof WinsScreen>;
+  journal: ComponentProps<typeof JournalScreen>;
+  anchor: ComponentProps<typeof AnchorScreen>;
+};
+
+const SanctuaryContext = createContext<SanctuaryScreens | null>(null);
+
+export function useSanctuaryScreens(): SanctuaryScreens {
+  const screens = use(SanctuaryContext);
+  if (!screens) throw new Error("Tab pages must render inside SanctuaryApp");
+  return screens;
+}
+
+/** Demo and shortcut options from the URL on first load. */
+function readUrlOptions(params: URLSearchParams) {
+  const nudge = params.get("nudge")?.toLowerCase();
+  const growth = params.get("growth")?.toLowerCase();
+  let growthDemo: BloomieDemo = null;
+  if (growth === "play") growthDemo = "play";
+  else if (growth && /^[0-2]$/.test(growth)) {
+    growthDemo = Number(growth) as BloomieDemo;
+  }
+  return {
+    demoNudge: DEMO_NUDGE_OPTIONS.find((o) => o.key === nudge)?.key ?? "none",
+    growthDemo,
+    /** `?sos=1`: open the SOS breathing pacer straight away. */
+    sos: params.get("sos") === "1",
+  } satisfies {
+    demoNudge: DemoNudgeKey;
+    growthDemo: BloomieDemo;
+    sos: boolean;
+  };
+}
+
+const NO_SUGGESTIONS: BackendSuggestion[] = [];
+const NO_ANOMALIES: BackendAnomaly[] = [];
+
+export function SanctuaryApp({ dashboard, children }: SanctuaryAppProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // The layout stays mounted across tabs, so these apply to the first load only.
+  const [urlOptions] = useState(() => readUrlOptions(searchParams));
+  const { sos } = urlOptions;
+  const initialSteps =
+    dashboard.steps && dashboard.steps.length > 0 ? dashboard.steps : null;
+
+  const tab = tabForPath(pathname);
+  const setTab = (next: Tab) => router.push(tabHref(next));
+  const userId = dashboard.userId;
+  const guestName = dashboard.displayName || "Elena";
+  const dateLabel = dashboard.dateLabel || "Wednesday, October 24";
   const [lowEnergy, setLowEnergy] = useState(false);
 
-  const [mood, setMood] = useState("Steady");
-  const [steps, setSteps] = useState<string[]>(STARTER_STEPS);
-  const [checked, setChecked] = useState<number[]>([]);
+  const [mood, setMood] = useState(dashboard.mood || "Steady");
+  const [steps, setSteps] = useState<string[]>(() =>
+    initialSteps ? initialSteps.map((s) => s.label) : STARTER_STEPS,
+  );
+  const [checked, setChecked] = useState<number[]>(() =>
+    initialSteps
+      ? initialSteps.flatMap((s, idx) => (s.complete ? [idx] : []))
+      : [],
+  );
   const [waveSent, setWaveSent] = useState(false);
   const [warmthSentTo, setWarmthSentTo] = useState<string[]>([]);
   const [restChecked, setRestChecked] = useState<number[]>([]);
   const [restingShared, setRestingShared] = useState(false);
   const [bloomieCelebrating, setBloomieCelebrating] = useState(false);
 
-  const [backendSuggestions, setBackendSuggestions] = useState<
-    BackendSuggestion[]
-  >([]);
-  const [backendAnomalies, setBackendAnomalies] = useState<BackendAnomaly[]>(
-    [],
+  const backendSuggestions: BackendSuggestion[] = Array.isArray(
+    dashboard.suggestions,
+  )
+    ? dashboard.suggestions
+    : NO_SUGGESTIONS;
+  const backendAnomalies: BackendAnomaly[] = Array.isArray(dashboard.anomalies)
+    ? dashboard.anomalies
+    : NO_ANOMALIES;
+  const [demoNudgeKey, setDemoNudgeKey] = useState<DemoNudgeKey>(
+    urlOptions.demoNudge,
   );
-  const [demoNudgeKey, setDemoNudgeKey] = useState<DemoNudgeKey>("none");
   const [dismissedNudgeIds, setDismissedNudgeIds] = useState<number[]>([]);
   const [completedNudgeIds, setCompletedNudgeIds] = useState<number[]>([]);
   const [helpedNudgeIds, setHelpedNudgeIds] = useState<number[]>([]);
   const [nudgeIndex, setNudgeIndex] = useState(0);
 
-  const [wins, setWins] = useState<string[]>(STARTER_WINS);
+  const [wins, setWins] = useState<string[]>(() =>
+    dashboard.wins && dashboard.wins.length > 0 ? dashboard.wins : STARTER_WINS,
+  );
   // Wins logged now (not the sample history); each counts as a done task.
   const [winsLogged, setWinsLogged] = useState(0);
   const [anchors, setAnchors] = useState<AnchorItem[]>(INITIAL_ANCHORS);
   const [favoritedIds, setFavoritedIds] = useState<string[]>(["blanket"]);
 
   const [activeSound, setActiveSound] = useState<SoundPreset | null>(null);
-  const [modal, setModal] = useState<PracticeModalState | null>(null);
+  const [modal, setModal] = useState<PracticeModalState | null>(
+    sos ? SOS_MODAL : null,
+  );
   const [pwaSheetOpen, setPwaSheetOpen] = useState(false);
   const [sensoryIndex, setSensoryIndex] = useState(0);
   const [toast, setToast] = useState("");
-  const [dataReady, setDataReady] = useState(false);
 
   const pwa = usePwa();
   const toastTimerRef = useRef<number | null>(null);
@@ -85,65 +192,17 @@ export default function Home() {
   const growthToastTimerRef = useRef<number | null>(null);
   const bloomieDemoTimerRef = useRef<number | null>(null);
 
+  // Drop `sos=1` (so a reload doesn't reopen the pacer) and the `tab=` left
+  // by the old-URL redirect; demo parameters like `nudge` stay. First load only.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const requestedTab = params.get("tab")?.toLowerCase();
-    // oxlint-disable-next-line react/set-state-in-effect -- URL params are read after hydration
-    if (requestedTab === "today") setTab("Today");
-    else if (requestedTab === "ground") setTab("Ground");
-    else if (requestedTab === "wins") setTab("Wins");
-    else if (requestedTab === "journal") setTab("Journal");
-    else if (requestedTab === "anchor") setTab("Anchor");
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("sos") && !url.searchParams.has("tab")) return;
+    url.searchParams.delete("sos");
+    url.searchParams.delete("tab");
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }, []);
 
-    const requestedNudge = params.get("nudge")?.toLowerCase() as
-      | DemoNudgeKey
-      | undefined;
-    if (
-      requestedNudge &&
-      DEMO_NUDGE_OPTIONS.some((o) => o.key === requestedNudge)
-    ) {
-      setDemoNudgeKey(requestedNudge);
-    }
-
-    if (params.get("sos") === "1") {
-      setTab("Ground");
-      setModal({
-        mode: "breath",
-        category: "Immediate Grounding",
-        title: "1-Tap SOS Breathing",
-        description:
-          "Follow the soft circle. Double inhale gently, then let go with a long, slow sigh.",
-        icon: "sos",
-      });
-      window.history.replaceState({}, "", "/?tab=ground");
-    }
-
-    fetch("/api/prototype")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data?.dashboard) return;
-        const next = data.dashboard as DashboardData;
-        if (next.userId) setUserId(next.userId);
-        if (next.displayName) setGuestName(next.displayName);
-        if (next.dateLabel) setDateLabel(next.dateLabel);
-        if (next.mood) setMood(next.mood);
-        if (next.steps && next.steps.length > 0) {
-          setSteps(next.steps.map((s) => s.label));
-          setChecked(next.steps.flatMap((s, idx) => (s.complete ? [idx] : [])));
-        }
-        if (next.wins && next.wins.length > 0) {
-          setWins(next.wins);
-        }
-        if (Array.isArray(next.suggestions)) {
-          setBackendSuggestions(next.suggestions);
-        }
-        if (Array.isArray(next.anomalies)) {
-          setBackendAnomalies(next.anomalies);
-        }
-      })
-      .catch(() => undefined)
-      .finally(() => setDataReady(true));
-
+  useEffect(() => {
     return () => {
       soundEngine.stop();
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
@@ -188,7 +247,7 @@ export default function Home() {
     doneTasks,
     totalTasks,
     floor: lowEnergy ? 1 : 0,
-    dataReady,
+    initialDemo: urlOptions.growthDemo,
     onStageUp: announceGrowth,
   });
 
@@ -420,7 +479,90 @@ export default function Home() {
     bloomieDemoTimerRef.current = window.setTimeout(apply, 450);
   }
 
-  const closeModal = useCallback(() => setModal(null), []);
+  const closeModal = () => setModal(null);
+
+  const screens: SanctuaryScreens = {
+    today: {
+      guestName,
+      dateLabel,
+      lowEnergy,
+      onExitLowEnergy: () => setLowEnergy(false),
+      behavioralNudges,
+      activeNudgeIndex: nudgeIndex,
+      onCycleNudge: () => setNudgeIndex((i) => i + 1),
+      onDismissNudge: handleDismissBehavioralNudge,
+      onStartNudge: handleStartBehavioralNudge,
+      onMarkNudgeHelped: handleMarkNudgeHelped,
+      mood,
+      onSelectMood: (nextMood) => {
+        setMood(nextMood);
+        triggerBloomieJoy();
+      },
+      steps,
+      checked,
+      onToggleStep: toggleStep,
+      onAddStep: handleAddStep,
+      restChecked,
+      onToggleRestStep: toggleRestStep,
+      lowEnergySoundOn: activeSound === "purr",
+      onToggleLowEnergySound: () =>
+        handleSoundToggle("purr", "soft brown noise"),
+      onStartSlowExhale: () => setModal(LOW_ENERGY_BREATH),
+      restingShared,
+      onShareResting: () => {
+        if (restingShared) return;
+        setRestingShared(true);
+        notify("Your circle knows you’re resting. No replies expected.");
+      },
+      waveSent,
+      onSendWave: () => {
+        setWaveSent(true);
+        triggerBloomieJoy();
+        notify("Sent a quiet wave to Liam, Maya, Marcus, and Sofia.");
+      },
+      warmthSentTo,
+      onSendWarmth: (name) => {
+        if (warmthSentTo.includes(name)) return;
+        setWarmthSentTo((prev) => [...prev, name]);
+        triggerBloomieJoy();
+        notify(`${name} will see a little warmth from you.`);
+      },
+      growthStage: growth.stage,
+      growthDone: doneTasks,
+      growthTotal: totalTasks,
+      growthPreview: growth.demo !== null,
+      isGrowing: growth.isGrowing,
+      isSettling: growth.isSettling,
+      onInteractCompanion: triggerBloomieJoy,
+    },
+    ground: {
+      activeSound,
+      onSoundToggle: handleSoundToggle,
+      onOpenModal: setModal,
+    },
+    wins: {
+      wins,
+      onAddWin: handleAddWin,
+      mood,
+      lowEnergy,
+      growthStage: growth.stage,
+      isGrowing: growth.isGrowing,
+      isSettling: growth.isSettling,
+    },
+    journal: { onSave: handleSaveJournal },
+    anchor: {
+      guestName,
+      anchors,
+      favoritedIds,
+      onToggleFavorite: handleToggleFavorite,
+      onCreateAnchor: handleCreateAnchor,
+      activeSound,
+      onSoundToggle: handleSoundToggle,
+      onOpenSensoryGuide: openSensoryGuide,
+      onOpenModal: setModal,
+      onNotify: notify,
+    },
+  };
 
   return (
     <div
@@ -525,129 +667,34 @@ export default function Home() {
         </div>
       </header>
 
-      {tab === "Today" && (
-        <TodayScreen
-          guestName={guestName}
-          dateLabel={dateLabel}
-          lowEnergy={lowEnergy}
-          onExitLowEnergy={() => setLowEnergy(false)}
-          behavioralNudges={behavioralNudges}
-          activeNudgeIndex={nudgeIndex}
-          onCycleNudge={() => setNudgeIndex((i) => i + 1)}
-          onDismissNudge={handleDismissBehavioralNudge}
-          onStartNudge={handleStartBehavioralNudge}
-          onMarkNudgeHelped={handleMarkNudgeHelped}
-          mood={mood}
-          onSelectMood={(nextMood) => {
-            setMood(nextMood);
-            triggerBloomieJoy();
-          }}
-          steps={steps}
-          checked={checked}
-          onToggleStep={toggleStep}
-          onAddStep={handleAddStep}
-          restChecked={restChecked}
-          onToggleRestStep={toggleRestStep}
-          lowEnergySoundOn={activeSound === "purr"}
-          onToggleLowEnergySound={() =>
-            handleSoundToggle("purr", "soft brown noise")
-          }
-          onStartSlowExhale={() => setModal(LOW_ENERGY_BREATH)}
-          restingShared={restingShared}
-          onShareResting={() => {
-            if (restingShared) return;
-            setRestingShared(true);
-            notify("Your circle knows you’re resting. No replies expected.");
-          }}
-          waveSent={waveSent}
-          onSendWave={() => {
-            setWaveSent(true);
-            triggerBloomieJoy();
-            notify("Sent a quiet wave to Liam, Maya, Marcus, and Sofia.");
-          }}
-          warmthSentTo={warmthSentTo}
-          onSendWarmth={(name) => {
-            if (warmthSentTo.includes(name)) return;
-            setWarmthSentTo((prev) => [...prev, name]);
-            triggerBloomieJoy();
-            notify(`${name} will see a little warmth from you.`);
-          }}
-          growthStage={growth.stage}
-          growthDone={doneTasks}
-          growthTotal={totalTasks}
-          growthPreview={growth.demo !== null}
-          isGrowing={growth.isGrowing}
-          isSettling={growth.isSettling}
-          onInteractCompanion={triggerBloomieJoy}
-        />
-      )}
-
-      {tab === "Ground" && (
-        <GroundScreen
-          activeSound={activeSound}
-          onSoundToggle={handleSoundToggle}
-          onOpenModal={setModal}
-        />
-      )}
-
-      {tab === "Wins" && (
-        <WinsScreen
-          wins={wins}
-          onAddWin={handleAddWin}
-          mood={mood}
-          lowEnergy={lowEnergy}
-          growthStage={growth.stage}
-          isGrowing={growth.isGrowing}
-          isSettling={growth.isSettling}
-        />
-      )}
-
-      {tab === "Journal" && <JournalScreen onSave={handleSaveJournal} />}
-
-      {tab === "Anchor" && (
-        <AnchorScreen
-          guestName={guestName}
-          anchors={anchors}
-          favoritedIds={favoritedIds}
-          onToggleFavorite={handleToggleFavorite}
-          onCreateAnchor={handleCreateAnchor}
-          activeSound={activeSound}
-          onSoundToggle={handleSoundToggle}
-          onOpenSensoryGuide={openSensoryGuide}
-          onOpenModal={setModal}
-          onNotify={notify}
-        />
-      )}
+      {/* oxlint-disable-next-line react/jsx-no-constructed-context-values -- the React Compiler memoizes `screens` */}
+      <SanctuaryContext value={screens}>{children}</SanctuaryContext>
 
       {/* Bottom Navigation */}
       <nav
         className="fixed bottom-0 left-1/2 z-30 grid w-full max-w-[430px] -translate-x-1/2 grid-cols-[repeat(5,1fr)] gap-1 border-t border-outline/10 bg-surface/94 px-3 pt-2 pb-[max(10px,env(safe-area-inset-bottom))] backdrop-blur-[20px] md:border-x md:border-x-outline/14 standalone:select-none"
         aria-label="Primary sections"
       >
-        {TABS.map(({ name, icon }) => {
+        {TABS.map(({ name, icon, href }) => {
           const isActive = tab === name;
           return (
-            <button
+            <Link
               key={name}
-              type="button"
+              href={href}
               className={cx(
-                "flex min-h-13 min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.25 text-[12px] transition-colors",
+                "flex min-h-13 min-w-0 flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.25 text-[12px] no-underline transition-colors",
                 isActive
                   ? "bg-secondary-container font-semibold text-on-secondary-container"
                   : "font-medium text-ink-soft hover:bg-secondary-container/30 hover:text-primary",
               )}
               aria-current={isActive ? "page" : undefined}
-              onClick={() => {
-                setTab(name);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
             >
               <Icon
                 name={name === "Wins" && isActive ? "heartFilled" : icon}
                 size={22}
               />
               <span>{name}</span>
-            </button>
+            </Link>
           );
         })}
       </nav>

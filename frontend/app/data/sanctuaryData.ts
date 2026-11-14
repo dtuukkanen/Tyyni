@@ -64,13 +64,22 @@ export type AnchorItem = {
   durationSeconds?: number;
 };
 
-export const TABS: { name: Tab; icon: IconName }[] = [
-  { name: "Today", icon: "sun" },
-  { name: "Ground", icon: "spa" },
-  { name: "Wins", icon: "heart" },
-  { name: "Journal", icon: "pen" },
-  { name: "Anchor", icon: "anchor" },
+/** Each tab is its own route under app/(sanctuary)/. */
+export const TABS: { name: Tab; icon: IconName; href: string }[] = [
+  { name: "Today", icon: "sun", href: "/" },
+  { name: "Ground", icon: "spa", href: "/ground" },
+  { name: "Wins", icon: "heart", href: "/wins" },
+  { name: "Journal", icon: "pen", href: "/journal" },
+  { name: "Anchor", icon: "anchor", href: "/anchor" },
 ];
+
+export function tabHref(tab: Tab): string {
+  return TABS.find((t) => t.name === tab)?.href ?? "/";
+}
+
+export function tabForPath(pathname: string): Tab {
+  return TABS.find((t) => t.href === pathname)?.name ?? "Today";
+}
 
 export const MOOD_OPTIONS: MoodOption[] = [
   {

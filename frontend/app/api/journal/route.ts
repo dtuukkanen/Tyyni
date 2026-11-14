@@ -1,5 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { resolveUser, serviceConfig } from "../service";
+import {
+  resolveUserId,
+  SERVICE_TIMEOUT_MS,
+  serviceConfig,
+} from "@/app/lib/service";
 
 // The backend accepts entries up to this many characters.
 const MAX_LENGTH = 5000;
@@ -28,16 +32,20 @@ export async function POST(request: NextRequest) {
       typeof body.userId === "string"
         ? body.userId
         : process.env.PYTHON_SERVICE_USER_ID;
-    const user = await resolveUser(service.base, service.headers, userId);
-    if (!user) {
+    const resolvedId = await resolveUserId(userId);
+    if (!resolvedId) {
       return NextResponse.json({ ok: false }, { status: 404 });
     }
 
-    const res = await fetch(`${service.base}/users/${user.id}/journal`, {
-      method: "POST",
-      headers: service.headers,
-      body: JSON.stringify({ text: text.slice(0, MAX_LENGTH) }),
-    });
+    const res = await fetch(
+      `${service.base}/users/${encodeURIComponent(resolvedId)}/journal`,
+      {
+        method: "POST",
+        headers: service.headers,
+        signal: AbortSignal.timeout(SERVICE_TIMEOUT_MS),
+        body: JSON.stringify({ text: text.slice(0, MAX_LENGTH) }),
+      },
+    );
     if (!res.ok) {
       throw new Error(`Journal returned ${res.status}`);
     }
