@@ -1,13 +1,98 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   type AnchorItem,
   type PracticeModalState,
   SENSORY_STEPS,
 } from "../data/sanctuaryData";
-import { Icon } from "./icons";
+import { Icon, type IconName } from "./icons";
 import type { SoundPreset } from "./soundEngine";
+import { IconOrb, type Tone } from "./ui/IconOrb";
+import { ScreenHero } from "./ui/ScreenHero";
+import { SectionHeader } from "./ui/SectionHeader";
+
+const SENSORY_CHANNELS = [
+  "Scent · Safe Memory",
+  "Tactile · Comfort",
+  "Acoustic · Calm",
+  "Place · Sanctuary",
+];
+
+const PHYSIOLOGICAL_SIGH: PracticeModalState = {
+  mode: "breath",
+  category: "Physiological Sigh",
+  title: "The Double Inhale Sigh",
+  description:
+    "Sip air in twice through the nose to gently open the lungs, then release one long, unhurried sigh out.",
+  icon: "air",
+};
+
+type AnchorCardProps = {
+  icon: IconName;
+  iconSize?: number;
+  tone: Tone;
+  tag: ReactNode;
+  /** Right side of the top bar: a button or a small note. */
+  aside: ReactNode;
+  linen?: boolean;
+  children: ReactNode;
+};
+
+/** Card with a tagged top bar, used for every anchor in the list. */
+function AnchorCard({
+  icon,
+  iconSize = 15,
+  tone,
+  tag,
+  aside,
+  linen = false,
+  children,
+}: AnchorCardProps) {
+  return (
+    <article className={linen ? "anchor-card is-linen" : "anchor-card"}>
+      <div className="anchor-meta-bar">
+        <div className="anchor-tag-group">
+          <span className={`anchor-mini-orb ${tone}`}>
+            <Icon name={icon} size={iconSize} />
+          </span>
+          <span className="anchor-tag-pill">{tag}</span>
+        </div>
+        {aside}
+      </div>
+      {children}
+    </article>
+  );
+}
+
+type EmergencyRowProps = {
+  icon: IconName;
+  /** Without a title the row is a softer, single-line alternative. */
+  title?: string;
+  desc: string;
+  action?: ReactNode;
+};
+
+function EmergencyRow({ icon, title, desc, action }: EmergencyRowProps) {
+  return (
+    <div
+      className={title ? "emergency-row" : "emergency-row emergency-row-soft"}
+    >
+      <div className="emergency-row-lead">
+        <Icon name={icon} size={20} />
+        {title ? (
+          <div>
+            <p className="emergency-row-title">{title}</p>
+            <p className="emergency-row-desc">{desc}</p>
+          </div>
+        ) : (
+          <p className="emergency-row-desc flush-top">{desc}</p>
+        )}
+      </div>
+      {action}
+    </div>
+  );
+}
 
 type AnchorScreenProps = {
   guestName: string;
@@ -37,7 +122,7 @@ export function AnchorScreen({
   const [phraseCount, setPhraseCount] = useState(4);
   const [addingAnchor, setAddingAnchor] = useState(false);
   const [anchorTitle, setAnchorTitle] = useState("");
-  const [anchorCategory, setAnchorCategory] = useState("Scent · Safe Memory");
+  const [anchorCategory, setAnchorCategory] = useState(SENSORY_CHANNELS[0]);
   const [anchorDesc, setAnchorDesc] = useState("");
 
   function speakPhrase() {
@@ -79,17 +164,12 @@ export function AnchorScreen({
 
   return (
     <main className="screen-body">
-      <div className="hero-header">
-        <span className="eyebrow-badge">
-          <span className="status-dot" aria-hidden="true" />
-          <span>SOMATIC STABILIZERS</span>
-        </span>
-        <h1 className="hero-title">Your Anchors.</h1>
-        <p className="hero-subtitle">
-          Familiar tethers to bring you back into your body when overwhelm
-          strikes.
-        </p>
-      </div>
+      <ScreenHero
+        badge={<span className="status-dot" aria-hidden="true" />}
+        badgeLabel="SOMATIC STABILIZERS"
+        title="Your Anchors."
+        subtitle="Familiar tethers to bring you back into your body when overwhelm strikes."
+      />
 
       {/* 5-4-3-2-1 Sensory Reset */}
       <section className="sensory-reset-card">
@@ -100,9 +180,7 @@ export function AnchorScreen({
               Sensory 5–4–3–2–1 Reset
             </h2>
           </div>
-          <span className="icon-orb icon-orb-round tone-moss">
-            <Icon name="flower" size={20} />
-          </span>
+          <IconOrb icon="flower" tone="tone-moss" />
         </div>
 
         <p className="practice-desc flush-top">
@@ -136,24 +214,21 @@ export function AnchorScreen({
 
       {/* My Core Anchors */}
       <section className="section-block" aria-labelledby="core-anchors-heading">
-        <div className="section-header-row">
-          <h2 id="core-anchors-heading" className="section-heading">
-            My Core Anchors
-          </h2>
-          <span className="section-meta">{anchors.length + 2} Active</span>
-        </div>
+        <SectionHeader
+          id="core-anchors-heading"
+          title="My Core Anchors"
+          meta={`${anchors.length + 2} Active`}
+        />
 
         {anchors.map((anchor) => {
           const isFav = favoritedIds.includes(anchor.id);
           return (
-            <article key={anchor.id} className="anchor-card">
-              <div className="anchor-meta-bar">
-                <div className="anchor-tag-group">
-                  <span className={`anchor-mini-orb ${anchor.tone}`}>
-                    <Icon name={anchor.icon} size={15} />
-                  </span>
-                  <span className="anchor-tag-pill">{anchor.tag}</span>
-                </div>
+            <AnchorCard
+              key={anchor.id}
+              icon={anchor.icon}
+              tone={anchor.tone}
+              tag={anchor.tag}
+              aside={
                 <button
                   type="button"
                   className={`icon-action-btn ${isFav ? "is-favorited" : ""}`}
@@ -167,8 +242,8 @@ export function AnchorScreen({
                 >
                   <Icon name={isFav ? "heartFilled" : "heart"} size={19} />
                 </button>
-              </div>
-
+              }
+            >
               <div>
                 <h3 className="practice-title">{anchor.title}</h3>
                 <p className="practice-desc">{anchor.desc}</p>
@@ -193,24 +268,20 @@ export function AnchorScreen({
                   <span>{anchor.button}</span>
                 </button>
               </div>
-            </article>
+            </AnchorCard>
           );
         })}
 
         {/* Personal Grounding Phrase */}
-        <article className="anchor-card is-linen">
-          <div className="anchor-meta-bar">
-            <div className="anchor-tag-group">
-              <span className="anchor-mini-orb tone-blush">
-                <Icon name="voice" size={15} />
-              </span>
-              <span className="anchor-tag-pill">
-                {guestName}’s Grounding Phrase
-              </span>
-            </div>
+        <AnchorCard
+          icon="voice"
+          tone="tone-blush"
+          tag={<>{guestName}’s Grounding Phrase</>}
+          aside={
             <span className="section-meta">Repetition {phraseCount}/5</span>
-          </div>
-
+          }
+          linen
+        >
           <blockquote className="phrase-blockquote">
             “This feeling is a wave. I am the shore.”
           </blockquote>
@@ -244,22 +315,20 @@ export function AnchorScreen({
               </button>
             </div>
           </div>
-        </article>
+        </AnchorCard>
 
         {/* Vibroacoustic Brown Noise Anchor */}
-        <article className="anchor-card">
-          <div className="anchor-meta-bar">
-            <div className="anchor-tag-group">
-              <span className="anchor-mini-orb tone-moss">
-                <Icon name="equalizer" size={16} />
-              </span>
-              <span className="anchor-tag-pill">Acoustic · Frequency</span>
-            </div>
+        <AnchorCard
+          icon="equalizer"
+          iconSize={16}
+          tone="tone-moss"
+          tag="Acoustic · Frequency"
+          aside={
             <span className="section-meta freq-badge">
               ● 24–30Hz Vibroacoustic
             </span>
-          </div>
-
+          }
+        >
           <div className="practice-footer">
             <div>
               <h3 className="practice-title">
@@ -287,7 +356,7 @@ export function AnchorScreen({
               />
             </button>
           </div>
-        </article>
+        </AnchorCard>
       </section>
 
       {/* Emergency Tether */}
@@ -302,64 +371,40 @@ export function AnchorScreen({
           actions trigger immediate biological downregulation.
         </p>
 
-        <div className="emergency-row">
-          <div className="emergency-row-lead">
-            <Icon name="air" size={20} />
-            <div>
-              <p className="emergency-row-title">The Double Inhale Sigh</p>
-              <p className="emergency-row-desc">
-                2 quick inhales through nose, slow long sigh out.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="btn-secondary-pill"
-            onClick={() =>
-              onOpenModal({
-                mode: "breath",
-                category: "Physiological Sigh",
-                title: "The Double Inhale Sigh",
-                description:
-                  "Sip air in twice through the nose to gently open the lungs, then release one long, unhurried sigh out.",
-                icon: "air",
-              })
-            }
-          >
-            Guide
-          </button>
-        </div>
-
-        <div className="emergency-row">
-          <div className="emergency-row-lead">
-            <Icon name="phone" size={20} />
-            <div>
-              <p className="emergency-row-title">Call Safe Person</p>
-              <p className="emergency-row-desc">
-                Mama (Direct bypass to speakerphone)
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="btn-secondary-pill btn-warm-connect"
-            onClick={() =>
-              onNotify("Ready to connect to Mama on speakerphone.")
-            }
-          >
-            Connect
-          </button>
-        </div>
-
-        <div className="emergency-row emergency-row-soft">
-          <div className="emergency-row-lead">
-            <Icon name="snowflake" size={20} />
-            <p className="emergency-row-desc flush-top">
-              Alternative: Submerge lower face into a bowl of ice-cold water for
-              15 seconds.
-            </p>
-          </div>
-        </div>
+        <EmergencyRow
+          icon="air"
+          title="The Double Inhale Sigh"
+          desc="2 quick inhales through nose, slow long sigh out."
+          action={
+            <button
+              type="button"
+              className="btn-secondary-pill"
+              onClick={() => onOpenModal(PHYSIOLOGICAL_SIGH)}
+            >
+              Guide
+            </button>
+          }
+        />
+        <EmergencyRow
+          icon="phone"
+          title="Call Safe Person"
+          desc="Mama (Direct bypass to speakerphone)"
+          action={
+            <button
+              type="button"
+              className="btn-secondary-pill btn-warm-connect"
+              onClick={() =>
+                onNotify("Ready to connect to Mama on speakerphone.")
+              }
+            >
+              Connect
+            </button>
+          }
+        />
+        <EmergencyRow
+          icon="snowflake"
+          desc="Alternative: Submerge lower face into a bowl of ice-cold water for 15 seconds."
+        />
       </section>
 
       {/* Add Sensory Anchor */}
@@ -405,10 +450,11 @@ export function AnchorScreen({
               value={anchorCategory}
               onChange={(e) => setAnchorCategory(e.target.value)}
             >
-              <option value="Scent · Safe Memory">Scent · Safe Memory</option>
-              <option value="Tactile · Comfort">Tactile · Comfort</option>
-              <option value="Acoustic · Calm">Acoustic · Calm</option>
-              <option value="Place · Sanctuary">Place · Sanctuary</option>
+              {SENSORY_CHANNELS.map((channel) => (
+                <option key={channel} value={channel}>
+                  {channel}
+                </option>
+              ))}
             </select>
           </div>
           <div className="composer-field">

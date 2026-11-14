@@ -1,8 +1,12 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { PracticeModalState } from "../data/sanctuaryData";
-import { Icon } from "./icons";
+import { Icon, type IconName } from "./icons";
 import type { SoundPreset } from "./soundEngine";
+import { IconOrb, type Tone } from "./ui/IconOrb";
+import { ReassureBanner } from "./ui/ReassureBanner";
+import { ScreenHero } from "./ui/ScreenHero";
 
 type GroundScreenProps = {
   activeSound: SoundPreset | null;
@@ -10,99 +14,231 @@ type GroundScreenProps = {
   onOpenModal: (modal: PracticeModalState) => void;
 };
 
+type PracticeCardProps = {
+  icon: IconName;
+  tone: Tone;
+  title: string;
+  desc: ReactNode;
+  duration: string;
+  /** Extra class on the duration pill, e.g. `is-moss`. */
+  durationClassName?: string;
+  /** Small line in the footer, left of the action. */
+  note: ReactNode;
+  /** Footer button. */
+  action: ReactNode;
+  /** Content between the header and the footer. */
+  children?: ReactNode;
+};
+
+function PracticeCard({
+  icon,
+  tone,
+  title,
+  desc,
+  duration,
+  durationClassName,
+  note,
+  action,
+  children,
+}: PracticeCardProps) {
+  return (
+    <article className="practice-card">
+      <div className="practice-top">
+        <div className="practice-lead">
+          <IconOrb icon={icon} size={22} tone={tone} square />
+          <div>
+            <h2 className="practice-title">{title}</h2>
+            <p className="practice-desc">{desc}</p>
+          </div>
+        </div>
+        <span
+          className={
+            durationClassName
+              ? `duration-pill ${durationClassName}`
+              : "duration-pill"
+          }
+        >
+          {duration}
+        </span>
+      </div>
+      {children}
+      <div className="practice-footer">
+        <span className="practice-note">{note}</span>
+        {action}
+      </div>
+    </article>
+  );
+}
+
+/** A practice whose button opens the breathing guide. */
+type GuidedPractice = Omit<PracticeCardProps, "action" | "children"> & {
+  cta: string;
+  primary?: boolean;
+  modal: PracticeModalState;
+};
+
+const BOX_BREATHING: GuidedPractice = {
+  icon: "air",
+  tone: "tone-moss",
+  title: "Box Breathing",
+  desc: "Calm nervous system · Inhale, hold, exhale, rest",
+  duration: "2 mins",
+  note: (
+    <>
+      <Icon name="infinity" size={16} />
+      <span>Biomorphic balance</span>
+    </>
+  ),
+  cta: "Begin",
+  primary: true,
+  modal: {
+    mode: "breath",
+    category: "Breath Rhythm",
+    title: "Box Breathing",
+    description:
+      "Follow the soothing expansion. There is no right or wrong rhythm.",
+    icon: "air",
+  },
+};
+
+/** The body-based practices, shown after Nearby nature. */
+const BODY_PRACTICES: GuidedPractice[] = [
+  {
+    icon: "meditate",
+    tone: "tone-eucalyptus",
+    title: "Gentle Body Scan",
+    desc: "Unclench jaw, soften shoulders, release hands",
+    duration: "3 mins",
+    note: (
+      <>
+        <span className="status-dot" aria-hidden="true" />
+        <span>Seated or lying down</span>
+      </>
+    ),
+    cta: "Begin",
+    primary: true,
+    modal: {
+      mode: "breath",
+      category: "Quiet Unwinding",
+      title: "Gentle Body Softening",
+      description:
+        "Let your tongue rest away from the roof of your mouth. Drop your shoulders down an inch.",
+      icon: "meditate",
+    },
+  },
+  {
+    icon: "bed",
+    tone: "tone-blush",
+    title: "Gentle Mat Stretch",
+    desc: "Bed or soft rug · Child’s pose & resting twist",
+    duration: "5 mins",
+    note: "Zero sweat · Heavy pillows encouraged",
+    cta: "View Poses",
+    modal: {
+      mode: "breath",
+      category: "Comfort First",
+      title: "Restorative Mat Rest",
+      description:
+        "Fold over a pillow in wide-knee child’s pose, then rest on your side with knees supported.",
+      icon: "bed",
+    },
+  },
+  {
+    icon: "walk",
+    tone: "tone-moss",
+    title: "Mindful Slow Walk",
+    desc: "Just feeling your feet contact the floor",
+    duration: "10 mins",
+    note: "Indoor socks or outdoor stroll",
+    cta: "Begin",
+    modal: {
+      mode: "breath",
+      category: "Tactile Presence",
+      title: "Slow Grounding Walk",
+      description:
+        "Notice the heel touch, the roll across the sole, and the lift. There is nowhere to hurry.",
+      icon: "walk",
+    },
+  },
+];
+
+const NEARBY_NATURE_MODAL: PracticeModalState = {
+  mode: "breath",
+  category: "Nature Connection",
+  title: "Linden Grove Sanctuary",
+  description:
+    "Step outside whenever you feel ready. Watching leaves move in the wind naturally softens cortisol.",
+  icon: "forest",
+  tips: [
+    "8 min level walk along shaded gravel",
+    "Quiet lakeside benches facing west",
+  ],
+};
+
+const SOS_MODAL: PracticeModalState = {
+  mode: "breath",
+  category: "Emergency Calm",
+  title: "Deep Calming Sigh",
+  description:
+    "Take two soft sips of air in through your nose, followed by a long, unhurried sigh out your mouth.",
+  icon: "heartFilled",
+};
+
 export function GroundScreen({
   activeSound,
   onSoundToggle,
   onOpenModal,
 }: GroundScreenProps) {
+  const sanctuaryPlaying = activeSound === "sanctuary";
+
+  function guided({ cta, primary, modal, ...card }: GuidedPractice) {
+    return (
+      <PracticeCard
+        key={card.title}
+        {...card}
+        action={
+          <button
+            type="button"
+            className={primary ? "btn-primary-pill" : "btn-secondary-pill"}
+            onClick={() => onOpenModal(modal)}
+          >
+            {cta}
+          </button>
+        }
+      />
+    );
+  }
+
   return (
     <main className="screen-body">
-      <div className="hero-header">
-        <span className="eyebrow-badge">
-          <Icon name="spa" size={14} />
-          <span>SOMATIC ANCHOR</span>
-        </span>
-        <h1 className="hero-title">Ground yourself.</h1>
-        <p className="hero-subtitle">
-          Choose one gentle practice. No rush, no expectations.
-        </p>
-
-        <div className="reassure-banner">
-          <span className="icon-orb icon-orb-round tone-eucalyptus">
-            <Icon name="twilight" size={20} />
-          </span>
-          <div className="reassure-copy">
-            <strong>Your pace is worthy</strong>
-            <span>
-              Even closing your eyes for 30 seconds rewires the nervous system.
-            </span>
-          </div>
-        </div>
-      </div>
+      <ScreenHero
+        badge={<Icon name="spa" size={14} />}
+        badgeLabel="SOMATIC ANCHOR"
+        title="Ground yourself."
+        subtitle="Choose one gentle practice. No rush, no expectations."
+      >
+        <ReassureBanner
+          icon="twilight"
+          tone="tone-eucalyptus"
+          title="Your pace is worthy"
+        >
+          Even closing your eyes for 30 seconds rewires the nervous system.
+        </ReassureBanner>
+      </ScreenHero>
 
       <section className="practices-stack" aria-label="Grounding practices">
-        {/* 1. Box Breathing */}
-        <article className="practice-card">
-          <div className="practice-top">
-            <div className="practice-lead">
-              <span className="icon-orb tone-moss">
-                <Icon name="air" size={22} />
-              </span>
-              <div>
-                <h2 className="practice-title">Box Breathing</h2>
-                <p className="practice-desc">
-                  Calm nervous system · Inhale, hold, exhale, rest
-                </p>
-              </div>
-            </div>
-            <span className="duration-pill">2 mins</span>
-          </div>
-          <div className="practice-footer">
-            <span className="practice-note">
-              <Icon name="infinity" size={16} />
-              <span>Biomorphic balance</span>
-            </span>
-            <button
-              type="button"
-              className="btn-primary-pill"
-              onClick={() =>
-                onOpenModal({
-                  mode: "breath",
-                  category: "Breath Rhythm",
-                  title: "Box Breathing",
-                  description:
-                    "Follow the soothing expansion. There is no right or wrong rhythm.",
-                  icon: "air",
-                })
-              }
-            >
-              Begin
-            </button>
-          </div>
-        </article>
+        {guided(BOX_BREATHING)}
 
-        {/* 2. Sound Sanctuary */}
-        <article className="practice-card">
-          <div className="practice-top">
-            <div className="practice-lead">
-              <span className="icon-orb tone-linen">
-                <Icon name="waves" size={22} />
-              </span>
-              <div>
-                <h2 className="practice-title">Sound Sanctuary</h2>
-                <p className="practice-desc">
-                  Ambient rainfall, forest stream, singing bowl
-                </p>
-              </div>
-            </div>
-            <span className="duration-pill">5 mins</span>
-          </div>
-          <div className="practice-footer">
-            <span className="practice-note">
+        <PracticeCard
+          icon="waves"
+          tone="tone-linen"
+          title="Sound Sanctuary"
+          desc="Ambient rainfall, forest stream, singing bowl"
+          duration="5 mins"
+          note={
+            <>
               <span
-                className={`wave-bars ${
-                  activeSound === "sanctuary" ? "is-playing" : ""
-                }`}
+                className={`wave-bars ${sanctuaryPlaying ? "is-playing" : ""}`}
                 aria-hidden="true"
               >
                 <span />
@@ -112,40 +248,40 @@ export function GroundScreen({
                 <span />
               </span>
               <span>Warm acoustic hum</span>
-            </span>
+            </>
+          }
+          action={
             <button
               type="button"
               className={`btn-secondary-pill ${
-                activeSound === "sanctuary" ? "is-active" : ""
+                sanctuaryPlaying ? "is-active" : ""
               }`}
               onClick={() => onSoundToggle("sanctuary", "Sound Sanctuary")}
             >
-              <Icon
-                name={activeSound === "sanctuary" ? "pause" : "play"}
-                size={15}
-              />
-              <span>{activeSound === "sanctuary" ? "Playing" : "Listen"}</span>
+              <Icon name={sanctuaryPlaying ? "pause" : "play"} size={15} />
+              <span>{sanctuaryPlaying ? "Playing" : "Listen"}</span>
             </button>
-          </div>
-        </article>
+          }
+        />
 
-        {/* 3. Nearby Nature */}
-        <article className="practice-card">
-          <div className="practice-top">
-            <div className="practice-lead">
-              <span className="icon-orb tone-moss">
-                <Icon name="forest" size={22} />
-              </span>
-              <div>
-                <h2 className="practice-title">Nearby nature</h2>
-                <p className="practice-desc">
-                  Quiet shaded trees, lake shores, riverbank, or open grass
-                </p>
-              </div>
-            </div>
-            <span className="duration-pill is-moss">0.8 km</span>
-          </div>
-
+        <PracticeCard
+          icon="forest"
+          tone="tone-moss"
+          title="Nearby nature"
+          desc="Quiet shaded trees, lake shores, riverbank, or open grass"
+          duration="0.8 km"
+          durationClassName="is-moss"
+          note="Open benches · Low foot traffic · Calming water"
+          action={
+            <button
+              type="button"
+              className="btn-secondary-pill"
+              onClick={() => onOpenModal(NEARBY_NATURE_MODAL)}
+            >
+              Explore
+            </button>
+          }
+        >
           <div className="nature-map-card">
             <svg
               className="nature-map-svg"
@@ -188,151 +324,9 @@ export function GroundScreen({
               <span>Linden Grove &amp; Lakeside Haven (8 min gentle walk)</span>
             </div>
           </div>
+        </PracticeCard>
 
-          <div className="practice-footer">
-            <span className="practice-note">
-              Open benches · Low foot traffic · Calming water
-            </span>
-            <button
-              type="button"
-              className="btn-secondary-pill"
-              onClick={() =>
-                onOpenModal({
-                  mode: "breath",
-                  category: "Nature Connection",
-                  title: "Linden Grove Sanctuary",
-                  description:
-                    "Step outside whenever you feel ready. Watching leaves move in the wind naturally softens cortisol.",
-                  icon: "forest",
-                  tips: [
-                    "8 min level walk along shaded gravel",
-                    "Quiet lakeside benches facing west",
-                  ],
-                })
-              }
-            >
-              Explore
-            </button>
-          </div>
-        </article>
-
-        {/* 4. Gentle Body Scan */}
-        <article className="practice-card">
-          <div className="practice-top">
-            <div className="practice-lead">
-              <span className="icon-orb tone-eucalyptus">
-                <Icon name="meditate" size={22} />
-              </span>
-              <div>
-                <h2 className="practice-title">Gentle Body Scan</h2>
-                <p className="practice-desc">
-                  Unclench jaw, soften shoulders, release hands
-                </p>
-              </div>
-            </div>
-            <span className="duration-pill">3 mins</span>
-          </div>
-          <div className="practice-footer">
-            <span className="practice-note">
-              <span className="status-dot" aria-hidden="true" />
-              <span>Seated or lying down</span>
-            </span>
-            <button
-              type="button"
-              className="btn-primary-pill"
-              onClick={() =>
-                onOpenModal({
-                  mode: "breath",
-                  category: "Quiet Unwinding",
-                  title: "Gentle Body Softening",
-                  description:
-                    "Let your tongue rest away from the roof of your mouth. Drop your shoulders down an inch.",
-                  icon: "meditate",
-                })
-              }
-            >
-              Begin
-            </button>
-          </div>
-        </article>
-
-        {/* 5. Gentle Mat Stretch */}
-        <article className="practice-card">
-          <div className="practice-top">
-            <div className="practice-lead">
-              <span className="icon-orb tone-blush">
-                <Icon name="bed" size={22} />
-              </span>
-              <div>
-                <h2 className="practice-title">Gentle Mat Stretch</h2>
-                <p className="practice-desc">
-                  Bed or soft rug · Child’s pose &amp; resting twist
-                </p>
-              </div>
-            </div>
-            <span className="duration-pill">5 mins</span>
-          </div>
-          <div className="practice-footer">
-            <span className="practice-note">
-              Zero sweat · Heavy pillows encouraged
-            </span>
-            <button
-              type="button"
-              className="btn-secondary-pill"
-              onClick={() =>
-                onOpenModal({
-                  mode: "breath",
-                  category: "Comfort First",
-                  title: "Restorative Mat Rest",
-                  description:
-                    "Fold over a pillow in wide-knee child’s pose, then rest on your side with knees supported.",
-                  icon: "bed",
-                })
-              }
-            >
-              View Poses
-            </button>
-          </div>
-        </article>
-
-        {/* 6. Mindful Slow Walk */}
-        <article className="practice-card">
-          <div className="practice-top">
-            <div className="practice-lead">
-              <span className="icon-orb tone-moss">
-                <Icon name="walk" size={22} />
-              </span>
-              <div>
-                <h2 className="practice-title">Mindful Slow Walk</h2>
-                <p className="practice-desc">
-                  Just feeling your feet contact the floor
-                </p>
-              </div>
-            </div>
-            <span className="duration-pill">10 mins</span>
-          </div>
-          <div className="practice-footer">
-            <span className="practice-note">
-              Indoor socks or outdoor stroll
-            </span>
-            <button
-              type="button"
-              className="btn-secondary-pill"
-              onClick={() =>
-                onOpenModal({
-                  mode: "breath",
-                  category: "Tactile Presence",
-                  title: "Slow Grounding Walk",
-                  description:
-                    "Notice the heel touch, the roll across the sole, and the lift. There is nowhere to hurry.",
-                  icon: "walk",
-                })
-              }
-            >
-              Begin
-            </button>
-          </div>
-        </article>
+        {BODY_PRACTICES.map(guided)}
       </section>
 
       <div className="section-block">
@@ -347,16 +341,7 @@ export function GroundScreen({
         <button
           type="button"
           className="sos-pill-btn"
-          onClick={() =>
-            onOpenModal({
-              mode: "breath",
-              category: "Emergency Calm",
-              title: "Deep Calming Sigh",
-              description:
-                "Take two soft sips of air in through your nose, followed by a long, unhurried sigh out your mouth.",
-              icon: "heartFilled",
-            })
-          }
+          onClick={() => onOpenModal(SOS_MODAL)}
         >
           <Icon name="sos" size={20} />
           <span>Need immediate calm? 1-Tap SOS Breathing</span>
