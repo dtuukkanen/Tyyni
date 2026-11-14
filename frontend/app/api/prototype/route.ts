@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { resolveUser, serviceConfig } from "../service";
 
 function mapMoodScoreToId(
   score: number | null | undefined,
@@ -22,45 +23,16 @@ function formatUtcDayLabel(isoDay: string | undefined): string | undefined {
   }).format(parsed);
 }
 
-async function resolveUser(
-  base: string,
-  headers: HeadersInit | undefined,
-  explicitUserId?: string | null,
-): Promise<{ id: string; display_name?: string } | null> {
-  if (explicitUserId) {
-    const userRes = await fetch(`${base}/users/${explicitUserId}`, {
-      cache: "no-store",
-      headers,
-    });
-    if (userRes.ok) return userRes.json();
-    return { id: explicitUserId };
-  }
-
-  const listRes = await fetch(`${base}/users`, { cache: "no-store", headers });
-  if (!listRes.ok) return null;
-  const users = (await listRes.json()) as {
-    id: string;
-    display_name?: string;
-  }[];
-  return users.length > 0 ? users[0] : null;
-}
-
-// Keep the Python service private to the server. The browser only talks to this route.
 export async function GET(request: NextRequest) {
-  const baseUrl = process.env.PYTHON_SERVICE_URL;
-  if (!baseUrl) {
+  const service = serviceConfig();
+  if (!service) {
     return NextResponse.json({
       source: "prototype",
       message: "Using built-in sample content.",
       dashboard: {},
     });
   }
-
-  const base = baseUrl.replace(/\/$/, "");
-  const apiKey = process.env.PYTHON_SERVICE_API_KEY;
-  const headers: HeadersInit | undefined = apiKey
-    ? { "X-API-Key": apiKey }
-    : undefined;
+  const { base, headers } = service;
 
   try {
     const queryUserId =
@@ -135,10 +107,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const baseUrl = process.env.PYTHON_SERVICE_URL;
-  if (!baseUrl) {
+  const service = serviceConfig(true);
+  if (!service) {
     return NextResponse.json({ ok: true, source: "prototype" });
   }
+  const { base, headers } = service;
 
   try {
     const body = (await request.json()) as {
@@ -151,13 +124,6 @@ export async function POST(request: NextRequest) {
     if (!body.suggestionId || body.suggestionId < 0 || body.done == null) {
       return NextResponse.json({ ok: true, source: "prototype" });
     }
-
-    const base = baseUrl.replace(/\/$/, "");
-    const apiKey = process.env.PYTHON_SERVICE_API_KEY;
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-      ...(apiKey ? { "X-API-Key": apiKey } : {}),
-    };
 
     const user = await resolveUser(
       base,

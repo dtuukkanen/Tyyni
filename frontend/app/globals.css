@@ -1987,6 +1987,99 @@ select:focus-visible {
   max-width: 38ch;
 }
 
+/* Journal: one quiet page, one button. */
+.journal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-low);
+  border: 1px solid rgba(113, 121, 118, 0.1);
+}
+
+.journal-textarea {
+  width: 100%;
+  min-height: 220px;
+  field-sizing: content;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(113, 121, 118, 0.22);
+  background: var(--surface-lowest);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+  resize: none;
+  outline: none;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.journal-textarea:focus {
+  border-color: var(--primary-container);
+  box-shadow: 0 0 0 3px rgba(58, 96, 87, 0.12);
+}
+
+.journal-textarea::placeholder {
+  color: var(--ink-muted);
+}
+
+.journal-save {
+  align-self: flex-end;
+  min-width: 120px;
+}
+
+.journal-save:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.journal-save:disabled:hover {
+  background: var(--primary-container);
+}
+
+.journal-note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--tertiary);
+}
+
+.journal-saved {
+  align-items: center;
+  text-align: center;
+  padding: 32px 20px;
+  gap: 6px;
+}
+
+.journal-saved-title {
+  margin: 8px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.journal-saved-sub {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.journal-again {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-container);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.journal-again:hover {
+  background: rgba(194, 233, 202, 0.3);
+}
+
 .section-block {
   display: flex;
   flex-direction: column;
@@ -3321,13 +3414,14 @@ select:focus-visible {
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(113, 121, 118, 0.1);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
 }
 
 .nav-tab {
+  min-width: 0;
   min-height: 52px;
-  padding: 5px 8px;
+  padding: 5px 4px;
   border-radius: var(--radius-full);
   color: var(--ink-soft);
   display: flex;
