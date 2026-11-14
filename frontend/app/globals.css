@@ -866,16 +866,146 @@ select:focus-visible {
   box-shadow: 0 8px 24px -6px rgba(34, 72, 64, 0.07);
 }
 
+.hero-greeting-card.has-behavioral-nudge {
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.86);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .hero-greeting-card .hero-title {
   margin: 0;
   font-size: 24px;
   line-height: 1.2;
 }
 
+.hero-greeting-card.has-behavioral-nudge .hero-title {
+  font-size: 20.5px;
+  line-height: 1.22;
+}
+
 .hero-greeting-card .hero-subtitle {
   margin-top: 3px;
   font-size: 13px;
   line-height: 1.42;
+}
+
+.hero-greeting-card.has-behavioral-nudge .hero-subtitle {
+  margin-top: 0;
+  font-size: 12.5px;
+  line-height: 1.38;
+}
+
+.nudge-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nudge-badge {
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nudge-tone-moss {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
+.nudge-tone-eucalyptus {
+  background: var(--primary-fixed);
+  color: var(--on-primary-fixed);
+}
+
+.nudge-tone-blush {
+  background: var(--tertiary-fixed);
+  color: var(--on-tertiary-fixed);
+}
+
+.nudge-meta-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nudge-ghost-btn {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(239, 238, 235, 0.8);
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 600;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.nudge-ghost-btn:hover {
+  background: var(--surface-high);
+  color: var(--ink);
+}
+
+.nudge-reason {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+.nudge-actions-row {
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nudge-primary-btn {
+  min-height: 36px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: var(--primary-container);
+  color: var(--on-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(34, 72, 64, 0.14);
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.nudge-primary-btn:hover {
+  background: var(--primary);
+}
+
+.nudge-primary-btn.is-warm {
+  background: var(--tertiary-container);
+  color: var(--on-tertiary);
+}
+
+.nudge-helped-btn {
+  min-height: 34px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(67, 102, 77, 0.28);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nudge-helped-btn.is-helped {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
 }
 
 /* Open Scenic Window & Bloomie Status Pill Resting Below the Pot */
@@ -2701,6 +2831,42 @@ select:focus-visible {
   margin: 0;
 }
 
+.pwa-demo-section {
+  padding-top: 12px;
+  border-top: 1px solid var(--surface-container);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pwa-demo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pwa-demo-chip {
+  min-height: 32px;
+  padding: 5px 11px;
+  border-radius: var(--radius-full);
+  background: var(--surface-low);
+  border: 1px solid var(--ghost-border);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.pwa-demo-chip:hover {
+  background: var(--surface-container);
+}
+
+.pwa-demo-chip.is-selected {
+  background: var(--primary-container);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
 .pwa-pref-row {
   padding-top: 12px;
   border-top: 1px solid var(--surface-container);
@@ -2769,12 +2935,31 @@ select:focus-visible {
     padding: 10px 14px;
   }
 
+  .hero-greeting-card.has-behavioral-nudge {
+    padding: 9px 13px;
+    gap: 4px;
+  }
+
   .hero-greeting-card .hero-title {
     font-size: 21px;
   }
 
+  .hero-greeting-card.has-behavioral-nudge .hero-title {
+    font-size: 18px;
+  }
+
   .hero-greeting-card .hero-subtitle {
     font-size: 12.5px;
+  }
+
+  .hero-greeting-card.has-behavioral-nudge .hero-subtitle {
+    font-size: 11.5px;
+  }
+
+  .nudge-primary-btn {
+    min-height: 32px;
+    padding: 4px 12px;
+    font-size: 12px;
   }
 
   .companion-flower-stage {
