@@ -12,7 +12,7 @@ Each waking minute is either incidental movement or part of a walking bout:
 - bouts (~110 steps/min): two commute walks on weekdays (about 1 h and 10 h after waking), a
   midday leisure walk on most weekend days, and an optional evening exercise walk.
 
-Nobody walks while asleep: the nights come from the HRV simulator's built-in window
+Nobody walks while asleep: the nights come from the built-in `sleep_window`
 (23:00-07:00 UTC, shifted for late_sleep_shift) or from real sleep sessions passed as
 `nights` (e.g. `sleep.nights(...)`), and the bouts follow each day's wake time.
 
@@ -26,20 +26,20 @@ Run: python -m app.simulators.activity --new-user demo --scenario withdrawal --d
 
 from __future__ import annotations
 
-import argparse
 import math
 import random
 import statistics
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.db import repository as repo
-from app.simulators import hrv
+from app.simulators import common, timelines
+from app.simulators.sleep_window import asleep_at, sleep_schedule, waking_window
 
 SCENARIOS = (
     "stable_active",
@@ -82,7 +82,6 @@ DAY_SD = 0.2  # day-to-day noise on the incidental budget, log space
 AR_SD = 0.5  # slow within-day noise on the incidental rate (stationary SD), log space
 AR_PHI = 0.98  # AR(1) autocorrelation per minute
 
-GAP_DAY_PROB = 0.5  # artifacts: chance of a 1-3 h gap (device not carried)
 MISSING_DAY_PROB = 0.05  # artifacts: chance a whole day has no data
 
 
@@ -112,22 +111,11 @@ def generate(
     are unchanged. nights: sleep sessions ({bedtime, wake_time}, e.g. from `sleep.nights`) to
     use instead of the built-in sleep window; time not covered by any night counts as awake.
     """
-    if scenario not in SCENARIOS:
-        raise ValueError(f"unknown scenario {scenario!r}; choose from {SCENARIOS}")
-    if days < 1:
-        raise ValueError("days must be >= 1")
-    if interval_min < 1 or 1440 % interval_min:
-        raise ValueError("interval_min must divide a day (e.g. 1, 5, 10, 15, 30, 60)")
-
-    walker = (
-        WALKERS[scenario.removeprefix("stable_")]
-        if scenario.startswith("stable_")
-        else WALKERS["average"]
-    )
-    rng = random.Random(seed)
-    artifact_rng = random.Random(rng.random())  # own stream: artifacts never shift the noise
-    origin = datetime(start.year, start.month, start.day, tzinfo=UTC)
-    schedule = hrv.sleep_schedule(scenario, days, origin, nights)
+    common.check_args(scenario, SCENARIOS, days, interval_min)
+    walker = common.profile(scenario, WALKERS)
+    rng, artifact_rng = common.rngs(seed)
+    origin = common.midnight(start)
+    schedule = sleep_schedule(days, origin, nights, scenario)
     source = f"{SOURCE_PREFIX}:{scenario}"
 
     innovation_sd = AR_SD * math.sqrt(1 - AR_PHI**2)
@@ -136,14 +124,14 @@ def generate(
     for d in range(days):
         day = start + timedelta(days=d)
         shape = _shape(scenario, d, days)
-        wake, _ = hrv.waking_window(schedule, d)
+        wake, _ = waking_window(schedule, d)
 
         day_z = rng.gauss(0, 1)
         bouts = _bouts(rng, walker, shape, wake, weekend=day.weekday() >= 5)
         budget = walker.incidental * shape.incidental * math.exp(DAY_SD * day_z - DAY_SD**2 / 2)
 
         missing_day = artifact_rng.random() < MISSING_DAY_PROB
-        gap = hrv.draw_gap(artifact_rng)
+        gap = common.draw_gap(artifact_rng)
 
         steps = [0] * 1440
         for k in range(1440):
@@ -151,7 +139,7 @@ def generate(
             move_u, step_z, cadence_z = rng.random(), rng.gauss(0, 1), rng.gauss(0, 1)
 
             hour = k / 60
-            if hrv.asleep_at(schedule, d, hour)[0] >= 0.5:
+            if asleep_at(schedule, d, hour)[0] >= 0.5:
                 continue
             if bouts[k] is not None:
                 cadence = BOUT_CADENCE + bouts[k] + BOUT_CADENCE_SD * cadence_z
@@ -198,11 +186,15 @@ def simulate(
 ) -> int:
     """Generate and write activity samples. replace=True first clears earlier activity data."""
     rows = generate(user_id, start, days, scenario, **kwargs)
-    if replace:
-        repo.delete_source_data(session, user_id, SOURCE_PREFIX)
-    for i in range(0, len(rows), chunk_size):
-        repo.insert_activity_samples(session, rows[i : i + chunk_size])
-    return len(rows)
+    return common.write(
+        session,
+        user_id,
+        SOURCE_PREFIX,
+        rows,
+        repo.insert_activity_samples,
+        replace=replace,
+        chunk_size=chunk_size,
+    )
 
 
 # --- Day structure ---------------------------------------------------------------------
@@ -258,61 +250,41 @@ def _bouts(
 def _shape(scenario: str, d: int, days: int) -> Shape:
     """Scenario change for day index d."""
     if scenario == "stress_period":
-        i = hrv.stress_intensity(d, days)
+        i = timelines.stress_intensity(d, days)
         return Shape(incidental=1 - 0.3 * i, bouts=1 - 0.2 * i, exercise=1 - 0.8 * i)
     if scenario == "withdrawal":
-        onset = round(days / 3)
-        r = _clamp((d - onset) / max(days - 1 - onset, 1), (0.0, 1.0))
+        r = timelines.decline(d, days)
         return Shape(incidental=1 - 0.55 * r, bouts=1 - 0.8 * r, exercise=1 - r)
     if scenario == "sudden_drop":
-        drop = days // 2
-        if d < drop:
-            return Shape()
-        k = math.exp(-(d - drop) / 1.5)
+        k = timelines.sudden_drop(d, days)
         return Shape(incidental=1 - 0.7 * k, bouts=1 - k, exercise=1 - k)
-    if scenario == "late_sleep_shift":
-        bed, _ = hrv.default_night(scenario, d - 1)
-        return Shape(exercise=1 - 0.1 * (bed - hrv.SLEEP_START_H))
-    if scenario == "oversleep":
-        r = _clamp((d - 1 - round(days / 3)) / 5, (0.0, 1.0))  # sleep oversleep, last night
+    if scenario == "late_sleep_shift":  # last night's shift
+        return Shape(exercise=1 - 0.1 * timelines.late_sleep_shift(d - 1))
+    if scenario == "oversleep":  # last night's oversleep
+        r = timelines.oversleep(d - 1, days)
         return Shape(incidental=1 - 0.3 * r, bouts=1 - 0.3 * r, exercise=1 - 0.7 * r)
     return Shape()
-
-
-def _clamp(value: float, bounds: tuple[float, float]) -> float:
-    return min(max(value, bounds[0]), bounds[1])
 
 
 # --- CLI -------------------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Simulate steps into activity_samples.")
-    who = parser.add_mutually_exclusive_group(required=True)
-    who.add_argument("--user", type=uuid.UUID, help="existing user id")
-    who.add_argument("--new-user", metavar="NAME", help="create a user with this display name")
-    parser.add_argument("--scenario", choices=SCENARIOS, default="stable_average")
-    parser.add_argument("--days", type=int, default=21)
-    parser.add_argument(
-        "--start",
-        type=date.fromisoformat,
-        help="first UTC day, YYYY-MM-DD (default: so the last day is today)",
+    parser = common.parser(
+        "Simulate steps into activity_samples.",
+        SCENARIOS,
+        "stable_average",
+        artifacts_help="drop gaps and some days",
+        replace_help="keep earlier activity simulator data instead of clearing it",
     )
     parser.add_argument("--interval", type=int, default=15, help="minutes per sample")
-    parser.add_argument("--artifacts", action="store_true", help="drop gaps and some days")
-    parser.add_argument("--seed", type=int)
-    parser.add_argument(
-        "--no-replace",
-        action="store_true",
-        help="keep earlier activity simulator data instead of clearing it",
-    )
     args = parser.parse_args(argv)
 
     from app.db import get_session
 
-    start = args.start or datetime.now(UTC).date() - timedelta(days=args.days - 1)
+    start, end = common.period(args)
     with get_session() as s:
-        user_id = args.user or repo.create_user(s, args.new_user)
+        user_id = common.user(s, args)
         n = simulate(
             s,
             user_id,
@@ -324,7 +296,6 @@ def main(argv: list[str] | None = None) -> None:
             interval_min=args.interval,
             seed=args.seed,
         )
-    end = start + timedelta(days=args.days - 1)
     print(f"user {user_id}: wrote {n} activity samples ({args.scenario}, {start} .. {end})")
 
 

@@ -18,9 +18,10 @@ language="mixed" writes ~60 % Finnish entries, and some entries switch language 
 artifacts adds writing noise (lowercase, no punctuation, typos, no ä/ö, one-sentence entries);
 the rows, timestamps and truth stay the same.
 
-Entries are timed within the waking day from the HRV simulator's built-in sleep window, or from
-real sleep sessions passed as `nights` (e.g. `sleep.nights(...)`). Scenario timelines match the
-other simulators (stress_period, withdrawal, sudden_drop), so the data lines up across inputs.
+Entries are timed within the waking day from the built-in `sleep_window`, or from real sleep
+sessions passed as `nights` (e.g. `sleep.nights(...)`). Scenario timelines come from `timelines`
+like the other simulators (stress_period, withdrawal, sudden_drop), so the data lines up across
+inputs.
 
 All randomness comes from one seeded RNG with a fixed number of draws per day, so two
 scenarios generated with the same seed share the same draws and differ only by their shape.
@@ -32,21 +33,22 @@ Run: python -m app.simulators.journal --new-user demo --scenario crisis --days 2
 
 from __future__ import annotations
 
-import argparse
 import math
 import random
 import re
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from types import MappingProxyType
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.db import repository as repo
-from app.simulators import hrv
+from app.simulators import common, timelines
+from app.simulators.common import clamp
+from app.simulators.sleep_window import sleep_schedule, waking_window
 
 SCENARIOS = (
     "stable_positive",
@@ -327,17 +329,13 @@ def generate(
     else is unchanged. nights: sleep sessions ({bedtime, wake_time}, e.g. from `sleep.nights`)
     that set the waking day instead of the built-in sleep window.
     """
-    if scenario not in SCENARIOS:
-        raise ValueError(f"unknown scenario {scenario!r}; choose from {SCENARIOS}")
+    common.check_args(scenario, SCENARIOS, days)
     if language not in LANGUAGE_MODES:
         raise ValueError(f"unknown language {language!r}; choose from {LANGUAGE_MODES}")
-    if days < 1:
-        raise ValueError("days must be >= 1")
 
-    rng = random.Random(seed)
-    artifact_rng = random.Random(rng.random())  # own stream: artifacts never shift the draws
-    origin = datetime(start.year, start.month, start.day, tzinfo=UTC)
-    schedule = hrv.sleep_schedule("stable_average", days, origin, nights)
+    rng, artifact_rng = common.rngs(seed)
+    origin = common.midnight(start)
+    schedule = sleep_schedule(days, origin, nights)
     source = f"{SOURCE_PREFIX}:{scenario}"
 
     rows: list[dict[str, Any]] = []
@@ -352,7 +350,7 @@ def generate(
         if not n:
             continue
 
-        wake, bed = hrv.waking_window(schedule, d)
+        wake, bed = waking_window(schedule, d)
         late = max(bed - 0.3 - 2.2 * late_u, wake + 0.5)
         hours = [late] if n == 1 else [min(wake + 2 + (bed - wake - 5) * early_u, late - 0.5), late]
 
@@ -403,9 +401,9 @@ def simulate(
 ) -> int:
     """Generate and write journal entries. replace=True first clears earlier simulator entries."""
     rows = generate(user_id, start, days, scenario, **kwargs)
-    if replace:
-        repo.delete_source_data(session, user_id, SOURCE_PREFIX)
-    return repo.insert_journal_entries(session, rows)
+    return common.write(
+        session, user_id, SOURCE_PREFIX, rows, repo.insert_journal_entries, replace=replace
+    )
 
 
 def _label(day: Day, u: float) -> str:
@@ -524,28 +522,25 @@ def _day(scenario: str, d: int, days: int) -> Day:
         return _mix(scenario.removeprefix("stable_"))
     if scenario == "stress_period":
         topics = {**EVEN_TOPICS, "stress": 4.0, "sleep": 2.0, "anxiety": 2.0, "hopeless": 0.3}
-        return _toward((0.08, 0.7), hrv.stress_intensity(d, days), topics=topics)
-    if scenario == "withdrawal":  # the activity simulator's withdrawal ramp
-        onset = round(days / 3)
-        r = _clamp((d - onset) / max(days - 1 - onset, 1))
+        return _toward((0.08, 0.7), timelines.stress_intensity(d, days), topics=topics)
+    if scenario == "withdrawal":
+        r = timelines.decline(d, days)
         topics = {**EVEN_TOPICS, "lonely": 4.0, "sad": 2.0, "stress": 0.5}
         return _toward((0.05, 0.65), r, write=WRITE_PROB * (1 - 0.6 * r), brief=r, topics=topics)
-    if scenario == "sudden_drop":  # one very bad day on the HRV / activity drop day
-        drop = days // 2
-        k = math.exp(-(d - drop) / 1.5) if d >= drop else 0.0
+    if scenario == "sudden_drop":  # one very bad day on the drop day
+        k = timelines.sudden_drop(d, days)
         topics = {**EVEN_TOPICS, "sad": 3.0, "anxiety": 3.0, "sleep": 2.0}
         return _toward((0.0, 0.95), k, write=WRITE_PROB + (1 - WRITE_PROB) * k, topics=topics)
     if scenario == "crisis":
-        onset = round(days / 3)
-        r = _clamp((d - onset) / max(days - 1 - onset, 1))
+        r = timelines.decline(d, days)
         risk_start = round(0.7 * days)
-        q = _clamp((d - risk_start + 1) / max(days - risk_start, 1)) if d >= risk_start else 0.0
+        q = clamp((d - risk_start + 1) / max(days - risk_start, 1)) if d >= risk_start else 0.0
         topics = {**EVEN_TOPICS, "hopeless": 1 + 4 * r, "lonely": 2.0, "sad": 2.0}
         return _toward(
             (0.02, 0.85),
             r,
             risk=0.6 * q,
-            suicidal=_clamp(2 * q - 1),  # self-harm first, suicidal later
+            suicidal=clamp(2 * q - 1),  # self-harm first, suicidal later
             topics=topics,
             force_risk=d == days - 1,
         )
@@ -555,40 +550,25 @@ def _day(scenario: str, d: int, days: int) -> Day:
     return _mix("neutral")
 
 
-def _clamp(value: float) -> float:
-    return min(max(value, 0.0), 1.0)
-
-
 # --- CLI -------------------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Simulate feeling journal entries.")
-    who = parser.add_mutually_exclusive_group(required=True)
-    who.add_argument("--user", type=uuid.UUID, help="existing user id")
-    who.add_argument("--new-user", metavar="NAME", help="create a user with this display name")
-    parser.add_argument("--scenario", choices=SCENARIOS, default="stable_neutral")
+    parser = common.parser(
+        "Simulate feeling journal entries.",
+        SCENARIOS,
+        "stable_neutral",
+        artifacts_help="add phone-typing noise",
+        replace_help="keep earlier journal simulator entries instead of clearing them",
+    )
     parser.add_argument("--language", choices=LANGUAGE_MODES, default="mixed")
-    parser.add_argument("--days", type=int, default=21)
-    parser.add_argument(
-        "--start",
-        type=date.fromisoformat,
-        help="first UTC day, YYYY-MM-DD (default: so the last day is today)",
-    )
-    parser.add_argument("--artifacts", action="store_true", help="add phone-typing noise")
-    parser.add_argument("--seed", type=int)
-    parser.add_argument(
-        "--no-replace",
-        action="store_true",
-        help="keep earlier journal simulator entries instead of clearing them",
-    )
     args = parser.parse_args(argv)
 
     from app.db import get_session
 
-    start = args.start or datetime.now(UTC).date() - timedelta(days=args.days - 1)
+    start, end = common.period(args)
     with get_session() as s:
-        user_id = args.user or repo.create_user(s, args.new_user)
+        user_id = common.user(s, args)
         n = simulate(
             s,
             user_id,
@@ -600,7 +580,6 @@ def main(argv: list[str] | None = None) -> None:
             artifacts=args.artifacts,
             seed=args.seed,
         )
-    end = start + timedelta(days=args.days - 1)
     print(f"user {user_id}: wrote {n} journal entries ({args.scenario}, {start} .. {end})")
 
 
