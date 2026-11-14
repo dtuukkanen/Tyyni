@@ -6,6 +6,7 @@ import { CompanionWorld } from "./components/CompanionWorld";
 import { GroundScreen } from "./components/GroundScreen";
 import { Icon, TyyniLogo } from "./components/icons";
 import { PracticeModal } from "./components/PracticeModal";
+import { PwaSanctuarySheet, usePwa } from "./components/PwaSanctuarySheet";
 import { type SoundPreset, soundEngine } from "./components/soundEngine";
 import { TodayScreen } from "./components/TodayScreen";
 import { WinsScreen } from "./components/WinsScreen";
@@ -38,13 +39,35 @@ export default function Home() {
 
   const [activeSound, setActiveSound] = useState<SoundPreset | null>(null);
   const [modal, setModal] = useState<PracticeModalState | null>(null);
+  const [pwaSheetOpen, setPwaSheetOpen] = useState(false);
   const [sensoryIndex, setSensoryIndex] = useState(0);
   const [toast, setToast] = useState("");
 
+  const pwa = usePwa();
   const toastTimerRef = useRef<number | null>(null);
   const joyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedTab = params.get("tab")?.toLowerCase();
+    if (requestedTab === "today") setTab("Today");
+    else if (requestedTab === "ground") setTab("Ground");
+    else if (requestedTab === "wins") setTab("Wins");
+    else if (requestedTab === "anchor") setTab("Anchor");
+
+    if (params.get("sos") === "1") {
+      setTab("Ground");
+      setModal({
+        mode: "breath",
+        category: "Immediate Grounding",
+        title: "1-Tap SOS Breathing",
+        description:
+          "Follow the soft circle. Double inhale gently, then let go with a long, slow sigh.",
+        icon: "sos",
+      });
+      window.history.replaceState({}, "", "/?tab=ground");
+    }
+
     fetch("/api/prototype")
       .then((r) => r.json())
       .then((data) => {
@@ -171,6 +194,17 @@ export default function Home() {
         </div>
 
         <div className="topbar-actions">
+          {pwa.isOffline && (
+            <button
+              type="button"
+              className="offline-pill-indicator"
+              onClick={() => setPwaSheetOpen(true)}
+              aria-label="Offline Sanctuary active"
+            >
+              <Icon name="wifiOff" size={13} />
+              <span>Offline</span>
+            </button>
+          )}
           {activeSound && (
             <button
               type="button"
@@ -197,13 +231,14 @@ export default function Home() {
           <button
             type="button"
             className="profile-btn"
-            aria-label={`${guestName}'s calm settings`}
-            onClick={() =>
-              notify(`Signed in gently as ${guestName} · Quiet notifications`)
-            }
+            aria-label={`${guestName}'s sanctuary & app settings`}
+            onClick={() => setPwaSheetOpen(true)}
           >
             <span className="profile-avatar">
               <Icon name="user" size={18} />
+              {pwa.canInstallPrompt && !pwa.isStandalone && (
+                <span className="install-ready-dot" aria-hidden="true" />
+              )}
             </span>
           </button>
         </div>
@@ -298,6 +333,20 @@ export default function Home() {
             setModal(null);
             notify("5–4–3–2–1 reset complete. Welcome back.");
           }}
+        />
+      )}
+
+      {/* Sanctuary App & Offline PWA Sheet */}
+      {pwaSheetOpen && (
+        <PwaSanctuarySheet
+          guestName={guestName}
+          lowEnergy={lowEnergy}
+          onToggleLowEnergy={() => setLowEnergy((v) => !v)}
+          pwa={pwa}
+          onClose={() => setPwaSheetOpen(false)}
+          onInstalled={() =>
+            notify("Tyyni added to your Home Screen sanctuary.")
+          }
         />
       )}
 

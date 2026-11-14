@@ -49,4 +49,4 @@ docker compose run --rm --no-deps -e DATABASE_URL="$URL" migrate      # or: ... 
 neon branches delete migration-test --project-id young-waterfall-75387175
 ```
 
-Then repeat with `--branch production` for the real database.
+Then repeat with `--branch production` for the real database. Application traffic (the API) uses the pooled string instead (`neon connection-string --pooled`).

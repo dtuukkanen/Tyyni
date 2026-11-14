@@ -1,8 +1,9 @@
 """SQLAlchemy models.
 
 Storage choices (see README "Database"):
-- heart_samples / activity_samples: TimescaleDB hypertables (high-frequency time series),
-  rolled up per day on read by `repository.daily_metrics`.
+- heart_samples / activity_samples / screen_samples: high-frequency time series, TimescaleDB
+  hypertables where the server has TimescaleDB (plain tables otherwise), rolled up per day
+  on read by `repository.daily_metrics`.
 - sleep_sessions: one row per night (an interval, not a stream), stages in JSONB.
 - journal_entries: free-text feeling journal; expected_label / expected_risk are the
   simulator's ground truth (null for real entries).

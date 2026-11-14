@@ -10,6 +10,7 @@ Create Date: 2026-11-14
 """
 
 from alembic import op
+from sqlalchemy import text
 
 revision = "0005"
 down_revision = "0004"
@@ -27,8 +28,14 @@ def upgrade() -> None:
             source          text NOT NULL DEFAULT 'device',
             PRIMARY KEY (user_id, ts)
         );
-        SELECT create_hypertable('screen_samples', by_range('ts', INTERVAL '7 days'));
-
+        """
+    )
+    # Plain table where 0001 found no TimescaleDB.
+    timescale = text("SELECT 1 FROM pg_extension WHERE extname = 'timescaledb'")
+    if op.get_bind().execute(timescale).first():
+        op.execute("SELECT create_hypertable('screen_samples', by_range('ts', INTERVAL '7 days'))")
+    op.execute(
+        """
         INSERT INTO screen_samples (user_id, ts, screen_time_min, source)
         SELECT user_id, ts, screen_time_min, source FROM activity_samples
         WHERE screen_time_min > 0;

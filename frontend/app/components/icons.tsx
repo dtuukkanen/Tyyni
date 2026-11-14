@@ -42,6 +42,8 @@ export type IconName =
   | "snowflake"
   | "calendar"
   | "arrowDown"
+  | "download"
+  | "wifiOff"
   | "close";
 
 type IconProps = SVGProps<SVGSVGElement> & {
@@ -406,6 +408,22 @@ export function Icon({ name, size = 20, className, ...props }: IconProps) {
       return (
         <svg {...common}>
           <path d="M12 5v14M6.5 13.5L12 19l5.5-5.5" />
+        </svg>
+      );
+    case "download":
+      return (
+        <svg {...common}>
+          <path d="M12 4.5v10.5M8 11.2L12 15.2l4-4" />
+          <path d="M5 18.5h14" />
+        </svg>
+      );
+    case "wifiOff":
+      return (
+        <svg {...common}>
+          <path d="M3.5 3.5l17 17" />
+          <path d="M8.5 15.5a5 5 0 0 1 6.5-.5" />
+          <path d="M5.2 12.2a9.5 9.5 0 0 1 3.3-2M12.8 9.5a9.5 9.5 0 0 1 6 2.7" />
+          <path d="M12 19h.01" />
         </svg>
       );
     case "close":
