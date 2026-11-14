@@ -82,13 +82,19 @@ Days are UTC calendar days; a sleep session counts toward the day the user woke 
 
 ## API
 
-[`backend/app/api`](backend/app/api) is a FastAPI app over the repository, for the frontend. It has no auth yet: the user is the `user_id` in the path.
+[`backend/app/api`](backend/app/api) is a FastAPI app over the repository, for the frontend. It has no user auth: the user is the `user_id` in the path. When the server sets `API_KEY`, every route requires it in the `X-API-Key` header (the docs at `/docs` and `/openapi.json` stay open); locally it is unset and the API is open.
 
 ```bash
 docker compose up -d api
 ```
 
 Interactive docs are at <http://localhost:8000/docs>. A frontend can generate a typed client from <http://localhost:8000/openapi.json>. The service applies migrations first and reloads when files under `backend/app` change. Allowed CORS origins come from `CORS_ORIGINS` (default: `http://localhost:5173,http://localhost:3000`).
+
+### Deployment
+
+The API runs on Vercel as the project `tyyni-api` (Hobby plan, no paid overage) at <https://tyyni-api.vercel.app>, in region `fra1` next to the Neon database. The project's root directory is `backend`: `index.py` exposes the app for Vercel's FastAPI preset, `.python-version` pins Python 3.12, and `vercel.json` sets the region and keeps tests and migrations out of the bundle. Pushes to `main` deploy to production; other branches get preview deployments, which use the same database.
+
+Its environment variables are `DATABASE_URL` (Neon's pooled connection string with the `postgresql+psycopg://` scheme) and `API_KEY`. The frontend project holds the same key as `PYTHON_SERVICE_API_KEY` and the URL as `PYTHON_SERVICE_URL`, and calls the API only from its server, so the key never reaches the browser. Migrations are not run on deploy; run them against Neon by hand (see [Neon](#neon)).
 
 | Endpoint | What it returns |
 |---|---|
