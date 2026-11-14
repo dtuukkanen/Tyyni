@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -95,3 +96,28 @@ class Mood(_FromOrm):
     ts: datetime
     score: int
     note: str | None
+
+
+Language = Literal["fi", "en"]
+Label = Literal["positive", "neutral", "harmful"]
+Risk = Literal["none", "self_harm", "suicidal"]
+
+
+class JournalEntryCreate(BaseModel):
+    text: str = Field(min_length=1, max_length=5000)
+    language: Language | None = Field(None, description="Leave out if unknown")
+    ts: datetime | None = Field(None, description="Defaults to now; naive times are UTC")
+
+
+class JournalEntry(_FromOrm):
+    id: int
+    ts: datetime
+    text: str
+    language: Language | None
+    source: str
+    expected_label: Label | None = Field(
+        description="Ground truth for simulated entries; null for real ones"
+    )
+    expected_risk: Risk | None = Field(
+        description="Ground truth for simulated entries; null for real ones"
+    )

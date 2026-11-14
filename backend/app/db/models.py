@@ -4,6 +4,8 @@ Storage choices (see README "Database"):
 - heart_samples / activity_samples: TimescaleDB hypertables (high-frequency time series),
   rolled up per day on read by `repository.daily_metrics`.
 - sleep_sessions: one row per night (an interval, not a stream), stages in JSONB.
+- journal_entries: free-text feeling journal; expected_label / expected_risk are the
+  simulator's ground truth (null for real entries).
 - Everything else (mood, anomalies, suggestions, consent, alerts): plain relational tables.
 
 The schema itself is owned by Alembic (alembic/versions); keep these models in sync.
@@ -32,6 +34,9 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 SEVERITIES = ("normal", "attention", "critical")
 CONTACT_KINDS = ("friend", "clinician")
+LANGUAGES = ("fi", "en")
+LABELS = ("positive", "neutral", "harmful")  # journal entry tone
+RISKS = ("none", "self_harm", "suicidal")  # crisis content in a journal entry
 
 
 class Base(DeclarativeBase):
@@ -117,6 +122,26 @@ class MoodCheckin(Base):
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     score: Mapped[int] = mapped_column(SmallInteger)
     note: Mapped[str | None] = mapped_column(Text)
+
+
+class JournalEntry(Base):
+    __tablename__ = "journal_entries"
+    __table_args__ = (
+        CheckConstraint(f"language IN {LANGUAGES}", name="journal_language"),
+        CheckConstraint(f"expected_label IN {LABELS}", name="journal_expected_label"),
+        CheckConstraint(f"expected_risk IN {RISKS}", name="journal_expected_risk"),
+        Index("ix_journal_entries_user_ts", "user_id", "ts"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[uuid.UUID] = _user_fk(index=False)
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    text: Mapped[str] = mapped_column(Text)
+    language: Mapped[str | None] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text, server_default="app")
+    # Ground truth, set only by the journal simulator
+    expected_label: Mapped[str | None] = mapped_column(Text)
+    expected_risk: Mapped[str | None] = mapped_column(Text)
 
 
 # --- Inference output, suggestions, escalation ---------------------------------------

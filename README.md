@@ -10,6 +10,7 @@ One containerized **PostgreSQL 16 + TimescaleDB** instance holds all data. Time 
 | Steps, active minutes, screen time | per-minute/hour counts | hypertable `activity_samples` |
 | Sleep | one session per night | `sleep_sessions` (duration generated, stages in JSONB) |
 | Mood check-in (1 tap) | one value per day | `mood_checkins` (score 1–5) |
+| Feeling journal | free-text entries, Finnish or English | `journal_entries` (simulated entries carry ground-truth `expected_label` / `expected_risk`) |
 | Inference + escalation | relational | `anomalies`, `suggestions`, `suggestion_feedback`, `contacts`, `consents`, `alerts` |
 
 Daily values (`repository.daily_metrics`) are aggregated from the hypertables on read, so freshly simulated, backfilled or deleted data is reflected right away, even inside the transaction that wrote it. (Timescale continuous aggregates were tried and dropped: real-time aggregation only covers rows newer than the last refresh, so backfilled history stayed stale.) Samples carry a `source` column (e.g. `simulator:stress_week`) so simulated data can be told apart and cleared.
@@ -76,6 +77,7 @@ Interactive docs are at <http://localhost:8000/docs>. A frontend can generate a 
 | `GET /users/{id}/activity?start=&end=` | Raw activity samples, same range rules as `heart` |
 | `GET /users/{id}/sleep?start=&end=` | Sleep sessions by wake day, with `stages` and `efficiency` |
 | `GET /users/{id}/mood?start=&end=`, `POST /users/{id}/mood` | Check-ins; post `{"score": 1–5, "note"?, "ts"?}` |
+| `GET /users/{id}/journal?start=&end=`, `POST /users/{id}/journal` | Journal entries by UTC day; post `{"text": "...", "language"?: "fi"\|"en", "ts"?}` |
 
 `start` / `end` are dates (`2026-11-14`) for day endpoints and datetimes (`2026-11-14T08:00:00Z`) for `heart` / `activity`; times without a zone are UTC. Days are UTC calendar days, as in the repository.
 
@@ -156,6 +158,34 @@ docker compose run --rm migrate python -m app.simulators.activity --new-user dem
 ```
 
 From Python: `activity.generate(...)` returns rows, `activity.simulate(session, user_id, start, days, scenario, ...)` writes them; pass `nights=sleep.nights(...)` to line the waking hours up with simulated sleep.
+
+### Journal
+
+[`backend/app/simulators/journal.py`](backend/app/simulators/journal.py) writes free-text feeling journal entries into `journal_entries`, tagged `simulator:journal:<scenario>`, so a classifier (Jev / Nemotron) can be built and evaluated before real users write anything. Each entry carries its ground truth:
+
+- `expected_label`: `positive`, `neutral` or `harmful` (any distressing feeling: stress, anxiety, sadness, loneliness, bad sleep, hopelessness)
+- `expected_risk`: `none`, `self_harm` or `suicidal` (crisis content, only on harmful entries)
+
+On about 70 % of days the user writes 0–2 entries (the last one in the evening before bed). Texts are composed from Finnish and English phrase banks with natural inflections ("hyvä päivä", "kävin kävelyllä", "went for a walk", "viiltelin taas", "ajattelin itsemurhaa", "I keep thinking about suicide"); crisis sentences are first-person and non-graphic. About 8 % of positive / neutral entries are distractors that a keyword match gets wrong, labelled risk `none`: negation ("en ole enää ajatellut itsemurhaa"), third person or news ("documentary about suicide prevention") and hyperbole ("tämä tentti tappaa minut").
+
+| Scenario | What it produces |
+|---|---|
+| `stable_positive` / `stable_neutral` / `stable_low` | Steady mix: about 60 / 30 / 12 % positive and 5 / 15 / 50 % harmful entries, no crisis content |
+| `stress_period` | Same timeline as the HRV scenario: harmful entries (deadlines, bad sleep, anxiety) rise to ~70 %, then recover |
+| `withdrawal` | Same ramp as the activity scenario: fewer and shorter entries, more loneliness and staying home |
+| `sudden_drop` | One very bad day on the HRV / activity `sudden_drop` day, recovering over ~3 days |
+| `crisis` | From the first third, harmful entries take over; the last 30 % of days add crisis entries, self-harm first and suicidal later, and the last day always has one |
+| `isolated_risk` | A steady neutral writer with a single crisis entry in the middle of the period |
+
+- `--language fi|en|mixed` (default `mixed`: about 60 % Finnish, and about 10 % of entries switch language for one sentence).
+- `--artifacts` adds phone-typing noise: lowercase, no punctuation, a typo, ä/ö typed as a/o, one-sentence entries. Rows, times and ground truth are unchanged.
+- `--seed` and `--no-replace` work as for HRV; replacing keeps entries written in the app (`source = 'app'`).
+
+```bash
+docker compose run --rm migrate python -m app.simulators.journal --new-user demo --scenario crisis --days 21 --seed 1
+```
+
+From Python: `journal.generate(...)` returns rows, `journal.simulate(session, user_id, start, days, scenario, ...)` writes them; pass `nights=sleep.nights(...)` to time the entries within the simulated waking day.
 
 ## Linting & formatting
 
