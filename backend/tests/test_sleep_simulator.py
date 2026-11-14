@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 from app.db import get_session
 from app.db import repository as repo
-from app.simulators import hrv, sleep
+from app.simulators import hrv, sleep, sleep_window, timelines
 
 UID = uuid.UUID(int=0)
 START = date(2026, 10, 1)  # a Thursday
@@ -93,11 +93,11 @@ def test_stable_levels_are_ordered_and_plausible(seed):
     assert spread["poor"] > spread["good"]
 
 
-def test_average_sleeper_matches_hrv_window():
+def test_average_sleeper_matches_default_window():
     bed = statistics.fmean(map(bedtime_hour, gen()))
     wake = statistics.fmean(map(wake_hour, gen()))
-    assert bed == pytest.approx(hrv.SLEEP_START_H, abs=0.3)
-    assert wake == pytest.approx(hrv.SLEEP_END_H, abs=0.3)
+    assert bed == pytest.approx(sleep_window.SLEEP_START_H, abs=0.3)
+    assert wake == pytest.approx(sleep_window.SLEEP_END_H, abs=0.3)
 
 
 def test_weekend_shift_sleeps_in_on_weekends():
@@ -112,13 +112,13 @@ def test_weekend_shift_sleeps_in_on_weekends():
             assert r == {**b, "source": r["source"]}  # weekdays are untouched
 
 
-def test_late_sleep_shift_follows_hrv_schedule():
+def test_late_sleep_shift_follows_default_window():
     rows, base = gen("late_sleep_shift"), gen()
     for d, (r, b) in enumerate(zip(rows, base, strict=True)):
         night = d - 1
-        bed, wake = hrv.default_night("late_sleep_shift", night)
-        assert bedtime_hour(r) - bedtime_hour(b) == pytest.approx(bed - hrv.SLEEP_START_H)
-        assert wake_hour(r) - wake_hour(b) == pytest.approx(wake - 24 - hrv.SLEEP_END_H)
+        bed, wake = sleep_window.default_night(timelines.late_sleep_shift(night))
+        assert bedtime_hour(r) - bedtime_hour(b) == pytest.approx(bed - sleep_window.SLEEP_START_H)
+        assert wake_hour(r) - wake_hour(b) == pytest.approx(wake - 24 - sleep_window.SLEEP_END_H)
     assert bedtime_hour(rows[-1]) - bedtime_hour(base[-1]) == pytest.approx(3.0)
     assert hours_in_bed(rows[-1]) < hours_in_bed(base[-1]) - 0.5  # later and shorter
 

@@ -13,7 +13,7 @@ from sqlalchemy import text
 from app.db import get_session
 from app.db import repository as repo
 from app.db.models import LABELS, LANGUAGES, RISKS
-from app.simulators import hrv, journal, sleep
+from app.simulators import journal, sleep, timelines
 
 UID = uuid.UUID(int=0)
 START = date(2026, 10, 1)
@@ -139,7 +139,7 @@ def test_scenarios_share_draws_before_they_diverge():
 def test_stress_period_more_harmful_then_recovers():
     onset = round(DAYS / 3)
     end = onset + max(3, DAYS // 3)
-    assert hrv.stress_intensity(onset + 3, DAYS) == 1.0
+    assert timelines.stress_intensity(onset + 3, DAYS) == 1.0
     stress, base = over_seeds("stress_period"), over_seeds("stable_neutral")
     during = range(onset + 2, end)
     assert share(stress, "harmful", during) > share(base, "harmful", during) + 0.3

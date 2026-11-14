@@ -12,7 +12,7 @@ Signal, in log space so values stay positive and roughly log-normal:
 - day factor: multi-day shape (rising, lowering, alternating, stress period, sudden drop).
 - intraday factor: shape within each day's waking hours (rising, lowering, alternating).
 - night gain: RMSSD is ~30 % higher while asleep (23:00-07:00 UTC by default, or the real
-  nights from the sleep simulator when `nights` is passed).
+  nights from the sleep simulator when `nights` is passed; see `sleep_window`).
 - noise: a per-day offset plus AR(1) noise between samples.
 HR follows HRV inversely (hr ~ rmssd^-0.35) plus a small waking bump.
 
@@ -23,19 +23,19 @@ Run: python -m app.simulators.hrv --new-user demo --scenario stress_period --day
 
 from __future__ import annotations
 
-import argparse
-import itertools
 import math
-import random
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.db import repository as repo
+from app.simulators import common, timelines
+from app.simulators.common import clamp, lerp
+from app.simulators.sleep_window import Schedule, asleep_at, sleep_schedule, waking_window
 
 SCENARIOS = (
     "stable_high",
@@ -68,11 +68,7 @@ LEVELS = {
 RMSSD_RANGE = (8.0, 200.0)
 HR_RANGE = (40.0, 180.0)
 
-SLEEP_START_H = 23.0  # bedtime, hours after midnight UTC
-SLEEP_END_H = 7.0  # wake time, next morning
-SLEEP_EDGE_H = 0.4  # width of the sigmoid falling-asleep / waking transition
-NIGHT_GAIN = math.log(1.30)  # RMSSD +30 % while asleep
-REFERENCE_EFFICIENCY = 0.88  # sleep efficiency that gives the full night gain
+NIGHT_GAIN = math.log(1.30)  # RMSSD +30 % while asleep, scaled by the night's recovery
 WAKING_HR_BUMP = 4.0  # bpm added while awake
 HR_EXPONENT = 0.35  # hr ~ rmssd ** -HR_EXPONENT
 
@@ -81,7 +77,6 @@ AR_SD = 0.12  # within-day noise (stationary SD), log space
 AR_PHI_5MIN = 0.8  # AR(1) autocorrelation per 5 minutes
 HR_NOISE_SD = 1.5  # bpm
 
-GAP_DAY_PROB = 0.5  # chance a day has a 1-3 h gap (watch off)
 OUTLIER_PROB = 0.01  # chance a sample is a spike artifact
 
 
@@ -106,36 +101,26 @@ def generate(
     use instead of the built-in sleep window. Poorer nights restore less HRV; time not
     covered by any night counts as awake.
     """
-    if scenario not in SCENARIOS:
-        raise ValueError(f"unknown scenario {scenario!r}; choose from {SCENARIOS}")
+    common.check_args(scenario, SCENARIOS, days, interval_min)
     if timescale not in TIMESCALES:
         raise ValueError(f"unknown timescale {timescale!r}; choose from {TIMESCALES}")
-    if days < 1:
-        raise ValueError("days must be >= 1")
-    if interval_min < 1 or 1440 % interval_min:
-        raise ValueError("interval_min must divide a day (e.g. 1, 5, 10, 15, 30, 60)")
 
-    level = (
-        LEVELS[scenario.removeprefix("stable_")]
-        if scenario.startswith("stable_")
-        else LEVELS["average"]
-    )
-    rng = random.Random(seed)
-    artifact_rng = random.Random(rng.random())  # own stream: artifacts never shift the signal noise
+    level = common.profile(scenario, LEVELS)
+    rng, artifact_rng = common.rngs(seed)
 
     phi = AR_PHI_5MIN ** (interval_min / 5)
     innovation_sd = AR_SD * math.sqrt(1 - phi**2)
     ar = rng.gauss(0, AR_SD)
     per_day = 1440 // interval_min
-    origin = datetime(start.year, start.month, start.day, tzinfo=UTC)
+    origin = common.midnight(start)
     source = f"{SOURCE_PREFIX}:{scenario}"
-    schedule = sleep_schedule(scenario, days, origin, nights)
+    schedule = sleep_schedule(days, origin, nights, scenario)
 
     rows: list[dict[str, Any]] = []
     for d in range(days):
         day_log = _day_log_factor(scenario, timescale, d, days)
         day_offset = rng.gauss(0, DAY_OFFSET_SD)
-        gap = draw_gap(artifact_rng) if artifacts else None
+        gap = common.draw_gap(artifact_rng) if artifacts else None
         for k in range(per_day):
             ar = phi * ar + rng.gauss(0, innovation_sd)
             hr_noise = rng.gauss(0, HR_NOISE_SD)
@@ -146,11 +131,11 @@ def generate(
             if gap and gap[0] <= hour < gap[1]:
                 continue
 
-            asleep, night_gain = asleep_at(schedule, d, hour)
+            asleep, recovery = asleep_at(schedule, d, hour)
             dev = (
                 day_log
                 + _intraday_log_factor(scenario, timescale, schedule, d, hour, asleep)
-                + night_gain * asleep
+                + NIGHT_GAIN * recovery * asleep
                 + day_offset
                 + ar
             )
@@ -166,8 +151,8 @@ def generate(
                 {
                     "user_id": user_id,
                     "ts": origin + timedelta(days=d, minutes=k * interval_min),
-                    "hr_bpm": round(_clamp(hr, HR_RANGE), 1),
-                    "hrv_rmssd_ms": round(_clamp(rmssd, RMSSD_RANGE), 1),
+                    "hr_bpm": round(clamp(hr, HR_RANGE), 1),
+                    "hrv_rmssd_ms": round(clamp(rmssd, RMSSD_RANGE), 1),
                     "source": source,
                 }
             )
@@ -187,11 +172,15 @@ def simulate(
 ) -> int:
     """Generate and write heart samples. replace=True first clears earlier HRV simulator data."""
     rows = generate(user_id, start, days, scenario, **kwargs)
-    if replace:
-        repo.delete_source_data(session, user_id, SOURCE_PREFIX)
-    for i in range(0, len(rows), chunk_size):
-        repo.insert_heart_samples(session, rows[i : i + chunk_size])
-    return len(rows)
+    return common.write(
+        session,
+        user_id,
+        SOURCE_PREFIX,
+        rows,
+        repo.insert_heart_samples,
+        replace=replace,
+        chunk_size=chunk_size,
+    )
 
 
 # --- Shapes ----------------------------------------------------------------------------
@@ -202,18 +191,17 @@ def _day_log_factor(scenario: str, timescale: str, d: int, days: int) -> float:
     q = d / (days - 1) if days > 1 else 0.0
     if timescale == "days":
         if scenario == "rising":
-            return _lerp(math.log(0.75), math.log(1.25), q)
+            return lerp(math.log(0.75), math.log(1.25), q)
         if scenario == "lowering":
-            return _lerp(math.log(1.25), math.log(0.75), q)
+            return lerp(math.log(1.25), math.log(0.75), q)
         if scenario == "alternating":
             return math.log(1.25) if d % 2 == 0 else math.log(0.8)
     if scenario == "stress_period":
-        return math.log(0.6) * stress_intensity(d, days)
+        return math.log(0.6) * timelines.stress_intensity(d, days)
     if scenario == "sudden_drop":
-        drop = days // 2
-        return 0.0 if d < drop else math.log(1 - 0.5 * math.exp(-(d - drop) / 2))
-    if scenario == "late_sleep_shift":
-        return math.log(1 - 0.02 * _sleep_shift(scenario, d))  # later nights cost a little HRV
+        return math.log(1 - 0.5 * timelines.sudden_drop(d, days, recovery_days=2))
+    if scenario == "late_sleep_shift":  # later nights cost a little HRV
+        return math.log(1 - 0.02 * timelines.late_sleep_shift(d))
     return 0.0
 
 
@@ -224,7 +212,7 @@ def _intraday_log_factor(
     if timescale != "intraday" or scenario not in PATTERNS:
         return 0.0
     wake, bed = waking_window(schedule, d)
-    p = min(max((hour - wake) / max(bed - wake, 1.0), 0.0), 1.0)
+    p = clamp((hour - wake) / max(bed - wake, 1.0))
     if scenario == "rising":
         shape = math.log(1.25) * (2 * p - 1)
     elif scenario == "lowering":
@@ -234,161 +222,31 @@ def _intraday_log_factor(
     return (1 - asleep) * shape
 
 
-def stress_intensity(d: int, days: int) -> float:
-    """stress_period timeline, 0..1: normal first third, 2-day onset, hold, 3-day recovery."""
-    onset = round(days / 3)
-    end = onset + max(3, days // 3)
-    return _interp(d, [(onset, 0.0), (onset + 2, 1.0), (end, 1.0), (end + 3, 0.0)])
-
-
-def _sleep_shift(scenario: str, night: int) -> float:
-    """Hours the night starting on day `night` is shifted later (late_sleep_shift only)."""
-    if scenario != "late_sleep_shift":
-        return 0.0
-    return min(max(0.5 * night, 0.0), 3.0)
-
-
-def default_night(scenario: str, night: int) -> tuple[float, float]:
-    """(bedtime, wake) of the night starting on day `night`, hours after that day's midnight."""
-    shift = _sleep_shift(scenario, night)
-    return SLEEP_START_H + shift, 24 + SLEEP_END_H + 0.8 * shift  # later nights are also shorter
-
-
-@dataclass(frozen=True)
-class Night:
-    bed: float  # hours after the origin (midnight of the first day)
-    wake: float
-    gain: float  # log RMSSD gain while asleep
-
-
-Schedule = dict[int, list[Night]]  # keyed by the day the night starts on
-
-
-def sleep_schedule(
-    scenario: str,
-    days: int,
-    origin: datetime,
-    nights: Sequence[Mapping[str, Any]] | None = None,
-) -> Schedule:
-    """Nights around `days` days from `origin`: the given sleep sessions, or the built-in
-    window (23:00-07:00 UTC, shifted for late_sleep_shift) when `nights` is None."""
-    return _default_schedule(scenario, days) if nights is None else _schedule_from(nights, origin)
-
-
-def _default_schedule(scenario: str, days: int) -> Schedule:
-    schedule: Schedule = {}
-    for n in range(-1, days):
-        bed, wake = default_night(scenario, n)
-        gain = NIGHT_GAIN * (1 - 0.05 * _sleep_shift(scenario, n))  # later nights restore less
-        schedule[n] = [Night(24 * n + bed, 24 * n + wake, gain)]
-    return schedule
-
-
-def _schedule_from(nights: Sequence[Mapping[str, Any]], origin: datetime) -> Schedule:
-    schedule: Schedule = {}
-    for row in sorted(nights, key=lambda r: r["bedtime"]):
-        bed = (row["bedtime"] - origin).total_seconds() / 3600
-        wake = (row["wake_time"] - origin).total_seconds() / 3600
-        efficiency = row.get("efficiency") or REFERENCE_EFFICIENCY
-        gain = NIGHT_GAIN * _clamp(efficiency / REFERENCE_EFFICIENCY, (0.6, 1.1))
-        n = math.floor(wake / 24) - 1  # the night that ends on day k starts on day k - 1
-        schedule.setdefault(n, []).append(Night(bed, wake, gain))
-    return schedule
-
-
-def waking_window(schedule: Schedule, d: int) -> tuple[float, float]:
-    """(this morning's wake, tonight's bedtime), hours after day d's midnight."""
-    last, tonight = schedule.get(d - 1), schedule.get(d)
-    wake = last[-1].wake - 24 * d if last else SLEEP_END_H
-    bed = tonight[0].bed - 24 * d if tonight else SLEEP_START_H
-    return wake, bed
-
-
-def asleep_at(schedule: Schedule, d: int, hour: float) -> tuple[float, float]:
-    """(asleep weight 0..1, night gain) at `hour` on day d, from last night and tonight."""
-    t = 24 * d + hour
-    best = (0.0, NIGHT_GAIN)
-    for n in (d - 1, d):
-        for night in schedule.get(n, ()):
-            weight = _sigmoid((t - night.bed) / SLEEP_EDGE_H) * _sigmoid(
-                (night.wake - t) / SLEEP_EDGE_H
-            )
-            if weight > best[0]:
-                best = (weight, night.gain)
-    return best
-
-
-def draw_gap(rng: random.Random) -> tuple[float, float] | None:
-    if rng.random() >= GAP_DAY_PROB:
-        return None
-    length = rng.uniform(1.0, 3.0)
-    begin = rng.uniform(0.0, 24.0 - length)
-    return begin, begin + length
-
-
-# --- Helpers ---------------------------------------------------------------------------
-
-
-def _sigmoid(x: float) -> float:
-    if x < -40:
-        return 0.0
-    return 1 / (1 + math.exp(-x))
-
-
-def _lerp(a: float, b: float, t: float) -> float:
-    return a + (b - a) * t
-
-
-def _interp(x: float, knots: list[tuple[float, float]]) -> float:
-    """Piecewise-linear through knots; flat before the first and after the last."""
-    if x <= knots[0][0]:
-        return knots[0][1]
-    for (x0, y0), (x1, y1) in itertools.pairwise(knots):
-        if x <= x1:
-            return y1 if x1 == x0 else _lerp(y0, y1, (x - x0) / (x1 - x0))
-    return knots[-1][1]
-
-
-def _clamp(value: float, bounds: tuple[float, float]) -> float:
-    return min(max(value, bounds[0]), bounds[1])
-
-
 # --- CLI -------------------------------------------------------------------------------
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Simulate HRV + heart rate into heart_samples.")
-    who = parser.add_mutually_exclusive_group(required=True)
-    who.add_argument("--user", type=uuid.UUID, help="existing user id")
-    who.add_argument("--new-user", metavar="NAME", help="create a user with this display name")
-    parser.add_argument("--scenario", choices=SCENARIOS, default="stable_average")
+    parser = common.parser(
+        "Simulate HRV + heart rate into heart_samples.",
+        SCENARIOS,
+        "stable_average",
+        artifacts_help="add sensor gaps and spikes",
+        replace_help="keep earlier HRV simulator data instead of clearing it",
+    )
     parser.add_argument(
         "--timescale",
         choices=TIMESCALES,
         default="days",
         help="for alternating/rising/lowering: across days or within each day",
     )
-    parser.add_argument("--days", type=int, default=21)
-    parser.add_argument(
-        "--start",
-        type=date.fromisoformat,
-        help="first UTC day, YYYY-MM-DD (default: so the last day is today)",
-    )
     parser.add_argument("--interval", type=int, default=5, help="minutes between samples")
-    parser.add_argument("--artifacts", action="store_true", help="add sensor gaps and spikes")
-    parser.add_argument("--seed", type=int)
-    parser.add_argument(
-        "--no-replace",
-        action="store_true",
-        help="keep earlier HRV simulator data instead of clearing it",
-    )
     args = parser.parse_args(argv)
 
     from app.db import get_session
 
-    start = args.start or datetime.now(UTC).date() - timedelta(days=args.days - 1)
+    start, end = common.period(args)
     with get_session() as s:
-        user_id = args.user or repo.create_user(s, args.new_user)
+        user_id = common.user(s, args)
         n = simulate(
             s,
             user_id,
@@ -401,7 +259,6 @@ def main(argv: list[str] | None = None) -> None:
             interval_min=args.interval,
             seed=args.seed,
         )
-    end = start + timedelta(days=args.days - 1)
     print(f"user {user_id}: wrote {n} samples ({args.scenario}, {start} .. {end})")
 
 
