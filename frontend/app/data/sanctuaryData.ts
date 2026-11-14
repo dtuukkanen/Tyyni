@@ -1,7 +1,7 @@
 import type { IconName } from "../components/icons";
 import type { BackendAnomaly, BackendSuggestion } from "./behavioralNudges";
 
-export type Tab = "Today" | "Ground" | "Wins" | "Anchor";
+export type Tab = "Today" | "Ground" | "Wins" | "Journal" | "Anchor";
 
 export type DashboardData = {
   userId?: string;
@@ -56,6 +56,7 @@ export const TABS: { name: Tab; icon: IconName }[] = [
   { name: "Today", icon: "sun" },
   { name: "Ground", icon: "spa" },
   { name: "Wins", icon: "heart" },
+  { name: "Journal", icon: "pen" },
   { name: "Anchor", icon: "anchor" },
 ];
 

@@ -45,7 +45,8 @@ export type IconName =
   | "download"
   | "wifiOff"
   | "close"
-  | "info";
+  | "info"
+  | "pen";
 
 type IconProps = SVGProps<SVGSVGElement> & {
   name: IconName;
@@ -431,6 +432,13 @@ export function Icon({ name, size = 20, className, ...props }: IconProps) {
       return (
         <svg {...common}>
           <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+        </svg>
+      );
+    case "pen":
+      return (
+        <svg {...common}>
+          <path d="M15.2 5.2l3.6 3.6M4.5 19.5l1-4.2L16.3 4.5a1.8 1.8 0 0 1 2.5 0l.7.7a1.8 1.8 0 0 1 0 2.5L8.7 18.5l-4.2 1Z" />
+          <path d="M13 19.5h6.5" />
         </svg>
       );
     case "info":

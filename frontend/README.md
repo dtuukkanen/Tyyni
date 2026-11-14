@@ -2,11 +2,12 @@
 
 Mobile-first Next.js calming wellness companion built on the **Somatic Serenity** design system fetched from Google Stitch (`designs/stitch/`).
 
-Includes four interactive sections switchable from the bottom navigation:
+Includes five interactive sections switchable from the bottom navigation:
 
 - **Today**: 2D cute **Companion World** sanctuary featuring layered environment hills & trees, slowly scrolling storybook clouds, and an animated potted flower companion (_Bloomie_), paired with frosted glass greeting & arrival check-in, an optional adaptive behavioral nudge space (transforming `"Good morning"` into suggestive prompts such as taking a walk, guided meditation, or messaging a friend with a 1-tap quick-action CTA when backend behavioral changes arrive), Low-Energy Mode (a calmer, less colourful world, basic-needs steps, and one-tap supports: a slow-exhale breath, soft brown noise, and telling your circle you're resting), Bloomie speaking in first person and growing a leaf per tended step, a feelings info popover on the arrival check-in, dynamic scroll blur/tint, guilt-free micro-steps, and Gentle Circle check-ins that show each friend's feeling and a note, with per-person warmth.
 - **Ground**: Guided Box Breathing & Somatic Rhythm Pacer, synthesized Web Audio Sound Sanctuary, Nearby Nature sanctuary view, Body Scan, Mat Stretch, Slow Walk, and 1-Tap SOS Breathing.
 - **Wins**: Today’s Sanctuary Jar, one-tap micro-victory suggestions, custom quiet win logging, and Recent Gentle Moments.
+- **Journal**: One quiet page to write on: a single text box and a Save button, with no prompts, tags or history to re-read. The unsent draft stays on the device, so leaving the tab loses nothing; the backend `journal` suggestion opens this tab.
 - **Anchor**: Interactive 5–4–3–2–1 Sensory Reset walkthrough, personal somatic anchors, rhythmic grounding phrase counter with spoken audio, 24–30Hz vibroacoustic brown noise, and Emergency Tether support.
 - **PWA & Offline Ready**: Web App Manifest (`app/manifest.ts`) with custom Bloomie icons (`192x192`, `512x512`, `maskable`, and `180x180` Apple touch icon), home-screen shortcuts (`SOS Calm`, `Ground`, `Anchor`), safe-area standalone framing, and a Service Worker (`public/sw.js`) that caches the Sanctuary app shell and static assets for offline grounding.
 
@@ -18,7 +19,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The app works with sample content when the Python service is not configured (and lets you preview Today behavioral nudges via `?nudge=walk|meditate|friend|sleep` or the Sanctuary Sheet). To connect the FastAPI backend, set `PYTHON_SERVICE_URL` (and optionally `PYTHON_SERVICE_API_KEY` and `PYTHON_SERVICE_USER_ID`). The Next.js server proxies through `/api/prototype`: `GET /api/prototype` resolves the active user (`?userId=...`, `PYTHON_SERVICE_USER_ID`, or the first user from `GET /users`), queries `GET /users/{user_id}/today` (triggering `POST /users/{user_id}/suggestions` when behavioral suggestions are empty), and falls back to `GET /dashboard` or sample content if unavailable; `POST /api/prototype` forwards suggestion feedback (`done`, `helped`) to `POST /users/{user_id}/suggestions/{suggestion_id}/feedback`.
+The app works with sample content when the Python service is not configured (and lets you preview Today behavioral nudges via `?nudge=walk|meditate|friend|sleep` or the Sanctuary Sheet). To connect the FastAPI backend, set `PYTHON_SERVICE_URL` (and optionally `PYTHON_SERVICE_API_KEY` and `PYTHON_SERVICE_USER_ID`). The Next.js server proxies through `/api/prototype`: `GET /api/prototype` resolves the active user (`?userId=...`, `PYTHON_SERVICE_USER_ID`, or the first user from `GET /users`), queries `GET /users/{user_id}/today` (triggering `POST /users/{user_id}/suggestions` when behavioral suggestions are empty), and falls back to `GET /dashboard` or sample content if unavailable; `POST /api/prototype` forwards suggestion feedback (`done`, `helped`) to `POST /users/{user_id}/suggestions/{suggestion_id}/feedback`; `POST /api/journal` forwards `{text}` to `POST /users/{user_id}/journal`.
 
 ## Bloomie growth
 

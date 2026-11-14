@@ -218,12 +218,12 @@ const PRACTICE_TEMPLATES: Record<string, NudgeTemplate> = {
     headline: (name) => `Put today into a few quiet words, ${name}.`,
     badgePrefix: "Quiet reflection",
     tone: "moss",
-    ctaLabel: "Log a Quiet Moment",
-    ctaIcon: "sprout",
+    ctaLabel: "Write a Few Words",
+    ctaIcon: "pen",
     action: {
       type: "navigate_tab",
-      tab: "Wins",
-      toast: "Capture any small honest moment — no filter needed.",
+      tab: "Journal",
+      toast: "A quiet page is ready. No filter needed.",
     },
   },
   wind_down: {

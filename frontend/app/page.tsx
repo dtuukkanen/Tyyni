@@ -5,6 +5,7 @@ import { AnchorScreen } from "./components/AnchorScreen";
 import { CompanionWorld } from "./components/CompanionWorld";
 import { GroundScreen } from "./components/GroundScreen";
 import { Icon, TyyniLogo } from "./components/icons";
+import { JournalScreen } from "./components/JournalScreen";
 import { PracticeModal } from "./components/PracticeModal";
 import { PwaSanctuarySheet, usePwa } from "./components/PwaSanctuarySheet";
 import { type SoundPreset, soundEngine } from "./components/soundEngine";
@@ -90,6 +91,7 @@ export default function Home() {
     if (requestedTab === "today") setTab("Today");
     else if (requestedTab === "ground") setTab("Ground");
     else if (requestedTab === "wins") setTab("Wins");
+    else if (requestedTab === "journal") setTab("Journal");
     else if (requestedTab === "anchor") setTab("Anchor");
 
     const requestedNudge = params.get("nudge")?.toLowerCase() as
@@ -285,6 +287,23 @@ export default function Home() {
     setWinsLogged(winsLogged + 1);
     growth.tasksChanged(doneTasks + 1, totalTasks + 1);
     notify(`Placed “${trimmed}” in your Sanctuary Jar.`);
+  }
+
+  async function handleSaveJournal(text: string): Promise<boolean> {
+    try {
+      const res = await fetch("/api/journal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, text }),
+      });
+      const data = (await res.json()) as { ok?: boolean };
+      if (!res.ok || !data.ok) return false;
+    } catch {
+      return false;
+    }
+    triggerBloomieJoy();
+    notify("Saved to your journal.");
+    return true;
   }
 
   function handleSoundToggle(preset: SoundPreset, label: string) {
@@ -549,6 +568,8 @@ export default function Home() {
       )}
 
       {tab === "Wins" && <WinsScreen wins={wins} onAddWin={handleAddWin} />}
+
+      {tab === "Journal" && <JournalScreen onSave={handleSaveJournal} />}
 
       {tab === "Anchor" && (
         <AnchorScreen
