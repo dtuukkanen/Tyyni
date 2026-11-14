@@ -12,6 +12,7 @@ All code lives in `backend/` (Python 3.12, package `app`):
   - `common.py`: math helpers, seeded RNGs, profile lookup, artifact gaps, chunked `write()` and the shared CLI `parser()`.
   - `timelines.py`: day-by-day shapes of scenarios shared across simulators (`stress_period`, `sudden_drop`, `withdrawal`/`crisis`, `oversleep`, `late_sleep_shift`).
   - `sleep_window.py`: when the simulated user is asleep, either the built-in 23:00–07:00 UTC window or real nights from `sleep.nights(...)`.
+- `app/inference/`: inference over the daily metrics. `anomalies.py` holds the detection rules (pure `find`) and `detect`, which stores them through the repository.
 - `alembic/versions/`: numbered migrations (`0001_…`, `0002_…`).
 - `tests/`: pytest suite, run against the real database.
 

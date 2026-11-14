@@ -70,7 +70,7 @@ Interactive docs are at <http://localhost:8000/docs>. A frontend can generate a 
 | `GET /health` | `{"status": "ok"}` once the DB answers |
 | `GET /users`, `POST /users` | All users; create one with `{"display_name": "demo"}` |
 | `GET /users/{id}` | One user (404 if unknown) |
-| `GET /users/{id}/today` | Today's metrics, the 14-day baseline and whether mood was logged: everything the day view needs |
+| `GET /users/{id}/today` | Today's metrics, the 14-day baseline, whether mood was logged and the stored anomalies of yesterday and today: everything the day view needs |
 | `GET /users/{id}/daily?start=&end=` | One row per day with all metrics (default: the last 14 days; at most 366) |
 | `GET /users/{id}/baseline?day=&window=14` | Mean of each metric over the `window` days before `day` |
 | `GET /users/{id}/heart?start=&end=` | Raw HR + HRV samples in `[start, end)` (default: the last 24 h; at most 31 days) |
@@ -78,6 +78,8 @@ Interactive docs are at <http://localhost:8000/docs>. A frontend can generate a 
 | `GET /users/{id}/sleep?start=&end=` | Sleep sessions by wake day, with `stages` and `efficiency` |
 | `GET /users/{id}/mood?start=&end=`, `POST /users/{id}/mood` | Check-ins; post `{"score": 1–5, "note"?, "ts"?}` |
 | `GET /users/{id}/journal?start=&end=`, `POST /users/{id}/journal` | Journal entries by UTC day; post `{"text": "...", "language"?: "fi"\|"en", "ts"?}` |
+| `GET /users/{id}/anomalies?start=&end=` | Stored [anomalies](#anomaly-detection) by day |
+| `POST /users/{id}/anomalies/detect?start=&end=` | Detects the anomalies again from the current data, stores them and returns them (default: the last 14 days) |
 
 `start` / `end` are dates (`2026-11-14`) for day endpoints and datetimes (`2026-11-14T08:00:00Z`) for `heart` / `activity`; times without a zone are UTC. Days are UTC calendar days, as in the repository.
 
@@ -86,6 +88,35 @@ To run it on the host instead (with the DB container up and `DATABASE_URL` from 
 ```bash
 pip install -e ".[dev]" && uvicorn app.api.main:app --reload
 ```
+
+## Anomaly detection
+
+[`backend/app/inference/anomalies.py`](backend/app/inference/anomalies.py) compares each day's metrics with the user's own normal and stores what stands out in `anomalies`. The baseline for a day is the median of the 14 days before it, and its spread is the median absolute deviation. Days on which an anomaly fired are left out, so a stress week neither becomes the new normal nor hides itself by widening the spread. A metric is judged once it has 7 normal days with data. A lasting change becomes the new normal after about two weeks.
+
+A rule fires when a metric is at least 2.5 spreads out *and* moves by at least its minimum change, so a very steady user isn't flagged for trivia:
+
+| Kind | Fires on |
+|---|---|
+| `stress` | HRV ≥ 25 % lower, or heart rate ≥ 6 bpm higher |
+| `short_sleep` / `long_sleep` | Time in bed ≥ 90 min shorter / longer |
+| `sleep_shift` | Bedtime or wake time ≥ 1.5 h later |
+| `low_activity` | Steps ≥ 40 % fewer |
+| `screen_time` | Screen time ≥ 1 h more (not simulated yet, so it doesn't fire on simulated data) |
+| `low_mood` | Mood check-in ≥ 1 point lower |
+
+Each anomaly is one row per day and kind. `metric` / `value` / `baseline` hold the most deviating metric. `explanation` holds a `summary` ("HRV 31 ms vs usual 47 ms (-34 %); heart rate 76 bpm vs usual 64 bpm (+12 bpm)"), every `signal` that fired with its `z`, and `escalation`. An anomaly is `attention`, or `critical` when it is:
+
+- `extreme`: a metric is at least 4 spreads out and moves by twice the minimum change,
+- `sustained`: the same kind fired 3 days in a row,
+- `multiple_signals`: 3 or more kinds fired on the same day.
+
+Heart rate and steps are judged once a day is over (a half day always looks inactive), so today only gets sleep and mood anomalies. Detection is explicit: run it after writing data, and a rerun updates anomalies in place (they keep their id) and removes ones that no longer fire. Gradual drifts (`withdrawal`, `late_sleep_shift`) are caught only partly, since the baseline moves with them.
+
+```bash
+docker compose run --rm migrate python -m app.inference.anomalies --user <id> --days 21
+```
+
+From Python: `anomalies.find(daily_rows, start, end, today=...)` is pure (rows of `repository.daily_metrics` in, anomaly rows out); `anomalies.detect(session, user_id, start, end)` reads, stores and returns them.
 
 ## Simulators
 

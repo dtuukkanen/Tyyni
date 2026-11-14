@@ -10,14 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.deps import Db
-from app.api.routers import journal, metrics, mood, samples, users
+from app.api.routers import anomalies, journal, metrics, mood, samples, users
 
 DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:3000"
 
 app = FastAPI(
     title="Wellbeing API",
     version="0.1.0",
-    description="Users, daily metrics, raw sensor series, mood check-ins and journal entries. "
+    description="Users, daily metrics, raw sensor series, mood check-ins, journal entries and "
+    "anomalies. "
     "All days are UTC calendar days; a sleep session counts toward the day the user woke up.",
 )
 
@@ -30,7 +31,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for router in (users.router, metrics.router, samples.router, mood.router, journal.router):
+for router in (
+    users.router,
+    metrics.router,
+    samples.router,
+    mood.router,
+    journal.router,
+    anomalies.router,
+):
     app.include_router(router)
 
 

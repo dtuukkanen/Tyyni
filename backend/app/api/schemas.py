@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -53,11 +53,35 @@ class Baseline(Metrics):
     window: int = Field(description="Number of days before `day` that were averaged")
 
 
+Severity = Literal["normal", "attention", "critical"]
+
+
+class Anomaly(_FromOrm):
+    id: int
+    day: date
+    kind: str = Field(
+        description="stress, short_sleep, long_sleep, sleep_shift, low_activity, screen_time "
+        "or low_mood"
+    )
+    severity: Severity
+    metric: str | None = Field(description="The most deviating metric")
+    value: float | None
+    baseline: float | None = Field(description="The metric's median over the 14 days before")
+    explanation: dict[str, Any] | None = Field(
+        description="summary (text), signals (every metric that fired) and escalation "
+        "(why it is critical: extreme, sustained, multiple_signals)"
+    )
+    created_at: datetime
+
+
 class Today(BaseModel):
     day: date
     metrics: DailyMetrics
     baseline: Baseline
     mood_logged: bool
+    anomalies: list[Anomaly] = Field(
+        description="Stored anomalies for yesterday and today (run detect to refresh them)"
+    )
 
 
 class HeartSample(_FromOrm):

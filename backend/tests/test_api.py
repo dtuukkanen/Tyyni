@@ -10,7 +10,7 @@ from sqlalchemy import text
 from app.api.main import app
 from app.db import get_session
 from app.db import repository as repo
-from app.simulators import journal
+from app.simulators import hrv, journal
 
 client = TestClient(app)
 
@@ -79,8 +79,9 @@ def test_create_get_and_list_users(user_id):
 
 
 def test_unknown_user_is_404():
-    for path in ("", "/daily", "/today", "/mood", "/sleep", "/journal"):
+    for path in ("", "/daily", "/today", "/mood", "/sleep", "/journal", "/anomalies"):
         assert client.get(f"/users/{uuid.uuid4()}{path}").status_code == 404
+    assert client.post(f"/users/{uuid.uuid4()}/anomalies/detect").status_code == 404
 
 
 def test_invalid_user_body_is_422():
@@ -208,6 +209,7 @@ def test_today_shape(user_id):
     assert body["metrics"]["day"] == body["day"]
     assert body["baseline"]["window"] == 14
     assert body["mood_logged"] is False
+    assert body["anomalies"] == []
 
 
 def test_heart_and_activity_samples(seeded):
@@ -234,3 +236,36 @@ def test_sleep_by_wake_day(seeded):
     assert sessions[0]["duration_min"] == 480
     assert sessions[0]["efficiency"] == pytest.approx(0.9)
     assert sessions[0]["stages"]["deep"] == 90
+
+
+def test_detect_and_list_anomalies(user_id):
+    with get_session() as s:
+        hrv.simulate(s, user_id, START, 21, "stress_period", seed=1)
+    params = {"start": str(START + timedelta(days=7)), "end": str(START + timedelta(days=20))}
+    assert client.get(f"/users/{user_id}/anomalies", params=params).json() == []
+
+    r = client.post(f"/users/{user_id}/anomalies/detect", params=params)
+    assert r.status_code == 200
+    found = r.json()
+    assert {a["kind"] for a in found} == {"stress"}
+    first = found[0]
+    assert first["severity"] in ("attention", "critical")
+    assert first["metric"] in ("hrv_rmssd_avg", "hr_avg")
+    assert first["explanation"]["summary"]
+    assert any(a["severity"] == "critical" for a in found)
+
+    listed = client.get(f"/users/{user_id}/anomalies", params=params).json()
+    assert listed == found
+    again = client.post(f"/users/{user_id}/anomalies/detect", params=params).json()
+    assert [a["id"] for a in again] == [a["id"] for a in found]
+
+
+def test_today_lists_yesterdays_and_todays_anomalies(user_id):
+    today = datetime.now(UTC).date()
+    with get_session() as s:
+        for i in range(15):
+            day = today - timedelta(days=14 - i)
+            repo.record_mood(s, user_id, score=2 if day == today else 4, ts=_at(day, 20))
+    client.post(f"/users/{user_id}/anomalies/detect")
+    body = client.get(f"/users/{user_id}/today").json()
+    assert [(a["day"], a["kind"]) for a in body["anomalies"]] == [(str(today), "low_mood")]
