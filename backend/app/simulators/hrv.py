@@ -11,7 +11,8 @@ Signal, in log space so values stay positive and roughly log-normal:
 - level: waking RMSSD / resting HR for a high, average or low HRV person.
 - day factor: multi-day shape (rising, lowering, alternating, stress period, sudden drop).
 - intraday factor: shape within each day's waking hours (rising, lowering, alternating).
-- night gain: RMSSD is ~30 % higher while asleep (23:00-07:00 UTC by default).
+- night gain: RMSSD is ~30 % higher while asleep (23:00-07:00 UTC by default, or the real
+  nights from the sleep simulator when `nights` is passed).
 - noise: a per-day offset plus AR(1) noise between samples.
 HR follows HRV inversely (hr ~ rmssd^-0.35) plus a small waking bump.
 
@@ -27,6 +28,7 @@ import itertools
 import math
 import random
 import uuid
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -70,6 +72,7 @@ SLEEP_START_H = 23.0  # bedtime, hours after midnight UTC
 SLEEP_END_H = 7.0  # wake time, next morning
 SLEEP_EDGE_H = 0.4  # width of the sigmoid falling-asleep / waking transition
 NIGHT_GAIN = math.log(1.30)  # RMSSD +30 % while asleep
+REFERENCE_EFFICIENCY = 0.88  # sleep efficiency that gives the full night gain
 WAKING_HR_BUMP = 4.0  # bpm added while awake
 HR_EXPONENT = 0.35  # hr ~ rmssd ** -HR_EXPONENT
 
@@ -92,12 +95,16 @@ def generate(
     artifacts: bool = False,
     interval_min: int = 5,
     seed: int | None = None,
+    nights: Sequence[Mapping[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     """Heart samples for `days` UTC days starting at `start`, shaped for insert_heart_samples.
 
     timescale applies to alternating / rising / lowering: "days" shapes the whole period,
     "intraday" repeats the shape within each day's waking hours (daily averages stay flat).
     artifacts adds sensor gaps and outlier spikes.
+    nights: sleep sessions ({bedtime, wake_time[, efficiency]}, e.g. from `sleep.nights`) to
+    use instead of the built-in sleep window. Poorer nights restore less HRV; time not
+    covered by any night counts as awake.
     """
     if scenario not in SCENARIOS:
         raise ValueError(f"unknown scenario {scenario!r}; choose from {SCENARIOS}")
@@ -122,6 +129,9 @@ def generate(
     per_day = 1440 // interval_min
     origin = datetime(start.year, start.month, start.day, tzinfo=UTC)
     source = f"{SOURCE_PREFIX}:{scenario}"
+    schedule = (
+        _default_schedule(scenario, days) if nights is None else _schedule_from(nights, origin)
+    )
 
     rows: list[dict[str, Any]] = []
     for d in range(days):
@@ -138,10 +148,10 @@ def generate(
             if gap and gap[0] <= hour < gap[1]:
                 continue
 
-            asleep, night_gain = _asleep(scenario, d, hour)
+            asleep, night_gain = _asleep(schedule, d, hour)
             dev = (
                 day_log
-                + _intraday_log_factor(scenario, timescale, d, hour, asleep)
+                + _intraday_log_factor(scenario, timescale, schedule, d, hour, asleep)
                 + night_gain * asleep
                 + day_offset
                 + ar
@@ -200,10 +210,7 @@ def _day_log_factor(scenario: str, timescale: str, d: int, days: int) -> float:
         if scenario == "alternating":
             return math.log(1.25) if d % 2 == 0 else math.log(0.8)
     if scenario == "stress_period":
-        onset = round(days / 3)
-        end = onset + max(3, days // 3)
-        low = math.log(0.6)
-        return _interp(d, [(onset, 0.0), (onset + 2, low), (end, low), (end + 3, 0.0)])
+        return math.log(0.6) * stress_intensity(d, days)
     if scenario == "sudden_drop":
         drop = days // 2
         return 0.0 if d < drop else math.log(1 - 0.5 * math.exp(-(d - drop) / 2))
@@ -213,14 +220,16 @@ def _day_log_factor(scenario: str, timescale: str, d: int, days: int) -> float:
 
 
 def _intraday_log_factor(
-    scenario: str, timescale: str, d: int, hour: float, asleep: float
+    scenario: str, timescale: str, schedule: Schedule, d: int, hour: float, asleep: float
 ) -> float:
     """Within-day shape over waking hours, symmetric in log space so the daily mean is kept."""
     if timescale != "intraday" or scenario not in PATTERNS:
         return 0.0
-    wake = _night(scenario, d - 1)[1] - 24  # this morning's wake time, hours after today's midnight
-    bed = _night(scenario, d)[0]
-    p = min(max((hour - wake) / (bed - wake), 0.0), 1.0)
+    # this morning's wake and tonight's bedtime, hours after today's midnight
+    last, tonight = schedule.get(d - 1), schedule.get(d)
+    wake = (last[-1].wake if last else 24 * d + SLEEP_END_H) - 24 * d
+    bed = (tonight[0].bed if tonight else 24 * d + SLEEP_START_H) - 24 * d
+    p = min(max((hour - wake) / max(bed - wake, 1.0), 0.0), 1.0)
     if scenario == "rising":
         shape = math.log(1.25) * (2 * p - 1)
     elif scenario == "lowering":
@@ -230,6 +239,13 @@ def _intraday_log_factor(
     return (1 - asleep) * shape
 
 
+def stress_intensity(d: int, days: int) -> float:
+    """stress_period timeline, 0..1: normal first third, 2-day onset, hold, 3-day recovery."""
+    onset = round(days / 3)
+    end = onset + max(3, days // 3)
+    return _interp(d, [(onset, 0.0), (onset + 2, 1.0), (end, 1.0), (end + 3, 0.0)])
+
+
 def _sleep_shift(scenario: str, night: int) -> float:
     """Hours the night starting on day `night` is shifted later (late_sleep_shift only)."""
     if scenario != "late_sleep_shift":
@@ -237,25 +253,54 @@ def _sleep_shift(scenario: str, night: int) -> float:
     return min(max(0.5 * night, 0.0), 3.0)
 
 
-def _night(scenario: str, night: int) -> tuple[float, float]:
+def default_night(scenario: str, night: int) -> tuple[float, float]:
     """(bedtime, wake) of the night starting on day `night`, hours after that day's midnight."""
     shift = _sleep_shift(scenario, night)
     return SLEEP_START_H + shift, 24 + SLEEP_END_H + 0.8 * shift  # later nights are also shorter
 
 
-def _asleep(scenario: str, d: int, hour: float) -> tuple[float, float]:
+@dataclass(frozen=True)
+class _Night:
+    bed: float  # hours after the origin (midnight of the first day)
+    wake: float
+    gain: float  # log RMSSD gain while asleep
+
+
+Schedule = dict[int, list[_Night]]  # keyed by the day the night starts on
+
+
+def _default_schedule(scenario: str, days: int) -> Schedule:
+    schedule: Schedule = {}
+    for n in range(-1, days):
+        bed, wake = default_night(scenario, n)
+        gain = NIGHT_GAIN * (1 - 0.05 * _sleep_shift(scenario, n))  # later nights restore less
+        schedule[n] = [_Night(24 * n + bed, 24 * n + wake, gain)]
+    return schedule
+
+
+def _schedule_from(nights: Sequence[Mapping[str, Any]], origin: datetime) -> Schedule:
+    schedule: Schedule = {}
+    for row in sorted(nights, key=lambda r: r["bedtime"]):
+        bed = (row["bedtime"] - origin).total_seconds() / 3600
+        wake = (row["wake_time"] - origin).total_seconds() / 3600
+        efficiency = row.get("efficiency") or REFERENCE_EFFICIENCY
+        gain = NIGHT_GAIN * _clamp(efficiency / REFERENCE_EFFICIENCY, (0.6, 1.1))
+        n = math.floor(wake / 24) - 1  # the night that ends on day k starts on day k - 1
+        schedule.setdefault(n, []).append(_Night(bed, wake, gain))
+    return schedule
+
+
+def _asleep(schedule: Schedule, d: int, hour: float) -> tuple[float, float]:
     """(asleep weight 0..1, night gain) at `hour` on day d, from last night and tonight."""
+    t = 24 * d + hour
     best = (0.0, NIGHT_GAIN)
-    for night, offset in ((d - 1, -24.0), (d, 0.0)):
-        bed, wake = _night(scenario, night)
-        weight = _sigmoid((hour - bed - offset) / SLEEP_EDGE_H) * _sigmoid(
-            (wake + offset - hour) / SLEEP_EDGE_H
-        )
-        if weight > best[0]:
-            gain = NIGHT_GAIN * (
-                1 - 0.05 * _sleep_shift(scenario, night)
-            )  # later nights restore less
-            best = (weight, gain)
+    for n in (d - 1, d):
+        for night in schedule.get(n, ()):
+            weight = _sigmoid((t - night.bed) / SLEEP_EDGE_H) * _sigmoid(
+                (night.wake - t) / SLEEP_EDGE_H
+            )
+            if weight > best[0]:
+                best = (weight, night.gain)
     return best
 
 
