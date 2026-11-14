@@ -22,20 +22,21 @@ The app works with sample content when the Python service is not configured (and
 
 ## Bloomie growth
 
-Bloomie has three states that follow the user's day. Each UTC day starts **Thirsty**: drooping olive stems with brown-tipped leaves, pale buds, dry cracked soil, fallen leaves, a sleepy face and a thought bubble asking for water, with "One tiny step perks me up" on the companion pill (not in Low-Energy mode). After 2 completed moments it is **Perking up**: a shower waters the soil, the stems spring upright, the leaves turn green, new shoots grow and the pot smiles. After 5 it is **Flourishing**: the buds burst into flowers, vines spill over the rim, petals scatter, the aura turns golden and a butterfly visits.
+Bloomie mirrors today's tasks live: the **Tiny Steps** on Today plus any wins logged in the **Sanctuary Jar** (Wins tab), where each logged win counts as one more done task.
 
-Completed moments are checking a tiny step, the mood check-in, sending a wave, starting a suggestion, adding a win, or finishing the 5–4–3–2–1 practice; each counts once a day, and Bloomie never goes back down within a day. Progress is stored in `localStorage` under `tyyni.bloomie.<UTC date>`; delete that key to start over. The logic lives in `app/components/useBloomieGrowth.ts`, the drawing in `FlowerCompanion` (`app/components/CompanionWorld.tsx`) and the states and motion in the Bloomie growth rules of `app/globals.css`.
+- **Thirsty** (nothing done yet): drooping olive stems with brown-tipped leaves, pale buds, dry cracked soil, fallen leaves, a sleepy face and a thought bubble asking for water, with "One tiny step perks me up" on the companion pill (not in Low-Energy mode).
+- **Perking up** (some done): a shower waters the soil, the stems spring upright, the leaves turn green, new shoots grow and the pot smiles.
+- **Flourishing** (everything done): the buds burst into flowers, vines spill over the rim, petals scatter, the aura turns golden and a butterfly visits.
 
-To test or demo it, open the settings sheet (the profile button, top right) and use **Bloomie Growth**:
+A mini Bloomie at the top of the Tiny Steps card shows the same state (with how many are done), so the change is visible while you check steps off; the big one in the scene changes too. Checking a step plays the move up with a toast; unchecking one moves Bloomie back down, and adding a new step means it isn't all done anymore. Mood check-ins, waves and suggestions still make Bloomie bounce but don't change its state. The logic lives in `app/components/useBloomieGrowth.ts`, the drawing in `FlowerCompanion` (`app/components/CompanionWorld.tsx`) and the states and motion in the Bloomie growth rules of `app/globals.css`.
 
-- **Live** follows today's real progress (the default).
+To preview a state without changing tasks, open the settings sheet (the profile button, top right) and use **Bloomie Growth**:
+
+- **Live** follows your steps and wins (the default).
 - **Thirsty**, **Perking up** or **Flourishing** shows that state; moving up plays the full transition (watering shower, petal burst). The sheet closes and switches to Today first, so the change plays in view.
 - **Play all** starts Thirsty and changes state every 4 s up to Flourishing, without toasts; tap it again to restart.
-- **Restart Bloomie's day** clears today's growth and unchecks the steps, to try the real flow from Thirsty.
 
-The same previews work as URL parameters for screen recordings: `?growth=0`, `?growth=1` or `?growth=2` pins a state and `?growth=play` plays them all.
-
-While a preview is active, completing tasks doesn't change the state or store progress. On load the flower jumps straight to its state without animating; only new completions (and play mode) animate.
+The same previews work as URL parameters for screen recordings: `?growth=0`, `?growth=1` or `?growth=2` pins a state and `?growth=play` plays them all. While a preview is active, your tasks don't move Bloomie. On load the flower jumps straight to its state without animating.
 
 ## Lint and format
 

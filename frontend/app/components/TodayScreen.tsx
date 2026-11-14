@@ -7,6 +7,7 @@ import {
   MOOD_OPTIONS,
   STEP_ICONS,
 } from "../data/sanctuaryData";
+import { FlowerCompanion } from "./CompanionWorld";
 import { Icon } from "./icons";
 import { GROWTH_STAGE_NAMES, type GrowthStage } from "./useBloomieGrowth";
 
@@ -32,6 +33,12 @@ type TodayScreenProps = {
   waveSent: boolean;
   onSendWave: () => void;
   growthStage: GrowthStage;
+  growthDone: number;
+  growthTotal: number;
+  /** A state picked in settings is showing instead of the live one. */
+  growthPreview: boolean;
+  isGrowing: boolean;
+  isSettling: boolean;
   onInteractCompanion: () => void;
 };
 
@@ -55,6 +62,11 @@ export function TodayScreen({
   waveSent,
   onSendWave,
   growthStage,
+  growthDone,
+  growthTotal,
+  growthPreview,
+  isGrowing,
+  isSettling,
   onInteractCompanion,
 }: TodayScreenProps) {
   const [addingStep, setAddingStep] = useState(false);
@@ -80,6 +92,14 @@ export function TodayScreen({
           : mood === "Light"
             ? "Basking in warm breeze · Radiating calm"
             : "Nurtured by your presence · Thriving & Calmed";
+
+  const growthLine = growthPreview
+    ? "Previewing from settings · pick Live to use your steps."
+    : growthStage === 0
+      ? "Check off a tiny step to perk Bloomie up."
+      : growthStage === 1
+        ? `${growthDone} of ${growthTotal} done · every bit helps.`
+        : "Everything’s done — enjoy the bloom.";
 
   function handleStepSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -297,6 +317,24 @@ export function TodayScreen({
               <span className="status-dot" aria-hidden="true" />
             </h2>
             <span className="section-meta">No streaks · No penalties</span>
+          </div>
+
+          {/* Live mini Bloomie, visible while checking steps off */}
+          <div className="bloomie-steps-strip">
+            <FlowerCompanion
+              variant="mini"
+              mood={mood}
+              lowEnergy={lowEnergy}
+              stage={growthStage}
+              isGrowing={isGrowing}
+              isSettling={isSettling}
+            />
+            <div className="bloomie-steps-copy" aria-live="polite">
+              <strong>
+                Bloomie is {GROWTH_STAGE_NAMES[growthStage].toLowerCase()}
+              </strong>
+              <span>{growthLine}</span>
+            </div>
           </div>
 
           <div className="steps-stack">

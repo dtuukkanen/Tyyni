@@ -1,22 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * Bloomie's daily growth. Every completed moment (a tiny step, a mood
- * check-in, a wave, a started suggestion, a win, a finished practice) earns an
- * idempotent key; the number of distinct keys sets the growth state:
- * Thirsty, then Perking up, then Flourishing. Each UTC day starts Thirsty, an
- * invitation to care for the plant, and growth never goes down within a day.
+ * Bloomie's growth state follows today's tasks live: Today's Tiny Steps plus
+ * the wins logged in the Sanctuary Jar, each win counting as one more done
+ * task. Nothing done is Thirsty, some done is Perking up, everything done is
+ * Flourishing. Moving up plays the celebration (with a toast); unchecking a
+ * step moves Bloomie back down.
  *
  * Demo overrides: `?growth=0..2` pins a state and `?growth=play` goes from
  * Thirsty to Flourishing on a timer, for screen recordings. The same overrides
- * can be picked in the app's settings sheet (`setDemo`). While an override is
- * active, completing tasks doesn't earn growth.
+ * can be picked in the app's settings sheet (`setDemo`); while one is active
+ * the tasks don't move Bloomie.
  *
- * Until the stored progress and the page's data have loaded, `isSettling` is
- * true so the flower can jump to its real stage without animating (the server
- * render knows neither the stored progress nor the URL override).
+ * Until the page's data has loaded, `isSettling` is true so the flower can
+ * jump to its real state without animating (the server render knows neither
+ * the user's tasks nor the URL override).
  */
 
 export type GrowthStage = 0 | 1 | 2;
@@ -27,67 +27,18 @@ export const GROWTH_STAGE_NAMES: Record<GrowthStage, string> = {
   2: "Flourishing",
 };
 
-/** Points needed to reach each state, indexed by state. */
-const STAGE_THRESHOLDS = [0, 2, 5] as const;
+/** A pinned state, the timed "play" run, or `null` to follow the tasks. */
+export type BloomieDemo = GrowthStage | "play" | null;
 
-const STORAGE_PREFIX = "tyyni.bloomie.";
 const PLAY_INTERVAL_MS = 4000;
 const GROWING_MS = 2400;
 
-export function stageFor(points: number): GrowthStage {
-  let stage = 0;
-  STAGE_THRESHOLDS.forEach((threshold, index) => {
-    if (points >= threshold) stage = index;
-  });
-  return stage as GrowthStage;
+export function stageFor(done: number, total: number): GrowthStage {
+  if (total === 0 || done === 0) return 0;
+  return done >= total ? 2 : 1;
 }
 
-function stepKey(label: string) {
-  return `step:${label}`;
-}
-
-function countPoints(earned: string[], checkedStepLabels: string[]) {
-  return new Set([...earned, ...checkedStepLabels.map(stepKey)]).size;
-}
-
-function storageKey() {
-  return `${STORAGE_PREFIX}${new Date().toISOString().slice(0, 10)}`;
-}
-
-function readEarned(): string[] {
-  try {
-    const today = storageKey();
-    // Drop earlier days so storage holds a single entry.
-    for (let i = window.localStorage.length - 1; i >= 0; i--) {
-      const key = window.localStorage.key(i);
-      if (key?.startsWith(STORAGE_PREFIX) && key !== today) {
-        window.localStorage.removeItem(key);
-      }
-    }
-    const parsed: unknown = JSON.parse(
-      window.localStorage.getItem(today) ?? "[]",
-    );
-    return Array.isArray(parsed)
-      ? parsed.filter((k): k is string => typeof k === "string")
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeEarned(earned: string[]) {
-  try {
-    window.localStorage.setItem(storageKey(), JSON.stringify(earned));
-  } catch {
-    // Storage can be unavailable (private mode); growth then lasts the session.
-  }
-}
-
-/** A pinned state, the timed "play" run, or `null` to follow real progress. */
-export type BloomieDemo = GrowthStage | "play" | null;
-type Override = BloomieDemo;
-
-function readOverride(): Override {
+function readOverride(): BloomieDemo {
   const value = new URLSearchParams(window.location.search).get("growth");
   if (value === "play") return "play";
   if (value !== null && /^[0-2]$/.test(value)) {
@@ -97,45 +48,46 @@ function readOverride(): Override {
 }
 
 export function useBloomieGrowth({
-  checkedStepLabels,
+  doneTasks,
+  totalTasks,
   dataReady,
   onStageUp,
 }: {
-  /** Labels of the steps checked right now; they count toward growth. */
-  checkedStepLabels: string[];
+  doneTasks: number;
+  totalTasks: number;
   /** Whether the page's initial data (steps) has arrived. */
   dataReady: boolean;
   onStageUp?: (stage: GrowthStage) => void;
 }) {
-  const [earned, setEarned] = useState<string[]>([]);
-  const [override, setOverride] = useState<Override>(null);
+  const [override, setOverride] = useState<BloomieDemo>(null);
   const [playStage, setPlayStage] = useState<GrowthStage>(0);
   const [isGrowing, setIsGrowing] = useState(false);
-  const [storageLoaded, setStorageLoaded] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [settled, setSettled] = useState(false);
 
-  const earnedRef = useRef<string[]>([]);
-  const dayRef = useRef("");
-  const overrideRef = useRef<Override>(null);
-  const checkedRef = useRef(checkedStepLabels);
+  const overrideRef = useRef<BloomieDemo>(null);
+  const stageRef = useRef<GrowthStage>(0);
   const onStageUpRef = useRef(onStageUp);
   const growTimerRef = useRef<number | null>(null);
-  const stageRef = useRef<GrowthStage>(0);
   const playTimerRef = useRef<number | null>(null);
 
+  const liveStage = stageFor(doneTasks, totalTasks);
+  const stage: GrowthStage =
+    override === "play" ? playStage : override !== null ? override : liveStage;
+
   useEffect(() => {
-    checkedRef.current = checkedStepLabels;
+    stageRef.current = stage;
     onStageUpRef.current = onStageUp;
   });
 
-  const celebrate = useCallback((stage: GrowthStage, announce: boolean) => {
+  const celebrate = useCallback((to: GrowthStage, announce: boolean) => {
     setIsGrowing(true);
     if (growTimerRef.current) window.clearTimeout(growTimerRef.current);
     growTimerRef.current = window.setTimeout(
       () => setIsGrowing(false),
       GROWING_MS,
     );
-    if (announce) onStageUpRef.current?.(stage);
+    if (announce) onStageUpRef.current?.(to);
   }, []);
 
   const stopPlay = useCallback(() => {
@@ -157,15 +109,11 @@ export function useBloomieGrowth({
   }, [celebrate, stopPlay]);
 
   useEffect(() => {
-    const stored = readEarned();
     const initialOverride = readOverride();
-    earnedRef.current = stored;
-    dayRef.current = storageKey();
     overrideRef.current = initialOverride;
-    // oxlint-disable-next-line react/set-state-in-effect -- localStorage and URL are read after hydration
-    setEarned(stored);
+    // oxlint-disable-next-line react/set-state-in-effect -- the URL is read after hydration
     setOverride(initialOverride);
-    setStorageLoaded(true);
+    setMounted(true);
     if (initialOverride === "play") startPlay();
     return () => {
       if (growTimerRef.current) window.clearTimeout(growTimerRef.current);
@@ -173,10 +121,10 @@ export function useBloomieGrowth({
     };
   }, [startPlay, stopPlay]);
 
-  // Turn transitions back on two frames after the real stage has rendered, so
+  // Turn transitions back on two frames after the real state has rendered, so
   // the browser has already applied it without animating.
   useEffect(() => {
-    if (settled || !storageLoaded || !dataReady) return;
+    if (settled || !mounted || !dataReady) return;
     let second = 0;
     const first = window.requestAnimationFrame(() => {
       second = window.requestAnimationFrame(() => setSettled(true));
@@ -185,51 +133,24 @@ export function useBloomieGrowth({
       window.cancelAnimationFrame(first);
       window.cancelAnimationFrame(second);
     };
-  }, [settled, storageLoaded, dataReady]);
+  }, [settled, mounted, dataReady]);
 
-  const earn = useCallback(
-    (key: string) => {
+  /**
+   * Call when the user changes their tasks, with the new counts; moving up a
+   * state plays the celebration and announces it.
+   */
+  const tasksChanged = useCallback(
+    (nextDone: number, nextTotal: number) => {
       if (overrideRef.current !== null) return;
-      // A tab left open past midnight (UTC) starts the new day Thirsty.
-      if (dayRef.current !== storageKey()) {
-        dayRef.current = storageKey();
-        earnedRef.current = [];
-      }
-      const before = earnedRef.current;
-      if (before.includes(key)) return;
-      const next = [...before, key];
-      earnedRef.current = next;
-      setEarned(next);
-      writeEarned(next);
-
-      const fromStage = stageFor(countPoints(before, checkedRef.current));
-      const toStage = stageFor(countPoints(next, checkedRef.current));
-      if (toStage > fromStage) celebrate(toStage, true);
+      const to = stageFor(nextDone, nextTotal);
+      if (to > stageRef.current) celebrate(to, true);
     },
     [celebrate],
   );
 
-  const earnStep = useCallback((label: string) => earn(stepKey(label)), [earn]);
-
-  const earnedStage = useMemo(
-    () => stageFor(countPoints(earned, checkedStepLabels)),
-    [earned, checkedStepLabels],
-  );
-
-  const stage: GrowthStage =
-    override === "play"
-      ? playStage
-      : override !== null
-        ? override
-        : earnedStage;
-
-  useEffect(() => {
-    stageRef.current = stage;
-  });
-
   /** Pick a demo override; going up plays the full celebration (no toast). */
   const setDemo = useCallback(
-    (next: Override) => {
+    (next: BloomieDemo) => {
       const from = stageRef.current;
       overrideRef.current = next;
       setOverride(next);
@@ -238,32 +159,18 @@ export function useBloomieGrowth({
         return;
       }
       stopPlay();
-      const to =
-        next ?? stageFor(countPoints(earnedRef.current, checkedRef.current));
+      const to = next ?? liveStage;
       if (to > from) celebrate(to, false);
     },
-    [celebrate, startPlay, stopPlay],
+    [celebrate, liveStage, startPlay, stopPlay],
   );
-
-  /** Forget today's growth and follow real progress again, from Thirsty. */
-  const restartDay = useCallback(() => {
-    stopPlay();
-    earnedRef.current = [];
-    dayRef.current = storageKey();
-    overrideRef.current = null;
-    setEarned([]);
-    setOverride(null);
-    writeEarned([]);
-  }, [stopPlay]);
 
   return {
     stage,
     demo: override,
     setDemo,
-    restartDay,
+    tasksChanged,
     isGrowing,
     isSettling: !settled,
-    earn,
-    earnStep,
   };
 }

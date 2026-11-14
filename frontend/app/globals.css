@@ -579,11 +579,11 @@ select:focus-visible {
   animation: flowerWholeSway 5.6s ease-in-out infinite;
 }
 
-.companion-flower-stage.is-low-energy .flower-whole-sway {
+.bloomie.is-low-energy .flower-whole-sway {
   animation-duration: 8.4s;
 }
 
-.companion-flower-stage.is-celebrating .flower-whole-sway {
+.bloomie.is-celebrating .flower-whole-sway {
   animation: flowerHappyBounce 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) 2;
 }
 
@@ -785,7 +785,7 @@ select:focus-visible {
   animation-delay: -3.6s;
 }
 
-.companion-flower-stage.is-celebrating .sparkle-dot {
+.bloomie.is-celebrating .sparkle-dot {
   background: #f79ca2;
   box-shadow: 0 0 10px rgba(247, 156, 162, 0.9);
   animation-duration: 1.7s;
@@ -891,15 +891,15 @@ select:focus-visible {
   transition: transform 1500ms cubic-bezier(0.34, 1.45, 0.64, 1) var(--d, 0ms);
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-lean {
+.bloomie[data-stage="0"] .bloomie-lean {
   transform: rotate(var(--lean));
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-bend {
+.bloomie[data-stage="0"] .bloomie-bend {
   transform: rotate(var(--bend));
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-nod {
+.bloomie[data-stage="0"] .bloomie-nod {
   transform: rotate(var(--nod));
 }
 
@@ -909,7 +909,7 @@ select:focus-visible {
   transition: transform 1300ms cubic-bezier(0.34, 1.4, 0.64, 1) 800ms;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-leaf-droop {
+.bloomie[data-stage="0"] .bloomie-leaf-droop {
   transform: rotate(var(--droop));
 }
 
@@ -973,45 +973,45 @@ select:focus-visible {
   transition: opacity 600ms ease 500ms;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-stem {
+.bloomie[data-stage="0"] .bloomie-stem {
   stroke: #857a48;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-leaf {
+.bloomie[data-stage="0"] .bloomie-leaf {
   stroke: #6e6240;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-leaf.tone-a {
+.bloomie[data-stage="0"] .bloomie-leaf.tone-a {
   fill: #bdb26a;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-leaf.tone-b {
+.bloomie[data-stage="0"] .bloomie-leaf.tone-b {
   fill: #c8ba70;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-leaf.tone-c {
+.bloomie[data-stage="0"] .bloomie-leaf.tone-c {
   fill: #d2c27c;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-leaf-rib {
+.bloomie[data-stage="0"] .bloomie-leaf-rib {
   stroke: #8a7a48;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-leaf-tip,
-.companion-flower-stage[data-stage="0"] .bloomie-soil-cracks {
+.bloomie[data-stage="0"] .bloomie-leaf-tip,
+.bloomie[data-stage="0"] .bloomie-soil-cracks {
   opacity: 1;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-bud {
+.bloomie[data-stage="0"] .bloomie-bud {
   fill: #d9b2a6;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-sepal {
+.bloomie[data-stage="0"] .bloomie-sepal {
   fill: #b8ae68;
   stroke: #6e6240;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-soil {
+.bloomie[data-stage="0"] .bloomie-soil {
   fill: #a88566;
 }
 
@@ -1021,13 +1021,13 @@ select:focus-visible {
   transition: opacity 500ms ease 900ms;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-face.is-thirsty,
-.companion-flower-stage[data-stage="1"] .bloomie-face.is-perky,
-.companion-flower-stage[data-stage="2"] .bloomie-face.is-joyful {
+.bloomie[data-stage="0"] .bloomie-face.is-thirsty,
+.bloomie[data-stage="1"] .bloomie-face.is-perky,
+.bloomie[data-stage="2"] .bloomie-face.is-joyful {
   opacity: 1;
 }
 
-.companion-flower-stage[data-stage="2"] .bloomie-face {
+.bloomie[data-stage="2"] .bloomie-face {
   transition-delay: 250ms;
 }
 
@@ -1036,11 +1036,11 @@ select:focus-visible {
   transition: opacity 800ms ease 900ms;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-cheeks {
+.bloomie[data-stage="0"] .bloomie-cheeks {
   opacity: 0.35;
 }
 
-.companion-flower-stage[data-stage="2"] .bloomie-cheeks {
+.bloomie[data-stage="2"] .bloomie-cheeks {
   opacity: 1;
 }
 
@@ -1080,7 +1080,7 @@ select:focus-visible {
   transform: translate(-28px, 46px) rotate(150deg);
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-fallen-leaf {
+.bloomie[data-stage="0"] .bloomie-fallen-leaf {
   transform: none;
   opacity: 1;
 }
@@ -1094,7 +1094,7 @@ select:focus-visible {
     opacity 300ms ease 150ms;
 }
 
-.companion-flower-stage[data-stage="0"] .bloomie-thought {
+.bloomie[data-stage="0"] .bloomie-thought {
   transform: scale(1);
   opacity: 1;
   transition:
@@ -1121,7 +1121,7 @@ select:focus-visible {
   opacity: 0;
 }
 
-.companion-flower-stage.is-growing[data-stage="1"] .bloomie-water-drop {
+.bloomie.is-growing[data-stage="1"] .bloomie-water-drop {
   animation: bloomieWaterFall 850ms cubic-bezier(0.55, 0, 0.9, 0.5)
     var(--d, 0ms) both;
 }
@@ -1142,11 +1142,11 @@ select:focus-visible {
 }
 
 /* State-up moment: aura flash, expanding ring, sparkle burst and a happy bounce */
-.companion-flower-stage.is-growing .flower-whole-sway {
+.bloomie.is-growing .flower-whole-sway {
   animation: flowerHappyBounce 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) 2;
 }
 
-.companion-flower-stage.is-growing .companion-aura {
+.bloomie.is-growing .companion-aura {
   animation: auraGrowthFlash 1.8s ease-out;
 }
 
@@ -1161,16 +1161,16 @@ select:focus-visible {
   pointer-events: none;
 }
 
-.companion-flower-stage[data-stage="1"] .growth-burst {
+.bloomie[data-stage="1"] .growth-burst {
   border-color: rgba(214, 244, 222, 0.95);
   box-shadow: 0 0 18px rgba(150, 214, 170, 0.75);
 }
 
-.companion-flower-stage.is-growing .growth-burst {
+.bloomie.is-growing .growth-burst {
   animation: growthBurstRing 1.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.companion-flower-stage.is-growing .sparkle-dot {
+.bloomie.is-growing .sparkle-dot {
   display: block;
   background: #fff4c4;
   box-shadow: 0 0 12px rgba(252, 225, 129, 1);
@@ -1221,7 +1221,7 @@ select:focus-visible {
   opacity: 0;
 }
 
-.companion-flower-stage.is-growing[data-stage="2"] .petal-burst span {
+.bloomie.is-growing[data-stage="2"] .petal-burst span {
   animation: bloomiePetalBurst 1.7s cubic-bezier(0.2, 0.8, 0.3, 1) 250ms both;
 }
 
@@ -1241,7 +1241,7 @@ select:focus-visible {
 }
 
 /* The aura is faint while thirsty and turns golden in full bloom */
-.companion-flower-stage[data-stage="0"] .companion-aura {
+.bloomie[data-stage="0"] .companion-aura {
   width: 62%;
   height: 62%;
   background: radial-gradient(
@@ -1251,7 +1251,7 @@ select:focus-visible {
   );
 }
 
-.companion-flower-stage[data-stage="2"] .companion-aura {
+.bloomie[data-stage="2"] .companion-aura {
   width: 104%;
   height: 104%;
   background: radial-gradient(
@@ -1263,12 +1263,12 @@ select:focus-visible {
 }
 
 /* No pollen while thirsty; extra pollen sparkles in full bloom */
-.companion-flower-stage[data-stage="0"] .sparkle-dot,
+.bloomie[data-stage="0"] .sparkle-dot,
 .sparkle-extra {
   display: none;
 }
 
-.companion-flower-stage[data-stage="2"] .sparkle-extra {
+.bloomie[data-stage="2"] .sparkle-extra {
   display: block;
 }
 
@@ -1295,8 +1295,8 @@ select:focus-visible {
 }
 
 /* While the real state loads, jump to it without animating */
-.companion-flower-stage.is-settling,
-.companion-flower-stage.is-settling * {
+.bloomie.is-settling,
+.bloomie.is-settling * {
   transition: none !important;
 }
 
@@ -1334,6 +1334,52 @@ select:focus-visible {
   to {
     transform: scaleX(0.45);
   }
+}
+
+/* Mini Bloomie in the Tiny Steps card, so its changes show while checking steps */
+.bloomie-steps-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 6px 14px 6px 4px;
+  border-radius: var(--radius-md);
+  background: rgba(194, 235, 223, 0.32);
+}
+
+.bloomie-mini {
+  position: relative;
+  flex: none;
+  width: 80px;
+  height: 95px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bloomie-mini .petal-burst,
+.bloomie-mini .companion-sparkles,
+.bloomie-mini .butterfly-drift {
+  display: none;
+}
+
+.bloomie-steps-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bloomie-steps-copy strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.bloomie-steps-copy span {
+  font-size: 12.5px;
+  color: var(--secondary);
 }
 
 /* Constant-radius frosted scroll veil — driven purely by GPU opacity (no transition lag) */
@@ -3432,13 +3478,6 @@ select:focus-visible {
   gap: 8px;
 }
 
-.bloomie-restart-btn {
-  align-self: flex-start;
-  min-height: 36px;
-  padding: 6px 14px;
-  font-size: 13px;
-}
-
 .pwa-demo-chips {
   display: flex;
   flex-wrap: wrap;
@@ -3624,8 +3663,8 @@ select:focus-visible {
   }
 
   /* Change Bloomie's state at once instead of staggering it in */
-  .companion-flower-stage,
-  .companion-flower-stage * {
+  .bloomie,
+  .bloomie * {
     transition-delay: 0ms !important;
   }
 }

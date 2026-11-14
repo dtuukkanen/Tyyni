@@ -837,6 +837,7 @@ export function FlowerCompanion({
   stage = 2,
   isGrowing,
   isSettling,
+  variant = "hero",
 }: {
   mood: string;
   lowEnergy: boolean;
@@ -844,6 +845,8 @@ export function FlowerCompanion({
   stage?: GrowthStage;
   isGrowing?: boolean;
   isSettling?: boolean;
+  /** `hero` is the big scene companion; `mini` sits inline (Tiny Steps card). */
+  variant?: "hero" | "mini";
 }) {
   const isRestingMood = mood === "Tired" || lowEnergy;
   const at = (from: GrowthStage) => (stage >= from ? "" : " is-dormant");
@@ -851,7 +854,9 @@ export function FlowerCompanion({
 
   return (
     <div
-      className={`companion-flower-stage ${lowEnergy ? "is-low-energy" : ""} ${
+      className={`bloomie ${
+        variant === "mini" ? "bloomie-mini" : "companion-flower-stage"
+      } ${lowEnergy ? "is-low-energy" : ""} ${
         isCelebrating ? "is-celebrating" : ""
       } ${isGrowing ? "is-growing" : ""} ${isSettling ? "is-settling" : ""}`}
       data-stage={stage}
@@ -882,7 +887,8 @@ export function FlowerCompanion({
 
       <svg
         className="companion-flower-svg"
-        viewBox="0 0 320 330"
+        // The mini crops the sky around the plant so it draws larger.
+        viewBox={variant === "mini" ? "56 64 208 248" : "0 0 320 330"}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >

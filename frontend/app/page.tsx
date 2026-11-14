@@ -43,7 +43,7 @@ export default function Home() {
 
   const [mood, setMood] = useState("Steady");
   const [steps, setSteps] = useState<string[]>(STARTER_STEPS);
-  const [checked, setChecked] = useState<number[]>([0]);
+  const [checked, setChecked] = useState<number[]>([]);
   const [waveSent, setWaveSent] = useState(false);
   const [bloomieCelebrating, setBloomieCelebrating] = useState(false);
 
@@ -60,6 +60,8 @@ export default function Home() {
   const [nudgeIndex, setNudgeIndex] = useState(0);
 
   const [wins, setWins] = useState<string[]>(STARTER_WINS);
+  // Wins logged now (not the sample history); each counts as a done task.
+  const [winsLogged, setWinsLogged] = useState(0);
   const [anchors, setAnchors] = useState<AnchorItem[]>(INITIAL_ANCHORS);
   const [favoritedIds, setFavoritedIds] = useState<string[]>(["blanket"]);
 
@@ -155,14 +157,9 @@ export default function Home() {
     }, 2800);
   }, []);
 
-  const checkedStepLabels = useMemo(
-    () => checked.flatMap((i) => (steps[i] === undefined ? [] : [steps[i]])),
-    [checked, steps],
-  );
-
   const announceGrowth = useCallback(
     (stage: GrowthStage) => {
-      // Land after the action's own toast, once the new growth is visible.
+      // Land after any other toast, once the new growth is visible.
       if (growthToastTimerRef.current) {
         window.clearTimeout(growthToastTimerRef.current);
       }
@@ -174,7 +171,8 @@ export default function Home() {
   );
 
   const growth = useBloomieGrowth({
-    checkedStepLabels,
+    doneTasks: checked.length + winsLogged,
+    totalTasks: steps.length + winsLogged,
     dataReady,
     onStageUp: announceGrowth,
   });
@@ -230,12 +228,15 @@ export default function Home() {
 
   function toggleStep(index: number) {
     const isCompleting = !checked.includes(index);
-    // Earn on uncheck too: the step was done, and Bloomie never shrinks.
-    growth.earnStep(steps[index]);
-    if (isCompleting) triggerBloomieJoy();
-    setChecked((prev) =>
-      isCompleting ? [...prev, index] : prev.filter((i) => i !== index),
+    const nextChecked = isCompleting
+      ? [...checked, index]
+      : checked.filter((i) => i !== index);
+    growth.tasksChanged(
+      nextChecked.length + winsLogged,
+      steps.length + winsLogged,
     );
+    if (isCompleting) triggerBloomieJoy();
+    setChecked(nextChecked);
   }
 
   function handleAddStep(trimmed: string) {
@@ -248,7 +249,11 @@ export default function Home() {
     const trimmed = label.trim();
     if (!trimmed) return;
     setWins((prev) => [trimmed, ...prev]);
-    growth.earn(`win:${trimmed}`);
+    setWinsLogged(winsLogged + 1);
+    growth.tasksChanged(
+      checked.length + winsLogged + 1,
+      steps.length + winsLogged + 1,
+    );
     notify(`Placed “${trimmed}” in your Sanctuary Jar.`);
   }
 
@@ -290,7 +295,6 @@ export default function Home() {
       prev.includes(nudge.id) ? prev : [...prev, nudge.id],
     );
     postSuggestionFeedback(nudge.id, true, nudge.helped);
-    growth.earn(`nudge:${nudge.id}`);
     triggerBloomieJoy();
 
     const { action } = nudge;
@@ -314,7 +318,6 @@ export default function Home() {
       }
       case "message_friend":
         setWaveSent(true);
-        growth.earn("wave");
         notify("Sent a warm wave to your Gentle Circle.");
         document
           .getElementById("gentle-circle-section")
@@ -326,9 +329,11 @@ export default function Home() {
         notify(action.toast);
         break;
       case "add_step":
-        setSteps((prev) =>
-          prev.includes(action.stepLabel) ? prev : [action.stepLabel, ...prev],
-        );
+        if (!steps.includes(action.stepLabel)) {
+          // The new step goes first, so shift the checked marks with their steps.
+          setSteps([action.stepLabel, ...steps]);
+          setChecked(checked.map((i) => i + 1));
+        }
         notify("Added gentle suggestion to Today’s Tiny Steps.");
         document
           .getElementById("today-steps")
@@ -462,7 +467,6 @@ export default function Home() {
           mood={mood}
           onSelectMood={(nextMood) => {
             setMood(nextMood);
-            growth.earn("mood");
             triggerBloomieJoy();
           }}
           steps={steps}
@@ -472,11 +476,15 @@ export default function Home() {
           waveSent={waveSent}
           onSendWave={() => {
             setWaveSent(true);
-            growth.earn("wave");
             triggerBloomieJoy();
             notify("Sent a quiet wave to Liam, Maya, Sofia, and Marcus.");
           }}
           growthStage={growth.stage}
+          growthDone={checked.length + winsLogged}
+          growthTotal={steps.length + winsLogged}
+          growthPreview={growth.demo !== null}
+          isGrowing={growth.isGrowing}
+          isSettling={growth.isSettling}
           onInteractCompanion={() => {
             triggerBloomieJoy();
             notify("Bloomie sways happily in the gentle breeze with you.");
@@ -543,7 +551,6 @@ export default function Home() {
           onClose={closeModal}
           onCompleteSensory={() => {
             setModal(null);
-            growth.earn("sensory");
             notify("5–4–3–2–1 reset complete. Welcome back.");
           }}
         />
@@ -570,15 +577,6 @@ export default function Home() {
           bloomieDemo={growth.demo}
           onSelectBloomieDemo={(demo) =>
             showBloomieChange(() => growth.setDemo(demo))
-          }
-          onRestartBloomie={() =>
-            showBloomieChange(() => {
-              setChecked([]);
-              growth.restartDay();
-              notify(
-                "Bloomie’s day restarted — complete steps to help it grow.",
-              );
-            })
           }
           pwa={pwa}
           onClose={() => setPwaSheetOpen(false)}

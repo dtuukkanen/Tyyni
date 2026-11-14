@@ -127,7 +127,6 @@ export interface PwaSanctuarySheetProps {
   bloomieStage: GrowthStage;
   bloomieDemo: BloomieDemo;
   onSelectBloomieDemo: (demo: BloomieDemo) => void;
-  onRestartBloomie: () => void;
   pwa: PwaState;
   onClose: () => void;
   onInstalled: () => void;
@@ -143,7 +142,6 @@ export function PwaSanctuarySheet({
   bloomieStage,
   bloomieDemo,
   onSelectBloomieDemo,
-  onRestartBloomie,
   pwa,
   onClose,
   onInstalled,
@@ -298,8 +296,8 @@ export function PwaSanctuarySheet({
             <strong>Bloomie Growth</strong>
             <span>
               {bloomieDemo === null
-                ? `Live: ${GROWTH_STAGE_NAMES[bloomieStage]} — follows today’s completed steps`
-                : "Previewing — completed steps don’t change Bloomie until you pick Live"}
+                ? `Live: ${GROWTH_STAGE_NAMES[bloomieStage]} — follows your Tiny Steps and logged wins`
+                : "Previewing — pick Live to let your steps and wins move Bloomie again"}
             </span>
           </div>
           <div
@@ -322,14 +320,6 @@ export function PwaSanctuarySheet({
               );
             })}
           </div>
-          <button
-            type="button"
-            className="btn-secondary-pill bloomie-restart-btn"
-            onClick={onRestartBloomie}
-          >
-            <Icon name="flower" size={15} />
-            <span>Restart Bloomie’s day</span>
-          </button>
         </div>
 
         {/* Quick Low-Energy Preference Row */}
