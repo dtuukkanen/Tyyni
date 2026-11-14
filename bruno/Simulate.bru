@@ -1,0 +1,35 @@
+meta {
+  name: Simulate
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/users/{{userId}}/simulate
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "scenario": "withdrawal",
+    "days": 21,
+    "seed": 1
+  }
+}
+
+script:post-response {
+  const [first] = res.body.suggestions ?? [];
+  if (first) bru.setVar("suggestionId", first.id);
+}
+
+docs {
+  Every field is optional: scenario, days (max 90), end (default today), seed, signals,
+  scenarios (per-signal overrides), artifacts, language, replace, infer. See docs/api.md.
+}
+
+assert {
+  res.status: eq 200
+  res.body.rows.heart: gt 0
+  res.body.suggestions.length: gt 0
+}

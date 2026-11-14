@@ -32,7 +32,8 @@
       }
     ],
     "no-underscore-dangle": "off",
-    "promise/always-return": "off"
+    "promise/always-return": "off",
+    "oxc/no-map-spread": "off"
   },
   "overrides": [
     {

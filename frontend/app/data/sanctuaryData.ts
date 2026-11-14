@@ -1,13 +1,17 @@
 import type { IconName } from "../components/icons";
+import type { BackendAnomaly, BackendSuggestion } from "./behavioralNudges";
 
 export type Tab = "Today" | "Ground" | "Wins" | "Anchor";
 
 export type DashboardData = {
+  userId?: string;
   displayName?: string;
   dateLabel?: string;
   mood?: string;
   steps?: { label: string; complete?: boolean }[];
   wins?: string[];
+  anomalies?: BackendAnomaly[];
+  suggestions?: BackendSuggestion[];
 };
 
 export type MoodOption = {

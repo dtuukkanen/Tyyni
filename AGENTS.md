@@ -8,7 +8,7 @@ All code lives in `backend/` (Python 3.12, package `app`):
 
 - `app/db/`: SQLAlchemy models (`models.py`), session handling (`session.py`, `get_session()` commits on success and rolls back on error) and `repository.py`, the only place that reads or writes tables.
 - `app/api/`: FastAPI app (`main.py`), shared dependencies (`deps.py`: per-request session, `PathUser`, validated date ranges), Pydantic schemas (`schemas.py`) and one router per resource in `routers/`.
-- `app/simulators/`: one module per signal (`hrv`, `sleep`, `activity`, `screen`, `mood`, `journal`), plus shared code:
+- `app/simulators/`: one module per signal (`hrv`, `sleep`, `activity`, `screen`, `mood`, `journal`), `combined` that runs them all with one scenario and seed (also behind `POST /users/{id}/simulate`), plus shared code:
   - `common.py`: math helpers, seeded RNGs, profile lookup, artifact gaps, chunked `write()` and the shared CLI `parser()`.
   - `timelines.py`: day-by-day shapes of scenarios shared across simulators (`stress_period`, `sudden_drop`, `withdrawal`/`crisis`, `oversleep`, `late_sleep_shift`).
   - `sleep_window.py`: when the simulated user is asleep, either the built-in 23:00–07:00 UTC window or real nights from `sleep.nights(...)`.

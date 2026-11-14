@@ -1,0 +1,16 @@
+meta {
+  name: Anomalies
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/users/{{userId}}/anomalies
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body: isArray
+}

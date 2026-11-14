@@ -55,6 +55,27 @@ All user routes start with `/users/{id}`.
 | `POST …/suggestions?day=` | Detects the anomalies of the day and the day before, adds suggestions for them and returns all of the day's suggestions. Calling it again keeps the ones already made |
 | `POST …/suggestions/{sid}/feedback` | Post `{"done": true, "helped": true\|false\|null}` or `{"done": false}`; the latest answer counts and steers later suggestions |
 
+**Simulated data**
+
+| Endpoint | Returns |
+|---|---|
+| `GET /simulators` | The scenario names `simulate` takes, and each signal's own scenarios |
+| `POST …/simulate` | Fills the user's signals with the [combined simulator](simulators/README.md#all-signals-at-once), then detects the period's anomalies and makes the last day's suggestions. Returns the seed, each signal's scenario and row count, the anomalies and the suggestions |
+
+`simulate` takes a JSON body; every field is optional:
+
+| Field | Default | Meaning |
+|---|---|---|
+| `scenario` | `stable_average` | The story; each signal follows the same name, its closest match, or its steady default |
+| `days`, `end` | 21, today | UTC days `[end - days + 1, end]`; at most 90 days |
+| `seed` | random | Same seed, same data; the response returns the one used |
+| `signals` | all six | Any of `sleep`, `heart`, `activity`, `screen`, `mood`, `journal` |
+| `scenarios` | `{}` | Set one signal's scenario directly, e.g. `{"journal": "crisis"}` |
+| `artifacts`, `language`, `replace` | `false`, `mixed`, `true` | As the [CLI options](simulators/README.md#running-one) |
+| `infer` | `true` | Detect anomalies and make suggestions afterwards |
+
+It clears only the user's earlier simulated rows, so rerunning it on demo day keeps the data ending today. A [Bruno](https://www.usebruno.com) collection for it and the main reads is in [`bruno/`](../bruno): open the folder in Bruno, or run `bru run --env Local` from it. For the `Vercel` environment, copy `bruno/.env.example` to `bruno/.env` and fill in the API key.
+
 ## Date ranges
 
 | Kind | Format | Default | Max |
