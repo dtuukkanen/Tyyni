@@ -16,3 +16,8 @@ body:json {
     "helped": true
   }
 }
+
+assert {
+  res.status: eq 201
+  res.body.done: isTruthy
+}

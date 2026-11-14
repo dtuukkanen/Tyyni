@@ -74,7 +74,7 @@ All user routes start with `/users/{id}`.
 | `artifacts`, `language`, `replace` | `false`, `mixed`, `true` | As the [CLI options](simulators/README.md#running-one) |
 | `infer` | `true` | Detect anomalies and make suggestions afterwards |
 
-It clears only the user's earlier simulated rows, so rerunning it on demo day keeps the data ending today. A [Bruno](https://www.usebruno.com) collection for it and the main reads is in [`bruno/`](../bruno).
+It clears only the user's earlier simulated rows, so rerunning it on demo day keeps the data ending today. A [Bruno](https://www.usebruno.com) collection for it and the main reads is in [`bruno/`](../bruno): open the folder in Bruno, or run `bru run --env Local` from it. For the `Vercel` environment, copy `bruno/.env.example` to `bruno/.env` and fill in the API key.
 
 ## Date ranges
 

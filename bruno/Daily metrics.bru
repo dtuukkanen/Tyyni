@@ -14,3 +14,8 @@ params:query {
   ~start: 2026-11-01
   ~end: 2026-11-14
 }
+
+assert {
+  res.status: eq 200
+  res.body.length: gt 0
+}
