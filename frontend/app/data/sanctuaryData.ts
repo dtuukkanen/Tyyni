@@ -18,7 +18,15 @@ export type MoodOption = {
   id: string;
   label: string;
   icon: IconName;
-  response: string;
+  meaning: string;
+};
+
+export type BreathPhase = {
+  label: string;
+  cue: string;
+  expand: boolean;
+  /** How long the phase lasts; defaults to 3600 ms. */
+  ms?: number;
 };
 
 export type PracticeModalState = {
@@ -28,6 +36,8 @@ export type PracticeModalState = {
   description: string;
   icon: IconName;
   tips?: string[];
+  /** Custom pacing; falls back to the even four-phase BREATH_PHASES. */
+  phases?: BreathPhase[];
 };
 
 export type AnchorItem = {
@@ -54,28 +64,25 @@ export const MOOD_OPTIONS: MoodOption[] = [
     id: "Tired",
     label: "Tired",
     icon: "droplet",
-    response:
-      "Tired is noted. Wrap yourself in quiet — today asks only for soft rest.",
+    meaning: "Low battery. Your body or mind is asking for rest.",
   },
   {
     id: "Tender",
     label: "Tender",
     icon: "sprout",
-    response:
-      "A bit tender is felt. Move with gentle kindness around yourself right now.",
+    meaning: "A bit raw. Things land harder than usual.",
   },
   {
     id: "Steady",
     label: "Steady",
     icon: "stone",
-    response: "Steady is selected. That is more than enough for today.",
+    meaning: "Grounded enough. Nothing needs fixing right now.",
   },
   {
     id: "Light",
     label: "Light",
     icon: "sun",
-    response:
-      "Clear and light is embraced. Enjoy the quiet ease of this moment.",
+    meaning: "Clear and open, with some ease or energy.",
   },
 ];
 
@@ -92,30 +99,80 @@ export const STEP_ICONS: IconName[] = [
   "spa",
 ];
 
-export const CIRCLE_MEMBERS = [
-  { initial: "L", name: "Liam", status: "Done", done: true, tone: "tone-moss" },
+/** Basic-needs steps shown instead of the usual list in low-energy mode. */
+export const LOW_ENERGY_STEPS: { label: string; icon: IconName }[] = [
+  { label: "Sip some water", icon: "waterGlass" },
+  { label: "Eat something small. Anything counts.", icon: "sprout" },
+  { label: "Close your eyes for two minutes", icon: "moon" },
+];
+
+export const LOW_ENERGY_BREATH: PracticeModalState = {
+  mode: "breath",
+  category: "Low-energy reset",
+  title: "Slow exhale",
+  description:
+    "Breathe in softly, then let the out-breath run a little longer. A long exhale tells your body it’s safe to slow down.",
+  icon: "air",
+  phases: [
+    { label: "Inhale", cue: "Softly, no effort", expand: true, ms: 4000 },
+    {
+      label: "Exhale",
+      cue: "Long and slow, like a sigh",
+      expand: false,
+      ms: 6500,
+    },
+    { label: "Rest", cue: "Let the body be heavy", expand: false, ms: 2000 },
+  ],
+  tips: [
+    "Stay lying down or slumped. No need to sit up straight.",
+    "Stop whenever you like. One slow breath still counts.",
+  ],
+};
+
+export type CircleMember = {
+  initial: string;
+  name: string;
+  tone: "tone-moss" | "tone-eucalyptus" | "tone-linen" | "tone-blush";
+  /** The mood id they checked in with, or null while they rest. */
+  feeling: string | null;
+  note: string;
+  when: string;
+};
+
+export const CIRCLE_MEMBERS: CircleMember[] = [
+  {
+    initial: "L",
+    name: "Liam",
+    tone: "tone-moss",
+    feeling: "Steady",
+    note: "Stretched by the window before work",
+    when: "8:10",
+  },
   {
     initial: "M",
     name: "Maya",
-    status: "Done",
-    done: true,
     tone: "tone-eucalyptus",
-  },
-  {
-    initial: "S",
-    name: "Sofia",
-    status: "Resting",
-    done: false,
-    tone: "tone-linen",
+    feeling: "Light",
+    note: "Walked the long way home in the sun",
+    when: "9:35",
   },
   {
     initial: "M",
     name: "Marcus",
-    status: "Done",
-    done: true,
     tone: "tone-blush",
+    feeling: "Tender",
+    note: "Breathed through a heavy morning",
+    when: "10:20",
   },
-] as const;
+  {
+    initial: "S",
+    name: "Sofia",
+    tone: "tone-linen",
+    feeling: null,
+    note: "Taking a slow, quiet day",
+    when: "",
+  },
+];
 
 export const STARTER_WINS = [
   "Drank a glass of water",
@@ -198,7 +255,7 @@ export const INITIAL_ANCHORS: AnchorItem[] = [
   },
 ];
 
-export const BREATH_PHASES = [
+export const BREATH_PHASES: BreathPhase[] = [
   { label: "Inhale", cue: "Softly through the nose", expand: true },
   { label: "Hold", cue: "Let the air settle", expand: true },
   { label: "Exhale", cue: "Unclench jaw & shoulders", expand: false },
