@@ -46,7 +46,10 @@ export type IconName =
   | "wifiOff"
   | "close"
   | "info"
-  | "pen";
+  | "pen"
+  | "eye"
+  | "cup"
+  | "clock";
 
 type IconProps = SVGProps<SVGSVGElement> & {
   name: IconName;
@@ -447,6 +450,28 @@ export function Icon({ name, size = 20, className, ...props }: IconProps) {
           <circle cx="12" cy="12" r="8.5" />
           <path d="M12 11v5.2" />
           <circle cx="12" cy="7.9" r="0.4" fill="currentColor" />
+        </svg>
+      );
+    case "eye":
+      return (
+        <svg {...common}>
+          <path d="M2.8 12s3.4-6.2 9.2-6.2 9.2 6.2 9.2 6.2-3.4 6.2-9.2 6.2S2.8 12 2.8 12Z" />
+          <circle cx="12" cy="12" r="2.6" />
+        </svg>
+      );
+    case "cup":
+      return (
+        <svg {...common}>
+          <path d="M5 9.5h11v4.2a5.5 5.5 0 0 1-11 0V9.5Z" />
+          <path d="M16 10.5h1.8a2.2 2.2 0 0 1 0 4.4H16" />
+          <path d="M8.5 5.2c0 1.2 1 1.4 1 2.5M12.5 5.2c0 1.2 1 1.4 1 2.5" />
+        </svg>
+      );
+    case "clock":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5V12l3 1.8" />
         </svg>
       );
   }

@@ -77,12 +77,29 @@ const PRACTICE_TEMPLATES: Record<string, NudgeTemplate> = {
     action: {
       type: "open_practice",
       modal: {
-        mode: "breath",
+        mode: "guide",
         category: "Movement · 10 Min",
         title: "Mindful Slow Walk",
-        description:
-          "Walk slowly outside without a destination, noticing each step and three quiet sounds around you.",
+        description: "Walk at an easy pace without a destination.",
         icon: "walk",
+        durationSeconds: 600,
+        steps: [
+          {
+            title: "Heel to Toe",
+            detail: "Feel each foot land before shifting your weight.",
+            icon: "walk",
+          },
+          {
+            title: "Look Up",
+            detail: "Rest your eyes on trees, buildings, or open sky.",
+            icon: "eye",
+          },
+          {
+            title: "Three Sounds",
+            detail: "Notice wind, footsteps, or distant birds around you.",
+            icon: "waves",
+          },
+        ],
       },
     },
   },
@@ -107,12 +124,29 @@ const PRACTICE_TEMPLATES: Record<string, NudgeTemplate> = {
     action: {
       type: "open_practice",
       modal: {
-        mode: "breath",
+        mode: "guide",
         category: "Movement · 8 Min",
         title: "Gentle Mat Stretch",
-        description:
-          "Move slowly through neck, shoulder, and hip releases — zero strain, pausing on every exhale.",
+        description: "Move through each easy pose without strain.",
         icon: "bed",
+        durationSeconds: 480,
+        steps: [
+          {
+            title: "Neck & Shoulders",
+            detail: "Slow ear-to-shoulder rolls, letting your arms hang.",
+            icon: "spa",
+          },
+          {
+            title: "Supported Child’s Pose",
+            detail: "Fold forward over a pillow and let your back lengthen.",
+            icon: "bed",
+          },
+          {
+            title: "Side Twist",
+            detail: "Rest on your side with knees stacked on a cushion.",
+            icon: "moon",
+          },
+        ],
       },
     },
   },
@@ -125,12 +159,30 @@ const PRACTICE_TEMPLATES: Record<string, NudgeTemplate> = {
     action: {
       type: "open_practice",
       modal: {
-        mode: "breath",
+        mode: "guide",
         category: "Meditation · 10 Min",
         title: "Gentle Body Scan",
         description:
-          "Rest comfortably and move your attention slowly from your toes to your jaw, letting each part soften.",
+          "Move attention slowly from head to feet, softening each area.",
         icon: "meditate",
+        durationSeconds: 600,
+        steps: [
+          {
+            title: "Jaw & Eyes",
+            detail: "Unclench teeth and soften the muscles around your eyes.",
+            icon: "spa",
+          },
+          {
+            title: "Shoulders & Belly",
+            detail: "Let shoulders drop and allow your stomach to relax.",
+            icon: "stone",
+          },
+          {
+            title: "Legs & Feet",
+            detail: "Feel the full weight of your legs supported beneath you.",
+            icon: "meditate",
+          },
+        ],
       },
     },
   },
@@ -147,7 +199,7 @@ const PRACTICE_TEMPLATES: Record<string, NudgeTemplate> = {
         category: "4-4-4-4 Rhythm · 4 Min",
         title: "Box Breathing",
         description:
-          "Breathe in for 4, hold softly for 4, out for 4, rest for 4. Four quiet rounds settle a busy heart.",
+          "Breathe in for 4, hold softly for 4, out for 4, rest for 4.",
         icon: "air",
       },
     },
@@ -165,8 +217,24 @@ const PRACTICE_TEMPLATES: Record<string, NudgeTemplate> = {
         category: "Immediate Calm · 1 Min",
         title: "Double Inhale Sigh",
         description:
-          "Two short breaths in through the nose, then one long slow exhale through the mouth.",
+          "Two short breaths in through the nose, then one long slow exhale.",
         icon: "air",
+        phases: [
+          { label: "Sip in", cue: "Through the nose", expand: true, ms: 2000 },
+          {
+            label: "Top-up sip",
+            cue: "One quick sip more",
+            expand: true,
+            ms: 1300,
+          },
+          {
+            label: "Long sigh",
+            cue: "Slow exhale out the mouth",
+            expand: false,
+            ms: 6000,
+          },
+          { label: "Rest", cue: "Shoulders heavy", expand: false, ms: 2000 },
+        ],
       },
     },
   },

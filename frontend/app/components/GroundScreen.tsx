@@ -118,12 +118,30 @@ const BODY_PRACTICES: GuidedPractice[] = [
     cta: "Begin",
     primary: true,
     modal: {
-      mode: "breath",
-      category: "Quiet Unwinding",
+      mode: "guide",
+      category: "Body Scan · 3 Min",
       title: "Gentle Body Softening",
-      description:
-        "Let your tongue rest away from the roof of your mouth. Drop your shoulders down an inch.",
+      description: "Tap each area as you let the tension drop away.",
       icon: "meditate",
+      durationSeconds: 180,
+      steps: [
+        {
+          title: "Jaw & Forehead",
+          detail: "Rest your tongue away from the roof of your mouth.",
+          icon: "spa",
+        },
+        {
+          title: "Shoulders & Chest",
+          detail: "Let both shoulders drop an inch away from your ears.",
+          icon: "stone",
+        },
+        {
+          title: "Hands & Feet",
+          detail:
+            "Unclench your fingers and feel the floor or bed beneath you.",
+          icon: "meditate",
+        },
+      ],
     },
   },
   {
@@ -135,12 +153,30 @@ const BODY_PRACTICES: GuidedPractice[] = [
     note: "Zero sweat · Heavy pillows encouraged",
     cta: "View Poses",
     modal: {
-      mode: "breath",
-      category: "Comfort First",
-      title: "Restorative Mat Rest",
-      description:
-        "Fold over a pillow in wide-knee child’s pose, then rest on your side with knees supported.",
+      mode: "guide",
+      category: "Restorative Poses · 5 Min",
+      title: "Gentle Mat Stretch",
+      description: "Stay in each pose as long as it feels comfortable.",
       icon: "bed",
+      durationSeconds: 300,
+      steps: [
+        {
+          title: "Supported Child’s Pose",
+          detail: "Knees wide, fold forward with a pillow under your chest.",
+          icon: "bed",
+        },
+        {
+          title: "Side-Lying Twist",
+          detail: "Lie on your side with a cushion tucked between your knees.",
+          icon: "moon",
+        },
+        {
+          title: "Legs Rested Up",
+          detail:
+            "Rest calves on the bed or couch edge to ease your lower back.",
+          icon: "stone",
+        },
+      ],
     },
   },
   {
@@ -152,26 +188,55 @@ const BODY_PRACTICES: GuidedPractice[] = [
     note: "Indoor socks or outdoor stroll",
     cta: "Begin",
     modal: {
-      mode: "breath",
-      category: "Tactile Presence",
+      mode: "guide",
+      category: "Movement · 10 Min",
       title: "Slow Grounding Walk",
-      description:
-        "Notice the heel touch, the roll across the sole, and the lift. There is nowhere to hurry.",
+      description: "Walk without a destination — indoors or outside.",
       icon: "walk",
+      durationSeconds: 600,
+      steps: [
+        {
+          title: "Heel, Sole, Lift",
+          detail: "Feel each foot meet the ground before shifting weight.",
+          icon: "walk",
+        },
+        {
+          title: "Look Ahead",
+          detail: "Lift your gaze from screens toward trees, roofs, or sky.",
+          icon: "eye",
+        },
+        {
+          title: "Three Quiet Sounds",
+          detail: "Notice footsteps, wind, or distant birds along the way.",
+          icon: "waves",
+        },
+      ],
     },
   },
 ];
 
 const NEARBY_NATURE_MODAL: PracticeModalState = {
-  mode: "breath",
-  category: "Nature Connection",
-  title: "Linden Grove Sanctuary",
-  description:
-    "Step outside whenever you feel ready. Watching leaves move in the wind naturally softens cortisol.",
+  mode: "guide",
+  category: "Nearby Green Space · 0.8 km",
+  title: "Linden Grove & Lakeside",
+  description: "A level, shaded loop with benches facing the water.",
   icon: "forest",
-  tips: [
-    "8 min level walk along shaded gravel",
-    "Quiet lakeside benches facing west",
+  steps: [
+    {
+      title: "Shaded Gravel Path",
+      detail: "8-minute level walk beneath mature linden trees.",
+      icon: "forest",
+    },
+    {
+      title: "West-Facing Benches",
+      detail: "Quiet spots along the water with low foot traffic.",
+      icon: "pin",
+    },
+    {
+      title: "Open Lawn",
+      detail: "Soft grass clearing near the south entrance.",
+      icon: "sun",
+    },
   ],
 };
 
@@ -180,8 +245,19 @@ const SOS_MODAL: PracticeModalState = {
   category: "Emergency Calm",
   title: "Deep Calming Sigh",
   description:
-    "Take two soft sips of air in through your nose, followed by a long, unhurried sigh out your mouth.",
+    "Two short sips of air in through your nose, then one long sigh out.",
   icon: "heartFilled",
+  phases: [
+    { label: "Sip in", cue: "Through the nose", expand: true, ms: 2000 },
+    { label: "Top-up sip", cue: "One quick sip more", expand: true, ms: 1300 },
+    {
+      label: "Long sigh",
+      cue: "Slow release out the mouth",
+      expand: false,
+      ms: 6000,
+    },
+    { label: "Rest", cue: "Let shoulders drop", expand: false, ms: 2000 },
+  ],
 };
 
 export function GroundScreen({
