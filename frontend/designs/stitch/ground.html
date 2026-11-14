@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-variant": "#e4e2df", "surface-container-lowest": "#ffffff", "primary-container": "#52796f", "inverse-primary": "#a6cfc3", "primary": "#3a6057", "surface-tint": "#3f665c", "on-secondary-fixed-variant": "#2c4e36", "on-tertiary-fixed": "#3c0800", "surface-container": "#efeeeb", "error": "#ba1a1a", "secondary-fixed": "#c5eccc", "secondary": "#43664d", "on-surface-variant": "#414846", "on-secondary": "#ffffff", "on-tertiary-fixed-variant": "#7c2e19", "tertiary": "#933f29", "on-tertiary": "#ffffff", "error-container": "#ffdad6", "surface": "#fbf9f6", "surface-bright": "#fbf9f6", "primary-fixed": "#c1ebdf", "tertiary-fixed-dim": "#ffb4a1", "background": "#fbf9f6", "on-tertiary-container": "#fff5f3", "inverse-surface": "#30312f", "surface-container-low": "#f5f3f0", "on-primary-fixed-variant": "#274e45", "on-secondary-fixed": "#00210e", "secondary-fixed-dim": "#aad0b1", "on-primary": "#ffffff", "surface-dim": "#dbdad7", "on-error": "#ffffff", "on-error-container": "#93000a", "on-surface": "#1b1c1a", "secondary-container": "#c2e9c9", "on-primary-container": "#dcfff4", "tertiary-container": "#b2573e", "on-background": "#1b1c1a", "outline-variant": "#c0c8c5", "on-secondary-container": "#486a51", "inverse-on-surface": "#f2f0ed", "surface-container-high": "#eae8e5", "outline": "#717976", "primary-fixed-dim": "#a6cfc3", "on-primary-fixed": "#00201a", "surface-container-highest": "#e4e2df", "tertiary-fixed": "#ffdbd2" }, borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, spacing: { "space-lg": "1.5rem", "space-xl": "2.5rem", "space-sm": "0.5rem", "gutter": "1rem", "margin": "1.5rem", "gutter-mobile": "0.75rem", "margin-mobile": "1.25rem", "space-md": "1rem", "space-xs": "0.25rem" }, fontFamily: { "label-md": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "headline-xl-mobile": ["Plus Jakarta Sans"], "headline-xl": ["Plus Jakarta Sans"], "label-lg": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"] }, fontSize: { "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }], "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }], "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }], "headline-xl-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "600" }], "label-lg": ["16px", { "lineHeight": "24px", "fontWeight": "600" }], "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }], "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }] } } } };</script><style>@layer base { html, body { width: 100vw; margin: 0; padding: 0; min-height: 100%; } body { overscroll-behavior-y: none; } .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); } .pt-safe { padding-top: env(safe-area-inset-top, 0px); } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-surface text-on-surface font-body-md antialiased min-h-screen flex flex-col max-w-[390px] mx-auto"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.03)] max-w-[390px]"><div class="h-16 px-margin-mobile flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt="Tyyni Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/ALJJyrBWJM5x3Q2UzwxzEHei9HaDXkUN-ywn8vyE-pM9XcaknQqkktLJ1xLJx5IV9rUAipoVTFfo-VnLZCbyINIOKHf-v59TkZv6hOouPfbUm2zSG_QpXAuj5piN_UIMr4FDfV3i2gu3C5E11TK2LVsiGqAaac9oYvDLs6gLUHuS_eM6922UukYe01dqQqcytJ1EQ259CBDbhqoNhNT0GsoVHAVLv0KvgXSlIpMtV8xIhfI"/><div class="flex flex-col"><div class="flex items-center gap-1.5"><span class="font-headline-md text-headline-md text-primary tracking-tight">Tyyni</span><span class="text-outline-variant font-body-sm text-body-sm">•</span><span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Ground</span></div><span class="font-label-sm text-label-sm text-outline -mt-0.5">Ground</span></div></div><div class="flex items-center gap-space-xs"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-24 bg-surface px-margin-mobile"><div class="flex flex-col w-full pb-8">
+<!-- Interactive Modals / Overlays Container -->
+<div class="fixed inset-0 z-50 bg-inverse-surface/40 backdrop-blur-sm hidden flex items-center justify-center p-margin-mobile transition-all duration-300" id="exercise-overlay">
+<div class="bg-surface-container-lowest text-on-surface rounded-xl p-space-lg w-full max-w-sm shadow-xl flex flex-col items-center text-center relative overflow-hidden">
+<!-- Ambient organic blur backdrop inside modal -->
+<div class="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-secondary-container/50 blur-2xl pointer-events-none"></div>
+<div class="absolute -bottom-16 -left-16 w-36 h-36 rounded-full bg-primary-fixed/40 blur-2xl pointer-events-none"></div>
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary mb-space-md">
+<span class="material-symbols-outlined text-[26px]" id="overlay-icon">air</span>
+</div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline mb-1" id="overlay-category">Gentle Pace</span>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-space-xs" id="overlay-title">Box Breathing</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-lg max-w-[260px]" id="overlay-desc">Take a soft breath in. Let the air settle quietly inside you.</p>
+<!-- Somatic Breathing Circle animation -->
+<div class="relative w-36 h-36 flex items-center justify-center mb-space-lg">
+<div class="absolute inset-0 rounded-full bg-primary-container/20 transition-all duration-[4000ms] ease-in-out scale-75" id="breath-outer"></div>
+<div class="w-24 h-24 rounded-full bg-primary-container text-on-primary flex items-center justify-center shadow-md transition-all duration-[4000ms] ease-in-out scale-90" id="breath-inner">
+<span class="font-label-md text-label-md font-semibold tracking-wide" id="breath-text">Inhale</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm w-full">
+<button class="w-full py-3.5 px-space-md rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-label-md hover:bg-surface-variant active:scale-95 transition-all" id="close-overlay">
+          I'm grounded now
+        </button>
+</div>
+</div>
+</div>
+<!-- Header / Soft Greeting Section -->
+<header class="flex flex-col pt-space-md mb-space-lg">
+<div class="inline-flex items-center gap-1.5 self-start px-3 py-1 rounded-full bg-secondary-container/60 text-on-secondary-container mb-space-xs">
+<span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">spa</span>
+<span class="font-label-sm text-label-sm tracking-wide font-semibold uppercase">Somatic Anchor</span>
+</div>
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface font-semibold tracking-tight mt-1 mb-1">
+      Ground yourself.
+    </h1>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+      Choose one gentle practice. No rush, no expectations.
+    </p>
+<!-- Subtle Ambient Pebble Card -->
+<div class="mt-space-md bg-surface-container-low rounded-lg p-space-md flex items-center gap-space-md relative overflow-hidden shadow-sm">
+<div class="w-10 h-10 rounded-full bg-primary-fixed text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px]">wb_twilight</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Your pace is worthy</span>
+<span class="font-body-sm text-body-sm text-outline truncate">Even closing your eyes for 30 seconds rewires the nervous system.</span>
+</div>
+</div>
+</header>
+<!-- Practices List (Clear tactile pebble cards) -->
+<section aria-label="Grounding practices" class="flex flex-col gap-space-sm mb-space-xl">
+<!-- 1. Box Breathing -->
+<article class="bg-surface-container-lowest rounded-lg p-space-md shadow-[0_4px_20px_-4px_rgba(45,55,72,0.05)] hover:shadow-md transition-all duration-200 flex flex-col gap-space-sm relative overflow-hidden group">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-11 h-11 rounded-2xl bg-secondary-container text-secondary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[24px]">air</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-md text-headline-md text-on-surface font-semibold truncate">Box Breathing</h2>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Calm nervous system · Inhale, hold, exhale, rest</p>
+</div>
+</div>
+<span class="inline-flex shrink-0 items-center px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">
+          2 mins
+        </span>
+</div>
+<div class="flex items-center justify-between pt-1 mt-1">
+<div class="flex items-center gap-1.5 text-outline">
+<span class="material-symbols-outlined text-[16px]">all_inclusive</span>
+<span class="font-label-sm text-label-sm">Biomorphic balance</span>
+</div>
+<button class="px-5 py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container active:scale-95 transition-all shadow-sm" onclick="openExercise('Box Breathing', 'Follow the soothing expansion. There is no right or wrong rhythm.', 'air', 'Breath Rhythm')">
+          Begin
+        </button>
+</div>
+</article>
+<!-- 2. Calming Music / Sound Sanctuary -->
+<article class="bg-surface-container-lowest rounded-lg p-space-md shadow-[0_4px_20px_-4px_rgba(45,55,72,0.05)] hover:shadow-md transition-all duration-200 flex flex-col gap-space-sm relative overflow-hidden">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-11 h-11 rounded-2xl bg-surface-container text-primary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[24px]">waves</span>
+</div>
+<div class="flex flex-col min-w-0">
+<h2 class="font-headline-md text-headline-md text-on-surface font-semibold truncate">Sound Sanctuary</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Ambient rainfall, forest stream, singing bowl</p>
+</div>
+</div>
+<span class="inline-flex shrink-0 items-center px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">
+          5 mins
+        </span>
+</div>
+<div class="flex items-center justify-between pt-1 mt-1">
+<!-- Visual audio wave representation -->
+<div class="flex items-center gap-1">
+<span class="w-1 h-3 rounded-full bg-primary/40 animate-pulse"></span>
+<span class="w-1 h-5 rounded-full bg-primary/70 animate-pulse delay-100"></span>
+<span class="w-1 h-2 rounded-full bg-primary/50 animate-pulse delay-200"></span>
+<span class="w-1 h-4 rounded-full bg-primary/80 animate-pulse delay-150"></span>
+<span class="w-1 h-3 rounded-full bg-primary/40 animate-pulse delay-75"></span>
+<span class="font-label-sm text-label-sm text-outline ml-2">Warm acoustic hum</span>
+</div>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-variant active:scale-95 transition-all flex items-center gap-1.5" onclick="toggleAudioPreview(this)">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+<span>Listen</span>
+</button>
+</div>
+</article>
+<!-- 3. Nearby Greenery -->
+<article class="bg-surface-container-lowest rounded-lg p-space-md shadow-[0_4px_20px_-4px_rgba(45,55,72,0.05)] hover:shadow-md transition-all duration-200 flex flex-col gap-space-sm relative overflow-hidden">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-11 h-11 rounded-2xl bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[24px]">forest</span>
+</div>
+<div class="flex flex-col min-w-0">
+<h2 class="font-headline-md text-headline-md text-on-surface font-semibold truncate">Nearby nature</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Quiet shaded trees, lake shores, riverbank, or open grass</p>
+</div>
+</div>
+<span class="inline-flex shrink-0 items-center px-2.5 py-1 rounded-full bg-secondary-container/50 text-on-secondary-container font-label-sm text-label-sm font-semibold">
+          0.8 km
+        </span>
+</div>
+<!-- Small serene map anchor -->
+<div class="relative w-full h-24 rounded-lg overflow-hidden my-1 bg-surface-container">
+<div class="w-full h-full bg-cover bg-center" data-alt="A soft atmospheric aerial view of a quiet tranquil urban garden with sunlit willow trees and a gravel pathway, shot with warm natural morning lighting and low contrast" data-location="Alppipuisto Park, Helsinki" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBqHnapOI8oLsr6vdw9lLtXiHKdxj7hKNTKMLF4aF0_mRe0jK-yc3VRazOEs4J4GXKzuvd-uVyZhqtmTAM9bAXFTh2ce3Un658cBcraPuxy4mPsSjIHSQIShIsYuoNGr3aJyzDh7DkSaW2oMA0b9E5mv5H_z74Q7tSRNB7U7IkwWm-9-U3l7vf773vYzkBLqbd_F2s8VArwvFIubs83xohck6v3UpYuKovz493spw')">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/60 via-transparent to-transparent flex items-end p-2.5">
+<div class="flex items-center gap-1.5 text-surface-container-lowest">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="font-label-sm text-label-sm font-medium">Linden Grove &amp; Lakeside Haven (8 min gentle walk)</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-outline">Open benches · Low foot traffic · Calming water</span>
+<button class="px-5 py-2.5 rounded-full bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-variant active:scale-95 transition-all" onclick="openExercise('Nearby Sanctuary', 'Take a slow step outside whenever you feel ready. Just watching leaves move in the wind helps regulate cortisol.', 'park', 'Nature Connection')">
+          Explore
+        </button>
+</div>
+</article>
+<!-- 4. Gentle Body Scan -->
+<article class="bg-surface-container-lowest rounded-lg p-space-md shadow-[0_4px_20px_-4px_rgba(45,55,72,0.05)] hover:shadow-md transition-all duration-200 flex flex-col gap-space-sm relative overflow-hidden">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-11 h-11 rounded-2xl bg-primary-fixed text-primary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[24px]">self_improvement</span>
+</div>
+<div class="flex flex-col min-w-0">
+<h2 class="font-headline-md text-headline-md text-on-surface font-semibold truncate">Gentle Body Scan</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Unclench jaw, soften shoulders, release hands</p>
+</div>
+</div>
+<span class="inline-flex shrink-0 items-center px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">
+          3 mins
+        </span>
+</div>
+<div class="flex items-center justify-between pt-1 mt-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-label-sm text-label-sm text-outline">Seated or lying down</span>
+</div>
+<button class="px-5 py-2.5 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container active:scale-95 transition-all shadow-sm" onclick="openExercise('Body Softening', 'Let your tongue rest gently from the roof of your mouth. Drop your shoulders down an inch.', 'self_improvement', 'Quiet Unwinding')">
+          Begin
+        </button>
+</div>
+</article>
+<!-- 5. Restorative Mat Stretch -->
+<article class="bg-surface-container-lowest rounded-lg p-space-md shadow-[0_4px_20px_-4px_rgba(45,55,72,0.05)] hover:shadow-md transition-all duration-200 flex flex-col gap-space-sm relative overflow-hidden">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-11 h-11 rounded-2xl bg-surface-container text-tertiary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[24px]">bed</span>
+</div>
+<div class="flex flex-col min-w-0">
+<h2 class="font-headline-md text-headline-md text-on-surface font-semibold truncate">Gentle Mat Stretch</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Bed or soft rug · Child's pose &amp; resting twist</p>
+</div>
+</div>
+<span class="inline-flex shrink-0 items-center px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">
+          5 mins
+        </span>
+</div>
+<div class="flex items-center justify-between pt-1 mt-1">
+<span class="font-label-sm text-label-sm text-outline">Zero sweat · Heavy pillows encouraged</span>
+<button class="px-5 py-2.5 rounded-full bg-surface-container-high text-on-surface font-label-md text-label-md hover:bg-surface-variant active:scale-95 transition-all" onclick="openExercise('Mat Rest', 'Settle onto your stomach or back. Pull a warm blanket over you if you feel chilly.', 'bed', 'Comfort First')">
+          View Poses
+        </button>
+</div>
+</article>
+<!-- 6. Mindful Slow Walk -->
+<article class="bg-surface-container-lowest rounded-lg p-space-md shadow-[0_4px_20px_-4px_rgba(45,55,72,0.05)] hover:shadow-md transition-all duration-200 flex flex-col gap-space-sm relative overflow-hidden">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-start gap-space-md min-w-0">
+<div class="w-11 h-11 rounded-2xl bg-secondary-container/70 text-on-secondary-container flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[24px]">directions_walk</span>
+</div>
+<div class="flex flex-col min-w-0">
+<h2 class="font-headline-md text-headline-md text-on-surface font-semibold truncate">Mindful Slow Walk</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Just feeling your feet contact the floor</p>
+</div>
+</div>
+<span class="inline-flex shrink-0 items-center px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm font-medium">
+          10 mins
+        </span>
+</div>
+<div class="flex items-center justify-between pt-1 mt-1">
+<span class="font-label-sm text-label-sm text-outline">Indoor socks or outdoor stroll</span>
+<button class="px-5 py-2.5 rounded-full bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-variant active:scale-95 transition-all" onclick="openExercise('Slow Grounding Walk', 'Notice the heel strike, the roll onto the ball of your foot, the gentle release. There is nowhere to arrive.', 'directions_walk', 'Tactile Presence')">
+          Begin
+        </button>
+</div>
+</article>
+</section>
+<!-- Supportive Bottom Anchor -->
+<footer class="flex flex-col gap-space-md pt-2">
+<!-- Non-judgmental reassurance note -->
+<div class="bg-surface-container-low rounded-lg p-space-md flex items-center gap-space-md text-left">
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-snug">
+        Doing even <strong class="text-on-surface font-semibold">30 seconds</strong> counts as a full practice. Showing up for your breath is already enough.
+      </p>
+</div>
+<!-- Quick SOS Breathing Button (De-escalated, calming) -->
+<button class="w-full py-4 px-space-md rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-lg text-label-lg flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm" onclick="openSOSBreathing()">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">emergency_home</span>
+<span>Need immediate calm? 1-Tap SOS Breathing</span>
+</button>
+</footer>
+</div>
+<script>
+  let breathInterval = null;
+  function openExercise(title, desc, iconName, category) {
+    const overlay = document.getElementById('exercise-overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayDesc = document.getElementById('overlay-desc');
+    const overlayIcon = document.getElementById('overlay-icon');
+    const overlayCategory = document.getElementById('overlay-category');
+    overlayTitle.textContent = title;
+    overlayDesc.textContent = desc;
+    overlayIcon.textContent = iconName;
+    overlayCategory.textContent = category;
+    overlay.classList.remove('hidden');
+    startBreathingCycle();
+  }
+  function openSOSBreathing() {
+    openExercise(
+      'Deep Calming Sigh',
+      'Two soft sips of air through the nose, followed by a long, slow release out the mouth.',
+      'favorite',
+      'Emergency Calm'
+    );
+  }
+  function startBreathingCycle() {
+    const outer = document.getElementById('breath-outer');
+    const inner = document.getElementById('breath-inner');
+    const text = document.getElementById('breath-text');
+    if (!outer || !inner || !text) return;
+    if (breathInterval) clearInterval(breathInterval);
+    let state = 0; // 0: Inhale, 1: Hold, 2: Exhale, 3: Rest
+    const updateCycle = () => {
+      if (state === 0) {
+        text.textContent = 'Inhale';
+        outer.classList.remove('scale-75');
+        outer.classList.add('scale-125');
+        inner.classList.remove('scale-90');
+        inner.classList.add('scale-110');
+      } else if (state === 1) {
+        text.textContent = 'Hold';
+      } else if (state === 2) {
+        text.textContent = 'Exhale';
+        outer.classList.remove('scale-125');
+        outer.classList.add('scale-75');
+        inner.classList.remove('scale-110');
+        inner.classList.add('scale-90');
+      } else if (state === 3) {
+        text.textContent = 'Rest';
+      }
+      state = (state + 1) % 4;
+    };
+    updateCycle();
+    breathInterval = setInterval(updateCycle, 3500);
+  }
+  document.getElementById('close-overlay').addEventListener('click', () => {
+    const overlay = document.getElementById('exercise-overlay');
+    overlay.classList.add('hidden');
+    if (breathInterval) {
+      clearInterval(breathInterval);
+      breathInterval = null;
+    }
+  });
+  function toggleAudioPreview(btn) {
+    const icon = btn.querySelector('.material-symbols-outlined');
+    const span = btn.querySelector('span:last-child');
+    if (span.textContent === 'Listen') {
+      span.textContent = 'Playing';
+      icon.textContent = 'pause';
+      btn.classList.add('bg-primary', 'text-on-primary');
+      btn.classList.remove('bg-surface-container-high', 'text-on-surface');
+    } else {
+      span.textContent = 'Listen';
+      icon.textContent = 'play_arrow';
+      btn.classList.remove('bg-primary', 'text-on-primary');
+      btn.classList.add('bg-surface-container-high', 'text-on-surface');
+    }
+  }
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_16px_rgba(45,55,72,0.05)] max-w-[390px]" data-active-classes="text-primary font-semibold [&amp;_span.material-symbols-outlined]:text-primary [&amp;_.indicator]:bg-primary/15"><div class="flex justify-around items-center h-16 px-space-xs max-w-md mx-auto"><a class="flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[48px] py-1 text-on-surface-variant transition-colors" data-path="today" href="#"><div class="indicator px-3 py-1 rounded-full transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">light_mode</span></div><span class="font-label-sm text-label-sm">Today</span></a><a aria-current="page" class="flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[48px] py-1 transition-colors text-primary font-semibold [&amp;_span.material-symbols-outlined]:text-primary [&amp;_.indicator]:bg-primary/15" data-path="ground" href="#"><div class="indicator px-3 py-1 rounded-full transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">spa</span></div><span class="font-label-sm text-label-sm">Ground</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[48px] py-1 text-on-surface-variant transition-colors" data-path="wins" href="#"><div class="indicator px-3 py-1 rounded-full transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">favorite</span></div><span class="font-label-sm text-label-sm">Wins</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[48px] py-1 text-on-surface-variant transition-colors" data-path="anchor" href="#"><div class="indicator px-3 py-1 rounded-full transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">anchor</span></div><span class="font-label-sm text-label-sm">Anchor</span></a></div></nav>
+</body></html>
