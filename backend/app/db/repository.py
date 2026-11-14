@@ -5,10 +5,10 @@ Days are UTC calendar days. A sleep session counts toward the day the user woke 
 
 import uuid
 from collections.abc import Iterable, Mapping
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import insert, text
+from sqlalchemy import insert, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -35,6 +35,14 @@ def create_user(
     session.add(user)
     session.flush()
     return user.id
+
+
+def get_user(session: Session, user_id: uuid.UUID) -> User | None:
+    return session.get(User, user_id)
+
+
+def list_users(session: Session) -> list[User]:
+    return list(session.scalars(select(User).order_by(User.created_at)))
 
 
 def _upsert_samples(session: Session, model, rows: Iterable[Mapping[str, Any]]) -> int:
@@ -94,6 +102,74 @@ def record_mood(
     return session.execute(
         insert(MoodCheckin).values(**values).returning(MoodCheckin.id)
     ).scalar_one()
+
+
+def _utc_day_start(day: date) -> datetime:
+    return datetime(day.year, day.month, day.day, tzinfo=UTC)
+
+
+def heart_samples(
+    session: Session, user_id: uuid.UUID, start: datetime, end: datetime
+) -> list[HeartSample]:
+    """Heart samples with start <= ts < end, oldest first."""
+    return list(
+        session.scalars(
+            select(HeartSample)
+            .where(HeartSample.user_id == user_id, HeartSample.ts >= start, HeartSample.ts < end)
+            .order_by(HeartSample.ts)
+        )
+    )
+
+
+def activity_samples(
+    session: Session, user_id: uuid.UUID, start: datetime, end: datetime
+) -> list[ActivitySample]:
+    """Activity samples with start <= ts < end, oldest first."""
+    return list(
+        session.scalars(
+            select(ActivitySample)
+            .where(
+                ActivitySample.user_id == user_id,
+                ActivitySample.ts >= start,
+                ActivitySample.ts < end,
+            )
+            .order_by(ActivitySample.ts)
+        )
+    )
+
+
+def sleep_sessions(
+    session: Session, user_id: uuid.UUID, start: date, end: date
+) -> list[SleepSession]:
+    """Sleep sessions whose UTC wake day is in [start, end], oldest first."""
+    return list(
+        session.scalars(
+            select(SleepSession)
+            .where(
+                SleepSession.user_id == user_id,
+                SleepSession.wake_time >= _utc_day_start(start),
+                SleepSession.wake_time < _utc_day_start(end + timedelta(days=1)),
+            )
+            .order_by(SleepSession.wake_time)
+        )
+    )
+
+
+def mood_checkins(
+    session: Session, user_id: uuid.UUID, start: date, end: date
+) -> list[MoodCheckin]:
+    """Mood check-ins on UTC days [start, end], oldest first."""
+    return list(
+        session.scalars(
+            select(MoodCheckin)
+            .where(
+                MoodCheckin.user_id == user_id,
+                MoodCheckin.ts >= _utc_day_start(start),
+                MoodCheckin.ts < _utc_day_start(end + timedelta(days=1)),
+            )
+            .order_by(MoodCheckin.ts)
+        )
+    )
 
 
 def delete_source_data(session: Session, user_id: uuid.UUID, source_prefix: str) -> None:

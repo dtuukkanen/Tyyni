@@ -29,5 +29,23 @@ services:
         condition: service_healthy
     command: ["alembic", "upgrade", "head"]
 
+  # HTTP API for the frontend: http://localhost:8000/docs. Reloads on edits under backend/app.
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-wellbeing}:${POSTGRES_PASSWORD:-wellbeing}@db:5432/${POSTGRES_DB:-wellbeing}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./backend/app:/app/app
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+
 volumes:
   pgdata:

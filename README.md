@@ -54,6 +54,37 @@ with get_session() as s:
 
 Days are UTC calendar days; a sleep session counts toward the day the user woke up. Schema changes go through Alembic (`backend/alembic/versions`).
 
+## API
+
+[`backend/app/api`](backend/app/api) is a FastAPI app over the repository, for the frontend. It has no auth yet: the user is the `user_id` in the path.
+
+```bash
+docker compose up -d api
+```
+
+Interactive docs are at <http://localhost:8000/docs>. A frontend can generate a typed client from <http://localhost:8000/openapi.json>. The service applies migrations first and reloads when files under `backend/app` change. Allowed CORS origins come from `CORS_ORIGINS` (default: `http://localhost:5173,http://localhost:3000`).
+
+| Endpoint | What it returns |
+|---|---|
+| `GET /health` | `{"status": "ok"}` once the DB answers |
+| `GET /users`, `POST /users` | All users; create one with `{"display_name": "demo"}` |
+| `GET /users/{id}` | One user (404 if unknown) |
+| `GET /users/{id}/today` | Today's metrics, the 14-day baseline and whether mood was logged: everything the day view needs |
+| `GET /users/{id}/daily?start=&end=` | One row per day with all metrics (default: the last 14 days; at most 366) |
+| `GET /users/{id}/baseline?day=&window=14` | Mean of each metric over the `window` days before `day` |
+| `GET /users/{id}/heart?start=&end=` | Raw HR + HRV samples in `[start, end)` (default: the last 24 h; at most 31 days) |
+| `GET /users/{id}/activity?start=&end=` | Raw activity samples, same range rules as `heart` |
+| `GET /users/{id}/sleep?start=&end=` | Sleep sessions by wake day, with `stages` and `efficiency` |
+| `GET /users/{id}/mood?start=&end=`, `POST /users/{id}/mood` | Check-ins; post `{"score": 1–5, "note"?, "ts"?}` |
+
+`start` / `end` are dates (`2026-11-14`) for day endpoints and datetimes (`2026-11-14T08:00:00Z`) for `heart` / `activity`; times without a zone are UTC. Days are UTC calendar days, as in the repository.
+
+To run it on the host instead (with the DB container up and `DATABASE_URL` from `.env.example`), from `backend/`:
+
+```bash
+pip install -e ".[dev]" && uvicorn app.api.main:app --reload
+```
+
 ## Simulators
 
 ### HRV + heart rate
