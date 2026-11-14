@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import {
   type AnchorItem,
   type PracticeModalState,
@@ -8,91 +8,70 @@ import {
 } from "../data/sanctuaryData";
 import { Icon, type IconName } from "./icons";
 import type { SoundPreset } from "./soundEngine";
-import { IconOrb, type Tone } from "./ui/IconOrb";
-import { ScreenHero } from "./ui/ScreenHero";
+import { IconOrb } from "./ui/IconOrb";
 import { SectionHeader } from "./ui/SectionHeader";
 
-const SENSORY_CHANNELS = [
-  "Scent · Safe Memory",
-  "Tactile · Comfort",
-  "Acoustic · Calm",
-  "Place · Sanctuary",
+type AnchorFilter = "all" | "senses" | "sound" | "sos";
+
+const FILTER_TABS: { id: AnchorFilter; label: string; icon: IconName }[] = [
+  { id: "all", label: "All", icon: "anchor" },
+  { id: "senses", label: "Senses", icon: "eye" },
+  { id: "sound", label: "Audio", icon: "waves" },
+  { id: "sos", label: "SOS", icon: "sos" },
+];
+
+const CHANNEL_OPTIONS: {
+  label: string;
+  icon: IconName;
+  tone: "tone-moss" | "tone-eucalyptus" | "tone-blush";
+}[] = [
+  { label: "Touch", icon: "tap", tone: "tone-moss" },
+  { label: "Scent", icon: "flower", tone: "tone-blush" },
+  { label: "Sound", icon: "waves", tone: "tone-eucalyptus" },
+  { label: "Place", icon: "tree", tone: "tone-moss" },
 ];
 
 const PHYSIOLOGICAL_SIGH: PracticeModalState = {
   mode: "breath",
-  category: "Physiological Sigh",
-  title: "The Double Inhale Sigh",
+  category: "Fast Reset · 1 Min",
+  title: "Double Inhale Sigh",
   description:
-    "Sip air in twice through the nose to gently open the lungs, then release one long, unhurried sigh out.",
+    "Two quick sips of air in through your nose, then one long, slow sigh out.",
   icon: "air",
+  phases: [
+    { label: "Sip in", cue: "Through the nose", expand: true, ms: 2000 },
+    { label: "Top-up sip", cue: "One quick sip more", expand: true, ms: 1300 },
+    {
+      label: "Long sigh",
+      cue: "Slow release out the mouth",
+      expand: false,
+      ms: 6000,
+    },
+    { label: "Rest", cue: "Shoulders drop", expand: false, ms: 2000 },
+  ],
 };
 
-type AnchorCardProps = {
-  icon: IconName;
-  iconSize?: number;
-  tone: Tone;
-  tag: ReactNode;
-  /** Right side of the top bar: a button or a small note. */
-  aside: ReactNode;
-  linen?: boolean;
-  children: ReactNode;
+const COLD_WATER_MODAL: PracticeModalState = {
+  mode: "guide",
+  category: "Dive Reflex · 15 Sec",
+  title: "Cold Water Reset",
+  description:
+    "Cold water on cheeks or wrists slows heart rate within seconds.",
+  icon: "snowflake",
+  durationSeconds: 15,
+  steps: [
+    {
+      title: "Fill bowl or cup hands",
+      detail: "Use cold tap water or hold a cool wet cloth.",
+      icon: "droplet",
+    },
+    {
+      title: "Cool cheeks & eyes",
+      detail: "Press cold water to cheeks and forehead for 15 seconds.",
+      icon: "snowflake",
+    },
+  ],
 };
-
-/** Card with a tagged top bar, used for every anchor in the list. */
-function AnchorCard({
-  icon,
-  iconSize = 15,
-  tone,
-  tag,
-  aside,
-  linen = false,
-  children,
-}: AnchorCardProps) {
-  return (
-    <article className={linen ? "anchor-card is-linen" : "anchor-card"}>
-      <div className="anchor-meta-bar">
-        <div className="anchor-tag-group">
-          <span className={`anchor-mini-orb ${tone}`}>
-            <Icon name={icon} size={iconSize} />
-          </span>
-          <span className="anchor-tag-pill">{tag}</span>
-        </div>
-        {aside}
-      </div>
-      {children}
-    </article>
-  );
-}
-
-type EmergencyRowProps = {
-  icon: IconName;
-  /** Without a title the row is a softer, single-line alternative. */
-  title?: string;
-  desc: string;
-  action?: ReactNode;
-};
-
-function EmergencyRow({ icon, title, desc, action }: EmergencyRowProps) {
-  return (
-    <div
-      className={title ? "emergency-row" : "emergency-row emergency-row-soft"}
-    >
-      <div className="emergency-row-lead">
-        <Icon name={icon} size={20} />
-        {title ? (
-          <div>
-            <p className="emergency-row-title">{title}</p>
-            <p className="emergency-row-desc">{desc}</p>
-          </div>
-        ) : (
-          <p className="emergency-row-desc flush-top">{desc}</p>
-        )}
-      </div>
-      {action}
-    </div>
-  );
-}
 
 type AnchorScreenProps = {
   guestName: string;
@@ -119,11 +98,18 @@ export function AnchorScreen({
   onOpenModal,
   onNotify,
 }: AnchorScreenProps) {
+  const [filter, setFilter] = useState<AnchorFilter>("all");
   const [phraseCount, setPhraseCount] = useState(4);
   const [addingAnchor, setAddingAnchor] = useState(false);
   const [anchorTitle, setAnchorTitle] = useState("");
-  const [anchorCategory, setAnchorCategory] = useState(SENSORY_CHANNELS[0]);
+  const [channelIdx, setChannelIdx] = useState(0);
   const [anchorDesc, setAnchorDesc] = useState("");
+
+  const purrPlaying = activeSound === "purr";
+  const showSenses = filter === "all" || filter === "senses";
+  const showSound = filter === "all" || filter === "sound";
+  const showSaved = filter === "all" || filter === "senses";
+  const showSos = filter === "all" || filter === "sos";
 
   function speakPhrase() {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -140,21 +126,33 @@ export function AnchorScreen({
 
   function handleSubmitAnchor(e: React.FormEvent) {
     e.preventDefault();
-    if (!anchorTitle.trim()) return;
+    const title = anchorTitle.trim();
+    if (!title) return;
+    const channel = CHANNEL_OPTIONS[channelIdx] ?? CHANNEL_OPTIONS[0];
+    const detail =
+      anchorDesc.trim() || "Hold your attention gently on this familiar cue.";
     const created: AnchorItem = {
       id: `custom-${Date.now()}`,
-      tag: anchorCategory,
-      title: anchorTitle.trim(),
-      desc:
-        anchorDesc.trim() ||
-        "A personal sensory tether chosen to bring warmth and steadiness back into your body.",
-      meta: "Personal tether",
-      button: "Hold Anchor",
-      icon: "spa",
-      tone: "tone-moss",
-      guideDesc:
-        anchorDesc.trim() ||
-        "Pause for three slow breaths while holding your attention gently on this anchor.",
+      tag: channel.label,
+      title,
+      desc: detail,
+      meta: "Personal",
+      button: "Open",
+      icon: channel.icon,
+      tone: channel.tone,
+      guideDesc: detail,
+      guideSteps: [
+        {
+          title: "Bring it close",
+          detail,
+          icon: channel.icon,
+        },
+        {
+          title: "Notice one detail",
+          detail: "Focus on its temperature, texture, scent, or sound.",
+          icon: "eye",
+        },
+      ],
     };
     onCreateAnchor(created);
     setAnchorTitle("");
@@ -162,327 +160,404 @@ export function AnchorScreen({
     setAddingAnchor(false);
   }
 
+  // Show favorited anchors first for faster scanning.
+  const orderedAnchors = [
+    ...anchors.filter((a) => favoritedIds.includes(a.id)),
+    ...anchors.filter((a) => !favoritedIds.includes(a.id)),
+  ];
+
   return (
     <main className="screen-body">
-      <ScreenHero
-        badge={<span className="status-dot" aria-hidden="true" />}
-        badgeLabel="SOMATIC STABILIZERS"
-        title="Your Anchors."
-        subtitle="Familiar tethers to bring you back into your body when overwhelm strikes."
-      />
-
-      {/* 5-4-3-2-1 Sensory Reset */}
-      <section className="sensory-reset-card">
-        <div className="practice-top">
-          <div>
-            <span className="kicker-text">Quick Grounding</span>
-            <h2 className="practice-title sensory-card-title">
-              Sensory 5–4–3–2–1 Reset
-            </h2>
-          </div>
-          <IconOrb icon="flower" tone="tone-moss" />
+      {/* 1. Visual Category Navigation (Today-style pill grid) */}
+      <section className="anchor-nav-card" aria-label="Anchor categories">
+        <div className="anchor-nav-top">
+          <h1 className="anchor-screen-title">Anchors</h1>
+          <span className="duration-pill">{anchors.length + 3} tools</span>
         </div>
 
-        <p className="practice-desc flush-top">
-          Shift activation away from racing thoughts into present physical
-          stimuli.
-        </p>
-
-        <div className="senses-row">
-          {SENSORY_STEPS.map((item, idx) => (
-            <button
-              key={item.sense}
-              type="button"
-              className="sense-pill"
-              onClick={() => onOpenSensoryGuide(idx)}
-            >
-              <span className="sense-num">{item.count}</span>
-              <span className="sense-label">{item.sense}</span>
-            </button>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          className="btn-primary-pill btn-full"
-          onClick={() => onOpenSensoryGuide(0)}
+        <div
+          className="anchor-filter-grid"
+          role="tablist"
+          aria-label="Filter anchors"
         >
-          <Icon name="play" size={15} />
-          <span>Begin Gentle Guide (90s)</span>
-        </button>
+          {FILTER_TABS.map((item) => {
+            const active = filter === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={`anchor-filter-chip ${active ? "is-active" : ""} ${
+                  item.id === "sos" ? "is-sos-chip" : ""
+                }`}
+                onClick={() => setFilter(item.id)}
+              >
+                <Icon name={item.icon} size={15} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
-      {/* My Core Anchors */}
-      <section className="section-block" aria-labelledby="core-anchors-heading">
-        <SectionHeader
-          id="core-anchors-heading"
-          title="My Core Anchors"
-          meta={`${anchors.length + 2} Active`}
-        />
-
-        {anchors.map((anchor) => {
-          const isFav = favoritedIds.includes(anchor.id);
-          return (
-            <AnchorCard
-              key={anchor.id}
-              icon={anchor.icon}
-              tone={anchor.tone}
-              tag={anchor.tag}
-              aside={
-                <button
-                  type="button"
-                  className={`icon-action-btn ${isFav ? "is-favorited" : ""}`}
-                  aria-label={
-                    isFav
-                      ? `Remove ${anchor.title} from favorites`
-                      : `Save ${anchor.title} to favorites`
-                  }
-                  aria-pressed={isFav}
-                  onClick={() => onToggleFavorite(anchor.id)}
-                >
-                  <Icon name={isFav ? "heartFilled" : "heart"} size={19} />
-                </button>
-              }
+      {/* 2. 5-4-3-2-1 Senses Strip */}
+      {showSenses && (
+        <section
+          className="frosted-panel-card section-block"
+          aria-labelledby="senses-heading"
+        >
+          <div className="section-header-row">
+            <h2 id="senses-heading" className="section-label">
+              <Icon name="flower" size={16} />
+              <span>5–4–3–2–1 Senses</span>
+            </h2>
+            <button
+              type="button"
+              className="compact-primary-btn"
+              onClick={() => onOpenSensoryGuide(0)}
             >
-              <div>
-                <h3 className="practice-title">{anchor.title}</h3>
-                <p className="practice-desc">{anchor.desc}</p>
-              </div>
-
-              <div className="anchor-divider-foot">
-                <span className="section-meta">{anchor.meta}</span>
-                <button
-                  type="button"
-                  className="btn-secondary-pill"
-                  onClick={() =>
-                    onOpenModal({
-                      mode: "breath",
-                      category: anchor.tag,
-                      title: anchor.title,
-                      description: anchor.guideDesc,
-                      icon: anchor.icon,
-                    })
-                  }
-                >
-                  <Icon name="tap" size={16} />
-                  <span>{anchor.button}</span>
-                </button>
-              </div>
-            </AnchorCard>
-          );
-        })}
-
-        {/* Personal Grounding Phrase */}
-        <AnchorCard
-          icon="voice"
-          tone="tone-blush"
-          tag={<>{guestName}’s Grounding Phrase</>}
-          aside={
-            <span className="section-meta">Repetition {phraseCount}/5</span>
-          }
-          linen
-        >
-          <blockquote className="phrase-blockquote">
-            “This feeling is a wave. I am the shore.”
-          </blockquote>
-
-          <div className="practice-footer">
-            <span className="practice-note">Tap rhythmically to ground</span>
-            <div className="phrase-actions">
-              <button
-                type="button"
-                className="round-action-btn"
-                aria-label="Listen to grounding phrase"
-                onClick={speakPhrase}
-              >
-                <Icon name="volume" size={18} />
-              </button>
-              <button
-                type="button"
-                className="round-action-btn"
-                aria-label="Count one slow phrase repetition"
-                onClick={() => {
-                  setPhraseCount((prev) => {
-                    const next = prev >= 5 ? 1 : prev + 1;
-                    if (next === 5) {
-                      onNotify("5 gentle repetitions completed. Stay steady.");
-                    }
-                    return next;
-                  });
-                }}
-              >
-                <Icon name="tap" size={18} />
-              </button>
-            </div>
+              <Icon name="play" size={12} />
+              <span>Start 90s</span>
+            </button>
           </div>
-        </AnchorCard>
 
-        {/* Vibroacoustic Brown Noise Anchor */}
-        <AnchorCard
-          icon="equalizer"
-          iconSize={16}
-          tone="tone-moss"
-          tag="Acoustic · Frequency"
-          aside={
-            <span className="section-meta freq-badge">
-              ● 24–30Hz Vibroacoustic
-            </span>
-          }
+          <div className="senses-row">
+            {SENSORY_STEPS.map((item, idx) => (
+              <button
+                key={item.sense}
+                type="button"
+                className="sense-pill"
+                onClick={() => onOpenSensoryGuide(idx)}
+              >
+                <Icon name={item.icon} size={16} className="sense-icon" />
+                <span className="sense-num">{item.count}</span>
+                <span className="sense-label">{item.sense}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 3. Audio & Grounding Phrase */}
+      {showSound && (
+        <section
+          className="frosted-panel-card section-block"
+          aria-labelledby="audio-anchors-heading"
         >
-          <div className="practice-footer">
-            <div>
-              <h3 className="practice-title">
-                Deep Cat Purr &amp; Brown Noise
-              </h3>
-              <p className="practice-desc">
-                Rhythmic low frequencies that relax the spine.
-              </p>
+          <SectionHeader
+            id="audio-anchors-heading"
+            headingClassName="section-label"
+            title="Audio & Phrase"
+            meta="1-tap calm"
+          />
+
+          <div className="anchor-audio-tile">
+            <IconOrb icon="equalizer" size={18} tone="tone-moss" />
+            <div className="anchor-tile-copy">
+              <div className="anchor-tile-line">
+                <strong className="anchor-tile-title">
+                  Purr &amp; Brown Noise
+                </strong>
+                <span className="anchor-mini-badge">24–30 Hz</span>
+              </div>
+              <span className="anchor-tile-sub">
+                <span
+                  className={`wave-bars ${purrPlaying ? "is-playing" : ""}`}
+                  aria-hidden="true"
+                >
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                <span>{purrPlaying ? "Playing low hum" : "Low rumble"}</span>
+              </span>
             </div>
             <button
               type="button"
-              className={`round-action-btn purr-play-btn ${
-                activeSound === "purr" ? "is-active" : ""
-              }`}
+              className={`btn-secondary-pill ${purrPlaying ? "is-active" : ""}`}
               aria-label={
-                activeSound === "purr"
+                purrPlaying
                   ? "Pause brown noise anchor"
                   : "Play brown noise anchor"
               }
               onClick={() => onSoundToggle("purr", "Vibroacoustic Brown Noise")}
             >
-              <Icon
-                name={activeSound === "purr" ? "pause" : "play"}
-                size={18}
-              />
+              <Icon name={purrPlaying ? "pause" : "play"} size={14} />
+              <span>{purrPlaying ? "Pause" : "Play"}</span>
             </button>
           </div>
-        </AnchorCard>
-      </section>
 
-      {/* Emergency Tether */}
-      <section className="emergency-tether-card">
-        <span className="emergency-kicker">
-          <Icon name="sos" size={18} />
-          <span>Emergency Tether</span>
-        </span>
-        <h2 className="practice-title">Panic or High Distress Support</h2>
-        <p className="practice-desc flush-top">
-          If your nervous system is in full freeze or acute flight, these three
-          actions trigger immediate biological downregulation.
-        </p>
+          <div className="anchor-phrase-tile">
+            <div className="anchor-phrase-top">
+              <span className="anchor-phrase-label">
+                <Icon name="voice" size={14} />
+                <span>{guestName}’s phrase</span>
+              </span>
+              <div
+                className="phrase-dots"
+                role="img"
+                aria-label={`Repetition ${phraseCount} of 5`}
+              >
+                {Array.from({ length: 5 }, (_, idx) => (
+                  <span
+                    // oxlint-disable-next-line react/no-array-index-key -- fixed 5-dot counter
+                    key={idx}
+                    className={`phrase-dot ${idx < phraseCount ? "is-filled" : ""}`}
+                  />
+                ))}
+              </div>
+            </div>
 
-        <EmergencyRow
-          icon="air"
-          title="The Double Inhale Sigh"
-          desc="2 quick inhales through nose, slow long sigh out."
-          action={
-            <button
-              type="button"
-              className="btn-secondary-pill"
-              onClick={() => onOpenModal(PHYSIOLOGICAL_SIGH)}
-            >
-              Guide
-            </button>
-          }
-        />
-        <EmergencyRow
-          icon="phone"
-          title="Call Safe Person"
-          desc="Mama (Direct bypass to speakerphone)"
-          action={
-            <button
-              type="button"
-              className="btn-secondary-pill btn-warm-connect"
-              onClick={() =>
-                onNotify("Ready to connect to Mama on speakerphone.")
-              }
-            >
-              Connect
-            </button>
-          }
-        />
-        <EmergencyRow
-          icon="snowflake"
-          desc="Alternative: Submerge lower face into a bowl of ice-cold water for 15 seconds."
-        />
-      </section>
+            <blockquote className="phrase-blockquote">
+              “This feeling is a wave. I am the shore.”
+            </blockquote>
 
-      {/* Add Sensory Anchor */}
-      {!addingAnchor ? (
-        <button
-          type="button"
-          className="dashed-add-anchor"
-          onClick={() => setAddingAnchor(true)}
-        >
-          <Icon name="plus" size={18} />
-          <span>Add a sensory anchor (scent, sound, person, place)</span>
-        </button>
-      ) : (
-        <form className="anchor-composer" onSubmit={handleSubmitAnchor}>
-          <div className="section-header-row">
-            <h3 className="practice-title">New Personal Anchor</h3>
-            <button
-              type="button"
-              className="icon-action-btn"
-              aria-label="Cancel adding anchor"
-              onClick={() => setAddingAnchor(false)}
-            >
-              <Icon name="close" size={18} />
-            </button>
+            <div className="phrase-pill-actions">
+              <button
+                type="button"
+                className="btn-secondary-pill"
+                onClick={speakPhrase}
+              >
+                <Icon name="volume" size={15} />
+                <span>Listen</span>
+              </button>
+              <button
+                type="button"
+                className="btn-secondary-pill"
+                onClick={() => {
+                  setPhraseCount((prev) => {
+                    const next = prev >= 5 ? 1 : prev + 1;
+                    if (next === 5) {
+                      onNotify("5 repetitions complete.");
+                    }
+                    return next;
+                  });
+                }}
+              >
+                <Icon name="tap" size={15} />
+                <span>Tap ({phraseCount}/5)</span>
+              </button>
+            </div>
           </div>
-          <div className="composer-field">
-            <label htmlFor="anchor-title">Anchor name</label>
-            <input
-              id="anchor-title"
-              className="composer-input"
-              type="text"
-              value={anchorTitle}
-              onChange={(e) => setAnchorTitle(e.target.value)}
-              placeholder="e.g., Cedarwood oil on wrists"
-              required
-            />
-          </div>
-          <div className="composer-field">
-            <label htmlFor="anchor-cat">Sensory channel</label>
-            <select
-              id="anchor-cat"
-              className="composer-input"
-              value={anchorCategory}
-              onChange={(e) => setAnchorCategory(e.target.value)}
-            >
-              {SENSORY_CHANNELS.map((channel) => (
-                <option key={channel} value={channel}>
-                  {channel}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="composer-field">
-            <label htmlFor="anchor-desc">Gentle note (optional)</label>
-            <input
-              id="anchor-desc"
-              className="composer-input"
-              type="text"
-              value={anchorDesc}
-              onChange={(e) => setAnchorDesc(e.target.value)}
-              placeholder="How it helps your body settle..."
-            />
-          </div>
-          <button type="submit" className="btn-primary-pill btn-full">
-            Save to My Core Anchors
-          </button>
-        </form>
+        </section>
       )}
 
-      {/* Gentle Reminder Footer */}
-      <section className="affirmation-card is-neutral">
-        <Icon name="spa" size={22} />
-        <p className="affirmation-quote affirmation-quote-ink">
-          “You don’t have to fix everything right now. Just feeling the ground
-          beneath you is enough.”
-        </p>
-        <span className="section-meta">— Tyyni Somatic Practice</span>
-      </section>
+      {/* 4. Personal Tactile Anchors */}
+      {showSaved && (
+        <section
+          className="frosted-panel-card section-block"
+          aria-labelledby="core-anchors-heading"
+        >
+          <div className="section-header-row">
+            <h2 id="core-anchors-heading" className="section-label">
+              <span>My Anchors</span>
+              <span className="status-dot" aria-hidden="true" />
+            </h2>
+            {!addingAnchor && (
+              <button
+                type="button"
+                className="inline-add-pill"
+                onClick={() => setAddingAnchor(true)}
+              >
+                <Icon name="plus" size={14} />
+                <span>Add</span>
+              </button>
+            )}
+          </div>
+
+          <div className="anchor-compact-list">
+            {orderedAnchors.map((anchor) => {
+              const isFav = favoritedIds.includes(anchor.id);
+              return (
+                <article key={anchor.id} className="anchor-compact-card">
+                  <IconOrb icon={anchor.icon} size={18} tone={anchor.tone} />
+                  <div className="anchor-tile-copy">
+                    <div className="anchor-tile-line">
+                      <h3 className="anchor-tile-title">{anchor.title}</h3>
+                      <span className="anchor-mini-badge">{anchor.meta}</span>
+                    </div>
+                    <p className="anchor-tile-desc">{anchor.desc}</p>
+                  </div>
+                  <div className="anchor-compact-actions">
+                    <button
+                      type="button"
+                      className={`fav-mini-btn ${isFav ? "is-favorited" : ""}`}
+                      aria-label={
+                        isFav
+                          ? `Remove ${anchor.title} from favorites`
+                          : `Pin ${anchor.title} to top`
+                      }
+                      aria-pressed={isFav}
+                      onClick={() => onToggleFavorite(anchor.id)}
+                    >
+                      <Icon name={isFav ? "heartFilled" : "heart"} size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary-pill anchor-open-btn"
+                      onClick={() =>
+                        onOpenModal({
+                          mode: "guide",
+                          category: `${anchor.tag} · ${anchor.meta}`,
+                          title: anchor.title,
+                          description: anchor.guideDesc,
+                          icon: anchor.icon,
+                          durationSeconds: anchor.durationSeconds,
+                          steps: anchor.guideSteps,
+                        })
+                      }
+                    >
+                      {anchor.button}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {addingAnchor && (
+            <form className="anchor-composer" onSubmit={handleSubmitAnchor}>
+              <div className="section-header-row">
+                <h3 className="anchor-tile-title">New Anchor</h3>
+                <button
+                  type="button"
+                  className="fav-mini-btn"
+                  aria-label="Cancel adding anchor"
+                  onClick={() => setAddingAnchor(false)}
+                >
+                  <Icon name="close" size={17} />
+                </button>
+              </div>
+
+              <div
+                className="channel-chip-row"
+                role="radiogroup"
+                aria-label="Anchor sense"
+              >
+                {CHANNEL_OPTIONS.map((ch, idx) => (
+                  <button
+                    key={ch.label}
+                    type="button"
+                    role="radio"
+                    aria-checked={channelIdx === idx}
+                    className={`channel-chip ${channelIdx === idx ? "is-selected" : ""}`}
+                    onClick={() => setChannelIdx(idx)}
+                  >
+                    <Icon name={ch.icon} size={14} />
+                    <span>{ch.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <label htmlFor="anchor-title" className="sr-only">
+                Anchor name
+              </label>
+              <input
+                id="anchor-title"
+                className="composer-input"
+                type="text"
+                value={anchorTitle}
+                onChange={(e) => setAnchorTitle(e.target.value)}
+                placeholder="Name (e.g., Cedarwood oil on wrists)"
+                required
+              />
+
+              <label htmlFor="anchor-desc" className="sr-only">
+                Short cue (optional)
+              </label>
+              <input
+                id="anchor-desc"
+                className="composer-input"
+                type="text"
+                value={anchorDesc}
+                onChange={(e) => setAnchorDesc(e.target.value)}
+                placeholder="One-line cue (optional)"
+              />
+
+              <button type="submit" className="btn-primary-pill btn-full">
+                Save Anchor
+              </button>
+            </form>
+          )}
+        </section>
+      )}
+
+      {/* 5. High Distress / SOS Fast Reset */}
+      {showSos && (
+        <section
+          className="emergency-tether-card"
+          aria-labelledby="sos-tether-heading"
+        >
+          <div className="section-header-row">
+            <h2 id="sos-tether-heading" className="emergency-kicker">
+              <Icon name="sos" size={17} />
+              <span>High Distress · Fast Reset</span>
+            </h2>
+          </div>
+
+          <div className="sos-tiles-stack">
+            <div className="emergency-row">
+              <div className="emergency-row-lead">
+                <IconOrb icon="air" size={17} tone="tone-eucalyptus" />
+                <div>
+                  <p className="emergency-row-title">Double Inhale Sigh</p>
+                  <p className="emergency-row-desc">
+                    2 quick sips in, long slow sigh out
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary-pill"
+                onClick={() => onOpenModal(PHYSIOLOGICAL_SIGH)}
+              >
+                Breathe
+              </button>
+            </div>
+
+            <div className="emergency-row">
+              <div className="emergency-row-lead">
+                <IconOrb icon="phone" size={17} tone="tone-blush" />
+                <div>
+                  <p className="emergency-row-title">Call Mama</p>
+                  <p className="emergency-row-desc">Direct speakerphone</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary-pill btn-warm-connect"
+                onClick={() =>
+                  onNotify("Ready to connect to Mama on speakerphone.")
+                }
+              >
+                Call
+              </button>
+            </div>
+
+            <div className="emergency-row">
+              <div className="emergency-row-lead">
+                <IconOrb icon="snowflake" size={17} tone="tone-moss" />
+                <div>
+                  <p className="emergency-row-title">Cold Water Reset</p>
+                  <p className="emergency-row-desc">
+                    Cool cheeks or wrists for 15 seconds
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary-pill"
+                onClick={() => onOpenModal(COLD_WATER_MODAL)}
+              >
+                15s Guide
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

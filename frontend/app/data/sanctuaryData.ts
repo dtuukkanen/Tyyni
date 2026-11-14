@@ -29,13 +29,23 @@ export type BreathPhase = {
   ms?: number;
 };
 
+export type PracticeGuideStep = {
+  title: string;
+  detail: string;
+  icon?: IconName;
+};
+
 export type PracticeModalState = {
-  mode: "breath" | "sensory";
+  mode: "breath" | "sensory" | "guide";
   category: string;
   title: string;
   description: string;
   icon: IconName;
   tips?: string[];
+  /** Step-by-step visual cards for non-breathing practices (`mode: "guide"`). */
+  steps?: PracticeGuideStep[];
+  /** Optional countdown timer in seconds for `mode: "guide"`. */
+  durationSeconds?: number;
   /** Custom pacing; falls back to the even four-phase BREATH_PHASES. */
   phases?: BreathPhase[];
 };
@@ -50,6 +60,8 @@ export type AnchorItem = {
   icon: IconName;
   tone: "tone-moss" | "tone-eucalyptus" | "tone-blush";
   guideDesc: string;
+  guideSteps?: PracticeGuideStep[];
+  durationSeconds?: number;
 };
 
 export const TABS: { name: Tab; icon: IconName }[] = [
@@ -182,77 +194,122 @@ export const STARTER_WINS = [
   "Left bed despite fatigue",
 ];
 
-export const WIN_SUGGESTIONS: { label: string; icon: IconName }[] = [
-  { label: "Drank water", icon: "tree" },
-  { label: "Took 3 slow breaths", icon: "meditate" },
-  { label: "Stretched my neck", icon: "spa" },
-  { label: "Ate something nourishing", icon: "sun" },
-  { label: "Said no to pressure", icon: "heart" },
-  { label: "Rested without guilt", icon: "spa" },
+export const WIN_SUGGESTIONS: {
+  label: string;
+  icon: IconName;
+  tone: "tone-moss" | "tone-eucalyptus" | "tone-blush" | "tone-linen";
+}[] = [
+  { label: "Drank water", icon: "waterGlass", tone: "tone-eucalyptus" },
+  { label: "Slow breaths", icon: "air", tone: "tone-moss" },
+  { label: "Stretched", icon: "walk", tone: "tone-moss" },
+  { label: "Ate something", icon: "cup", tone: "tone-linen" },
+  { label: "Set boundary", icon: "heart", tone: "tone-blush" },
+  { label: "Rested", icon: "moon", tone: "tone-eucalyptus" },
 ];
 
-export const SENSORY_STEPS = [
+export const SENSORY_STEPS: {
+  count: number;
+  sense: string;
+  icon: IconName;
+  prompt: string;
+  detail: string;
+}[] = [
   {
     count: 5,
     sense: "See",
-    prompt: "Name five quiet things in your field of view",
-    detail:
-      "Notice soft light on a wall, the grain of a table, a plant leaf, or a shadow resting still.",
+    icon: "eye",
+    prompt: "Spot five quiet things in view",
+    detail: "Light on a wall, wood grain, a leaf, or a still shadow.",
   },
   {
     count: 4,
     sense: "Touch",
-    prompt: "Feel four physical textures against your skin",
+    icon: "tap",
+    prompt: "Feel four textures against your skin",
     detail:
-      "Notice the weight of fabric on your shoulders, your feet on the floor, or the warmth of your palms.",
+      "Fabric on your shoulders, feet on the floor, warmth in your hands.",
   },
   {
     count: 3,
     sense: "Hear",
-    prompt: "Listen for three ambient sounds nearby or far away",
-    detail:
-      "Let sounds pass without labeling them good or bad — wind outside, distant hum, or your own breath.",
+    icon: "waves",
+    prompt: "Notice three sounds nearby or far",
+    detail: "Wind outside, a distant hum, or your own breathing.",
   },
   {
     count: 2,
     sense: "Smell",
-    prompt: "Notice two gentle scents in the air around you",
-    detail:
-      "Tea, fresh air from a window, clean linen, or simply the neutral coolness of the room.",
+    icon: "flower",
+    prompt: "Catch two scents in the air",
+    detail: "Tea, fresh air from a window, clean fabric, or cool room air.",
   },
   {
     count: 1,
     sense: "Taste",
-    prompt: "Bring awareness to one sensation in your mouth",
-    detail:
-      "Take a sip of water or let your tongue rest softly away from the roof of your mouth.",
+    icon: "cup",
+    prompt: "Notice one sensation in your mouth",
+    detail: "Take a sip of water or unclench your jaw and rest your tongue.",
   },
 ];
 
 export const INITIAL_ANCHORS: AnchorItem[] = [
   {
     id: "blanket",
-    tag: "Tactile · Proprioception",
-    title: "The Heavy Blanket & Warm Tea",
-    desc: "Deep pressure input over knees and shoulders. Gentle warmth against the palms to stimulate parasympathetic calming.",
-    meta: "Recommended: 10 mins",
-    button: "Hold Anchor",
-    icon: "moon",
+    tag: "Touch",
+    title: "Heavy Blanket & Tea",
+    desc: "Weight over shoulders + warm mug in both hands",
+    meta: "10 min",
+    button: "Open",
+    icon: "cup",
     tone: "tone-moss",
-    guideDesc:
-      "Drape a heavy blanket across your shoulders or lap. Cup something warm between both palms and let your shoulders drop.",
+    guideDesc: "Steady warmth and gentle weight to help your body settle.",
+    durationSeconds: 600,
+    guideSteps: [
+      {
+        title: "Drape weight",
+        detail: "Pull a heavy blanket or coat over your shoulders or lap.",
+        icon: "bed",
+      },
+      {
+        title: "Hold warmth",
+        detail: "Cup a warm mug between both palms and notice the heat.",
+        icon: "cup",
+      },
+      {
+        title: "Drop shoulders",
+        detail: "Unclench your jaw and lean back against support.",
+        icon: "stone",
+      },
+    ],
   },
   {
     id: "water",
-    tag: "Thermal · Vagal Tone",
+    tag: "Cool reset",
     title: "Cool Water on Wrists",
-    desc: "Run cool tap water over inside wrists for 45 seconds or press a chilled compress against your forehead to activate the dive reflex.",
-    meta: "Immediate physiological brake",
-    button: "Step-by-step",
+    desc: "Run cool tap water over inner wrists",
+    meta: "45 sec",
+    button: "Open",
     icon: "droplet",
     tone: "tone-eucalyptus",
-    guideDesc:
-      "Turn on cool tap water. Hold the insides of both wrists beneath the gentle stream for 45 seconds while breathing out slowly.",
+    guideDesc: "Cool water quickly slows a racing heart.",
+    durationSeconds: 45,
+    guideSteps: [
+      {
+        title: "Turn on cool water",
+        detail: "Cool tap water is enough — no need for painful ice.",
+        icon: "droplet",
+      },
+      {
+        title: "Hold inner wrists",
+        detail: "Let the stream run across both inner wrists for 45 seconds.",
+        icon: "clock",
+      },
+      {
+        title: "Press to cheeks",
+        detail: "Optionally press cool wet palms gently to your face.",
+        icon: "snowflake",
+      },
+    ],
   },
 ];
 

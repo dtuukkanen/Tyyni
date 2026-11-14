@@ -567,7 +567,17 @@ export default function Home() {
         />
       )}
 
-      {tab === "Wins" && <WinsScreen wins={wins} onAddWin={handleAddWin} />}
+      {tab === "Wins" && (
+        <WinsScreen
+          wins={wins}
+          onAddWin={handleAddWin}
+          mood={mood}
+          lowEnergy={lowEnergy}
+          growthStage={growth.stage}
+          isGrowing={growth.isGrowing}
+          isSettling={growth.isSettling}
+        />
+      )}
 
       {tab === "Journal" && <JournalScreen onSave={handleSaveJournal} />}
 
