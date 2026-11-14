@@ -25,7 +25,10 @@ async function SanctuaryWithData({ children }: { children: ReactNode }) {
 /** Part of the prerendered shell; shows until the app streams in. */
 function SanctuarySplash() {
   return (
-    <div className="tyyni-shell app-splash" aria-busy="true">
+    <div
+      className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col items-center justify-center bg-surface md:shadow-[0_0_60px_-12px_rgba(34,72,64,0.14),0_0_0_1px_rgba(113,121,118,0.14)]"
+      aria-busy="true"
+    >
       <TyyniLogo size={56} />
     </div>
   );
