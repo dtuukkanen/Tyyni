@@ -21,7 +21,6 @@ import {
   sectionLabel,
   sectionMeta,
   screenBody,
-  statusDot,
   TONE,
   type Tone,
 } from "./ui/styles";
