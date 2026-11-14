@@ -33,17 +33,28 @@ export function PracticeModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  const phases = modal.phases ?? BREATH_PHASES;
+
   useEffect(() => {
     if (modal.mode !== "breath") return;
     // oxlint-disable-next-line react/set-state-in-effect -- restart the breath cycle when a new modal opens
     setBreathIndex(0);
-    const timer = window.setInterval(() => {
-      setBreathIndex((prev) => (prev + 1) % BREATH_PHASES.length);
-    }, 3600);
-    return () => window.clearInterval(timer);
   }, [modal]);
 
-  const activeBreath = BREATH_PHASES[breathIndex];
+  useEffect(() => {
+    if (modal.mode !== "breath") return;
+    const timer = window.setTimeout(
+      () => setBreathIndex((prev) => (prev + 1) % phases.length),
+      phases[breathIndex % phases.length].ms ?? 3600,
+    );
+    return () => window.clearTimeout(timer);
+  }, [modal, phases, breathIndex]);
+
+  const activeBreath = phases[breathIndex % phases.length];
+  // Let the circle move for the whole phase, so a long exhale looks long.
+  const pacerStyle = {
+    transitionDuration: `${(activeBreath.ms ?? 3600) - 200}ms`,
+  };
   const activeSense = SENSORY_STEPS[sensoryIndex];
 
   return (
@@ -83,11 +94,13 @@ export function PracticeModal({
                 className={`pacer-ring-outer ${
                   activeBreath.expand ? "phase-expand" : "phase-rest"
                 }`}
+                style={pacerStyle}
               />
               <div
                 className={`pacer-core ${
                   activeBreath.expand ? "phase-expand" : "phase-rest"
                 }`}
+                style={pacerStyle}
               >
                 <span className="pacer-phase-label">{activeBreath.label}</span>
                 <span className="pacer-sub-label">{activeBreath.cue}</span>
