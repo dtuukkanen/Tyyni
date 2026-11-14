@@ -23,7 +23,7 @@ The app works with sample content when the Python service is not configured. To 
 
 The app is hosted on Vercel's free Hobby plan, which has no paid overage: if a usage limit is hit, the project is paused instead of billed. The Vercel project `tyyni` is connected to this GitHub repository with **Root Directory** `frontend`: every push to `main` deploys to production (https://tyyni-seven.vercel.app), and other branches and pull requests get preview deployments.
 
-`vercel.json` pins the server route `/api/prototype` to `arn1` (Stockholm), the Vercel region closest to the backend in Google Cloud `europe-north1` (Finland). Until `PYTHON_SERVICE_URL` is set in the project's environment variables, the deployment serves the built-in sample content.
+`vercel.json` pins the server route `/api/prototype` to `fra1` (Frankfurt), next to the Python service (Vercel project `tyyni-api`, also `fra1`) and its Neon database (`aws-eu-central-1`). The route calls `PYTHON_SERVICE_URL` with `PYTHON_SERVICE_API_KEY` in the `X-API-Key` header; until `PYTHON_SERVICE_URL` is set, the deployment serves the built-in sample content.
 
 To deploy by hand, run the CLI from the repository root (not `frontend/`), since the project's root directory is applied on top of it:
 

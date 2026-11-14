@@ -88,6 +88,8 @@ def seeded(user_id):
 
 def test_hypertables_exist():
     with get_session() as s:
+        if not s.execute(text("SELECT 1 FROM pg_extension WHERE extname = 'timescaledb'")).first():
+            pytest.skip("no TimescaleDB on this server; the sample tables are plain tables")
         names = set(
             s.execute(
                 text("SELECT hypertable_name FROM timescaledb_information.hypertables")

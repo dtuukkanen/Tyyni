@@ -2,7 +2,7 @@
 
 ## Database
 
-One containerized **PostgreSQL 16 + TimescaleDB** instance holds all data. Time series and relational data live side by side, so the inference logic can join heart rate, sleep, activity and mood in one query.
+One containerized **PostgreSQL 16 + TimescaleDB** instance holds all data locally; the hosted database is Neon (see [Neon](#neon)). Time series and relational data live side by side, so the inference logic can join heart rate, sleep, activity and mood in one query.
 
 | Data | Shape | Storage |
 |---|---|---|
@@ -36,6 +36,30 @@ Connect a SQL client (e.g. DataGrip) to `localhost:5432`, database `wellbeing`, 
 
 Defaults are dev-only; copy `.env.example` to `.env` to change credentials or ports.
 
+### Neon
+
+The hosted database is the Neon project `tyyni-db` (Free plan, PostgreSQL 18, `aws-eu-central-1` Frankfurt). Its `production` branch holds the data; the Neon–Vercel integration also created a `vercel-dev` branch and put `DATABASE_URL` / `DATABASE_URL_UNPOOLED` in the Vercel project. The Free plan never bills: when its monthly compute or network transfer allowance runs out, the compute is suspended until the next month.
+
+Neon's TimescaleDB is the Apache-licensed build: hypertables work, continuous aggregates don't. The migrations check what the server offers, so the same history runs everywhere:
+
+| Server | Sample tables | Continuous aggregates (dropped again in `0002`) |
+|---|---|---|
+| Local `timescale/timescaledb` image | hypertables | created |
+| Neon | hypertables | skipped |
+| PostgreSQL without TimescaleDB | plain tables (`test_hypertables_exist` is skipped) | skipped |
+
+Run migrations against Neon over the **direct** connection string (no `-pooler` in the host); the pooled one goes through PgBouncer, which breaks session state that migrations rely on. Try a migration on a throwaway branch first:
+
+```bash
+neon branches create --project-id young-waterfall-75387175 --name migration-test --parent production
+URL=$(neon connection-string --project-id young-waterfall-75387175 --branch migration-test \
+  --database-name neondb | sed 's#^postgresql://#postgresql+psycopg://#')
+docker compose run --rm --no-deps -e DATABASE_URL="$URL" migrate      # or: ... migrate pytest -q
+neon branches delete migration-test --project-id young-waterfall-75387175
+```
+
+Use `--branch production` for the real database. Application traffic (the API) should use the pooled string (`neon connection-string --pooled`).
+
 ### Using it from Python
 
 All reads and writes go through [`backend/app/db/repository.py`](backend/app/db/repository.py):
@@ -58,13 +82,19 @@ Days are UTC calendar days; a sleep session counts toward the day the user woke 
 
 ## API
 
-[`backend/app/api`](backend/app/api) is a FastAPI app over the repository, for the frontend. It has no auth yet: the user is the `user_id` in the path.
+[`backend/app/api`](backend/app/api) is a FastAPI app over the repository, for the frontend. It has no user auth: the user is the `user_id` in the path. When the server sets `API_KEY`, every route requires it in the `X-API-Key` header (the docs at `/docs` and `/openapi.json` stay open); locally it is unset and the API is open.
 
 ```bash
 docker compose up -d api
 ```
 
 Interactive docs are at <http://localhost:8000/docs>. A frontend can generate a typed client from <http://localhost:8000/openapi.json>. The service applies migrations first and reloads when files under `backend/app` change. Allowed CORS origins come from `CORS_ORIGINS` (default: `http://localhost:5173,http://localhost:3000`).
+
+### Deployment
+
+The API runs on Vercel as the project `tyyni-api` (Hobby plan, no paid overage) at <https://tyyni-api.vercel.app>, in region `fra1` next to the Neon database. The project's root directory is `backend`: `index.py` exposes the app for Vercel's FastAPI preset, `.python-version` pins Python 3.12, and `vercel.json` sets the region and keeps tests and migrations out of the bundle. Pushes to `main` deploy to production; other branches get preview deployments, which use the same database.
+
+Its environment variables are `DATABASE_URL` (Neon's pooled connection string with the `postgresql+psycopg://` scheme) and `API_KEY`. The frontend project holds the same key as `PYTHON_SERVICE_API_KEY` and the URL as `PYTHON_SERVICE_URL`, and calls the API only from its server, so the key never reaches the browser. Migrations are not run on deploy; run them against Neon by hand (see [Neon](#neon)).
 
 | Endpoint | What it returns |
 |---|---|

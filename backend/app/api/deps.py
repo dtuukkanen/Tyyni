@@ -1,11 +1,14 @@
-"""Shared FastAPI dependencies: DB session, path user, and validated query ranges."""
+"""Shared FastAPI dependencies: API key, DB session, path user, and validated query ranges."""
 
+import os
+import secrets
 import uuid
 from collections.abc import Iterator
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Query, Security, status
+from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 
 from app.db import get_session
@@ -15,6 +18,20 @@ from app.db.models import User
 DEFAULT_DAYS = 14
 MAX_DAYS = 366
 MAX_SAMPLE_DAYS = 31
+
+
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def require_api_key(key: Annotated[str | None, Security(_api_key_header)]) -> None:
+    """Shared secret between the frontend's server and this API, checked when API_KEY is set.
+
+    Unset (local development, tests) leaves the API open. It is not per-user auth: whoever holds
+    the key can read every user's data, so it must stay on the server side.
+    """
+    expected = os.environ.get("API_KEY")
+    if expected and not (key and secrets.compare_digest(key, expected)):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or missing API key")
 
 
 def get_db() -> Iterator[Session]:

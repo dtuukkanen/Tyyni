@@ -5,7 +5,7 @@ __pycache__/
 .venv/
 *.egg-info/
 build/
-.DS_STORE
-.vercel
+.DS_Store
+.vercel/
 .env*
 !.env.example

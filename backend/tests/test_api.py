@@ -293,3 +293,17 @@ def test_today_lists_yesterdays_and_todays_anomalies(user_id):
     client.post(f"/users/{user_id}/anomalies/detect")
     body = client.get(f"/users/{user_id}/today").json()
     assert [(a["day"], a["kind"]) for a in body["anomalies"]] == [(str(today), "low_mood")]
+
+
+def test_api_key_open_when_unset(monkeypatch):
+    monkeypatch.delenv("API_KEY", raising=False)
+    assert client.get("/health").status_code == 200
+
+
+def test_api_key_required_when_set(monkeypatch):
+    monkeypatch.setenv("API_KEY", "s3cret")
+    assert client.get("/health").status_code == 401
+    assert client.get("/users", headers={"X-API-Key": "wrong"}).status_code == 401
+    assert client.get("/health", headers={"X-API-Key": "s3cret"}).status_code == 200
+    # The docs stay reachable so the schema can be browsed; their routes have no dependencies.
+    assert client.get("/openapi.json").status_code == 200
