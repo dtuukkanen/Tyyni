@@ -5,11 +5,11 @@ Interactive docs at /docs; the OpenAPI schema at /openapi.json can generate a ty
 
 import os
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from app.api.deps import Db
+from app.api.deps import Db, require_api_key
 from app.api.routers import anomalies, journal, metrics, mood, samples, suggestions, users
 
 DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:3000"
@@ -19,7 +19,9 @@ app = FastAPI(
     version="0.1.0",
     description="Users, daily metrics, raw sensor series, mood check-ins, journal entries, "
     "anomalies, and suggestions with their feedback. "
-    "All days are UTC calendar days; a sleep session counts toward the day the user woke up.",
+    "All days are UTC calendar days; a sleep session counts toward the day the user woke up. "
+    "When the server sets API_KEY, every route requires it in the X-API-Key header.",
+    dependencies=[Depends(require_api_key)],
 )
 
 app.add_middleware(

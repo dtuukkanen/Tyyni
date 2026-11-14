@@ -8,7 +8,11 @@ export async function GET() {
   }
 
   try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/dashboard`, { cache: "no-store" });
+    const apiKey = process.env.PYTHON_SERVICE_API_KEY;
+    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/dashboard`, {
+      cache: "no-store",
+      headers: apiKey ? { "X-API-Key": apiKey } : undefined,
+    });
     if (!response.ok) throw new Error(`Python service returned ${response.status}`);
     return NextResponse.json({ source: "service", dashboard: await response.json() });
   } catch (error) {
